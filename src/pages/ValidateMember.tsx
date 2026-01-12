@@ -1,32 +1,51 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import logoGoib from '@/assets/logo-goib.png';
 
+interface MemberData {
+  full_name: string;
+  cim_number: string | null;
+  status: string;
+  lodge_name: string | null;
+  lodge_city: string | null;
+  lodge_state: string | null;
+}
+
 export default function ValidateMember() {
   const { profileId } = useParams<{ profileId: string }>();
 
-  const { data: profile, isLoading, error } = useQuery({
+  const { data: member, isLoading, error } = useQuery({
     queryKey: ['validate-member', profileId],
-    queryFn: async () => {
+    queryFn: async (): Promise<MemberData> => {
       if (!profileId) throw new Error('ID não fornecido');
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, status, degree, cim_number, lodges:lodge_id(name, city, state)')
-        .eq('id', profileId)
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-member?id=${profileId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao validar membro');
+      }
+
+      return response.json();
     },
     enabled: !!profileId,
   });
 
-  const isActive = profile?.status === 'approved';
-  const lodge = (profile as any)?.lodges;
+  const isActive = member?.status === 'approved';
+
+  const lodgeInfo = member?.lodge_name 
+    ? `${member.lodge_name}${member.lodge_city ? ` - ${member.lodge_city}` : ''}${member.lodge_state ? `/${member.lodge_state}` : ''}`
+    : null;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -48,13 +67,13 @@ export default function ValidateMember() {
               <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">Verificando...</p>
             </div>
-          ) : error || !profile ? (
+          ) : error || !member ? (
             <div className="flex flex-col items-center py-8">
               <XCircle className="h-16 w-16 text-destructive" />
               <p className="mt-4 text-lg font-semibold text-destructive">
                 Membro não encontrado
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground mt-2 text-center">
                 O código QR escaneado não corresponde a nenhum membro registrado.
               </p>
             </div>
@@ -79,31 +98,20 @@ export default function ValidateMember() {
               <div className="space-y-4 border-t pt-4">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase">Nome</p>
-                  <p className="font-semibold">{profile.full_name}</p>
+                  <p className="font-semibold">{member.full_name}</p>
                 </div>
 
-                {profile.cim_number && (
+                {member.cim_number && (
                   <div>
                     <p className="text-xs text-muted-foreground uppercase">CIM</p>
-                    <p className="font-semibold">{profile.cim_number}</p>
+                    <p className="font-semibold">{member.cim_number}</p>
                   </div>
                 )}
 
-                {profile.degree && (
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Grau</p>
-                    <p className="font-semibold">{profile.degree}</p>
-                  </div>
-                )}
-
-                {lodge && (
+                {lodgeInfo && (
                   <div>
                     <p className="text-xs text-muted-foreground uppercase">Loja Maçônica</p>
-                    <p className="font-semibold">
-                      {lodge.name}
-                      {lodge.city && ` - ${lodge.city}`}
-                      {lodge.state && `/${lodge.state}`}
-                    </p>
+                    <p className="font-semibold">{lodgeInfo}</p>
                   </div>
                 )}
               </div>
