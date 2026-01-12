@@ -80,6 +80,7 @@ export type Database = {
           cim_number: string | null
           city: string | null
           complement: string | null
+          cpf: string | null
           created_at: string
           full_name: string
           id: string
@@ -102,6 +103,7 @@ export type Database = {
           cim_number?: string | null
           city?: string | null
           complement?: string | null
+          cpf?: string | null
           created_at?: string
           full_name: string
           id?: string
@@ -124,6 +126,7 @@ export type Database = {
           cim_number?: string | null
           city?: string | null
           complement?: string | null
+          cpf?: string | null
           created_at?: string
           full_name?: string
           id?: string
