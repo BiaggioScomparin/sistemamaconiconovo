@@ -20,6 +20,7 @@ const formatCPF = (value: string): string => {
 
 const profileSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
+  email: z.string().email('E-mail inválido'),
   cpf: z.string().min(14, 'CPF inválido').max(14),
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
   initiation_date: z.string().optional(),
@@ -180,6 +181,14 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             <Input {...register('full_name')} id="full_name" />
             {errors.full_name && (
               <p className="text-sm text-destructive">{errors.full_name.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">E-mail *</Label>
+            <Input {...register('email')} id="email" type="email" placeholder="seu@email.com" />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
 

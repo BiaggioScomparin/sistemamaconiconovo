@@ -118,7 +118,8 @@ export default function AdminMembers() {
 
   const getInitialData = (profile: Profile) => ({
     full_name: profile.full_name,
-    cpf: (profile as any).cpf || '',
+    email: profile.email || '',
+    cpf: profile.cpf || '',
     birth_date: profile.birth_date,
     initiation_date: profile.initiation_date || undefined,
     mother_name: profile.mother_name || undefined,

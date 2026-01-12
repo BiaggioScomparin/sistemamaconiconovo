@@ -16,6 +16,7 @@ export interface Profile {
   id: string;
   user_id: string | null;
   full_name: string;
+  email: string | null;
   cpf: string | null;
   birth_date: string;
   initiation_date: string | null;

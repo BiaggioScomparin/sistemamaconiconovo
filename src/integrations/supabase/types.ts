@@ -82,6 +82,7 @@ export type Database = {
           complement: string | null
           cpf: string | null
           created_at: string
+          email: string | null
           full_name: string
           id: string
           initiation_date: string | null
@@ -105,6 +106,7 @@ export type Database = {
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          email?: string | null
           full_name: string
           id?: string
           initiation_date?: string | null
@@ -128,6 +130,7 @@ export type Database = {
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           initiation_date?: string | null
