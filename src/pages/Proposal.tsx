@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,12 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Search, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { validateImageFile, getValidatedFileName, ALLOWED_IMAGE_TYPES } from '@/lib/fileValidation';
 
+// Utility functions
 const formatCPF = (value: string): string => {
   const clean = value.replace(/\D/g, '').slice(0, 11);
   if (clean.length <= 3) return clean;
@@ -25,73 +24,60 @@ const formatCPF = (value: string): string => {
   return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
 };
 
+// Schema
 const proposalSchema = z.object({
-  // Personal data
-  full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
+  full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('E-mail inválido'),
-  cpf: z.string().min(14, 'CPF inválido').max(14),
+  cpf: z.string().min(14, 'CPF inválido'),
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
-  naturality: z.string().max(100).optional(),
-  nationality: z.string().max(100).optional(),
-  
-  // Address
-  cep: z.string().max(9).optional(),
-  street: z.string().max(200).optional(),
-  number: z.string().max(20).optional(),
-  complement: z.string().max(100).optional(),
-  neighborhood: z.string().max(100).optional(),
-  city: z.string().max(100).optional(),
-  state: z.string().max(2).optional(),
-  residence_time: z.string().max(50).optional(),
-  
-  // Contact
-  phone: z.string().max(20).optional(),
-  cell_phone: z.string().max(20).optional(),
-  
-  // Documents
-  identity_number: z.string().max(20).optional(),
-  identity_issuer: z.string().max(20).optional(),
-  voter_title: z.string().max(20).optional(),
-  voter_zone: z.string().max(10).optional(),
-  voter_city: z.string().max(100).optional(),
-  
-  // Family
-  father_name: z.string().max(100).optional(),
-  mother_name: z.string().max(100).optional(),
-  education_level: z.string().max(100).optional(),
-  civil_status: z.string().max(50).optional(),
+  naturality: z.string().optional(),
+  nationality: z.string().optional(),
+  cep: z.string().optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  residence_time: z.string().optional(),
+  phone: z.string().optional(),
+  cell_phone: z.string().optional(),
+  identity_number: z.string().optional(),
+  identity_issuer: z.string().optional(),
+  voter_title: z.string().optional(),
+  voter_zone: z.string().optional(),
+  voter_city: z.string().optional(),
+  father_name: z.string().optional(),
+  mother_name: z.string().optional(),
+  education_level: z.string().optional(),
+  civil_status: z.string().optional(),
   marriage_date: z.string().optional(),
-  spouse_name: z.string().max(100).optional(),
-  spouse_profession: z.string().max(100).optional(),
+  spouse_name: z.string().optional(),
+  spouse_profession: z.string().optional(),
   spouse_retired: z.boolean().optional(),
-  
-  // Professional
-  profession: z.string().max(100).optional(),
+  profession: z.string().optional(),
   is_retired: z.boolean().optional(),
-  employer: z.string().max(200).optional(),
-  employer_phone: z.string().max(20).optional(),
-  work_street: z.string().max(200).optional(),
-  work_neighborhood: z.string().max(100).optional(),
-  work_city: z.string().max(100).optional(),
-  work_state: z.string().max(2).optional(),
-  work_cep: z.string().max(9).optional(),
-  work_time: z.string().max(50).optional(),
-  monthly_income: z.string().max(50).optional(),
-  
-  // Questionnaire
-  opinion_masonry: z.string().max(1000).optional(),
-  expectation_masonry: z.string().max(1000).optional(),
+  employer: z.string().optional(),
+  employer_phone: z.string().optional(),
+  work_street: z.string().optional(),
+  work_neighborhood: z.string().optional(),
+  work_city: z.string().optional(),
+  work_state: z.string().optional(),
+  work_cep: z.string().optional(),
+  work_time: z.string().optional(),
+  monthly_income: z.string().optional(),
+  opinion_masonry: z.string().optional(),
+  expectation_masonry: z.string().optional(),
   informed_financial_values: z.boolean().optional(),
   can_afford_financial: z.boolean().optional(),
   agrees_investigation_fee: z.boolean().optional(),
   aware_no_refund: z.boolean().optional(),
-  opinion_family: z.string().max(1000).optional(),
+  opinion_family: z.string().optional(),
   believes_supreme_being: z.boolean().optional(),
-  opinion_freedom: z.string().max(1000).optional(),
-  opinion_equality: z.string().max(1000).optional(),
-  opinion_fraternity: z.string().max(1000).optional(),
-  
-  sponsor_name: z.string().max(100).optional(),
+  opinion_freedom: z.string().optional(),
+  opinion_equality: z.string().optional(),
+  opinion_fraternity: z.string().optional(),
+  sponsor_name: z.string().optional(),
 });
 
 type ProposalFormData = z.infer<typeof proposalSchema>;
@@ -135,24 +121,27 @@ export default function Proposal() {
     if (type === 'home') setFetchingCEP(true);
     else setFetchingWorkCEP(true);
 
-    const address = await fetchAddressByCEP(cep);
-
-    if (address) {
-      if (type === 'home') {
-        setValue('street', address.logradouro);
-        setValue('neighborhood', address.bairro);
-        setValue('city', address.localidade);
-        setValue('state', address.uf);
-      } else {
-        setValue('work_street', address.logradouro);
-        setValue('work_neighborhood', address.bairro);
-        setValue('work_city', address.localidade);
-        setValue('work_state', address.uf);
+    try {
+      const address = await fetchAddressByCEP(cep);
+      if (address) {
+        if (type === 'home') {
+          setValue('street', address.logradouro);
+          setValue('neighborhood', address.bairro);
+          setValue('city', address.localidade);
+          setValue('state', address.uf);
+        } else {
+          setValue('work_street', address.logradouro);
+          setValue('work_neighborhood', address.bairro);
+          setValue('work_city', address.localidade);
+          setValue('work_state', address.uf);
+        }
       }
+    } catch (error) {
+      console.error('CEP search error:', error);
+    } finally {
+      if (type === 'home') setFetchingCEP(false);
+      else setFetchingWorkCEP(false);
     }
-
-    if (type === 'home') setFetchingCEP(false);
-    else setFetchingWorkCEP(false);
   };
 
   const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'cep' | 'work_cep') => {
@@ -168,7 +157,6 @@ export default function Proposal() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate the file before accepting
       const validation = validateImageFile(file);
       if (!validation.valid) {
         toast({ 
@@ -176,7 +164,6 @@ export default function Proposal() {
           description: validation.error || 'Arquivo inválido', 
           variant: 'destructive' 
         });
-        // Reset the input
         e.target.value = '';
         return;
       }
@@ -206,11 +193,10 @@ export default function Proposal() {
     setLoading(true);
 
     try {
-      let photoUrl = null;
+      let photoUrl: string | null = null;
 
-      // Upload photo if provided (with validation)
+      // Upload photo if provided
       if (photoFile) {
-        // Re-validate the file before upload (double-check)
         const validation = validateImageFile(photoFile);
         if (!validation.valid) {
           throw new Error(validation.error);
@@ -225,7 +211,10 @@ export default function Proposal() {
             upsert: false
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error('Erro ao fazer upload da foto');
+        }
 
         const { data: urlData } = supabase.storage
           .from('photos')
@@ -235,86 +224,99 @@ export default function Proposal() {
       }
 
       // Create profile with status 'proposta'
+      const profileData = {
+        full_name: data.full_name,
+        email: data.email,
+        cpf: data.cpf,
+        birth_date: data.birth_date,
+        naturality: data.naturality || null,
+        nationality: data.nationality || 'Brasileiro',
+        cep: data.cep || null,
+        street: data.street || null,
+        number: data.number || null,
+        complement: data.complement || null,
+        neighborhood: data.neighborhood || null,
+        city: data.city || null,
+        state: data.state || null,
+        residence_time: data.residence_time || null,
+        phone: data.phone || null,
+        cell_phone: data.cell_phone || null,
+        identity_number: data.identity_number || null,
+        identity_issuer: data.identity_issuer || null,
+        voter_title: data.voter_title || null,
+        voter_zone: data.voter_zone || null,
+        voter_city: data.voter_city || null,
+        father_name: data.father_name || null,
+        mother_name: data.mother_name || null,
+        education_level: data.education_level || null,
+        civil_status: data.civil_status || null,
+        marriage_date: data.marriage_date || null,
+        spouse_name: data.spouse_name || null,
+        spouse_profession: data.spouse_profession || null,
+        spouse_retired: data.spouse_retired || false,
+        profession: data.profession || null,
+        is_retired: data.is_retired || false,
+        employer: data.employer || null,
+        employer_phone: data.employer_phone || null,
+        work_street: data.work_street || null,
+        work_neighborhood: data.work_neighborhood || null,
+        work_city: data.work_city || null,
+        work_state: data.work_state || null,
+        work_cep: data.work_cep || null,
+        work_time: data.work_time || null,
+        monthly_income: data.monthly_income || null,
+        opinion_masonry: data.opinion_masonry || null,
+        expectation_masonry: data.expectation_masonry || null,
+        informed_financial_values: data.informed_financial_values || false,
+        can_afford_financial: data.can_afford_financial || false,
+        agrees_investigation_fee: data.agrees_investigation_fee || false,
+        aware_no_refund: data.aware_no_refund || false,
+        opinion_family: data.opinion_family || null,
+        believes_supreme_being: data.believes_supreme_being ?? true,
+        opinion_freedom: data.opinion_freedom || null,
+        opinion_equality: data.opinion_equality || null,
+        opinion_fraternity: data.opinion_fraternity || null,
+        sponsor_name: data.sponsor_name || null,
+        photo_url: photoUrl,
+        status: 'proposta',
+        member_status: 'pending',
+        proposal_date: new Date().toISOString().split('T')[0],
+      };
+
+      console.log('Submitting profile data:', profileData);
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          full_name: data.full_name,
-          email: data.email,
-          cpf: data.cpf,
-          birth_date: data.birth_date,
-          naturality: data.naturality,
-          nationality: data.nationality,
-          cep: data.cep,
-          street: data.street,
-          number: data.number,
-          complement: data.complement,
-          neighborhood: data.neighborhood,
-          city: data.city,
-          state: data.state,
-          residence_time: data.residence_time,
-          phone: data.phone,
-          cell_phone: data.cell_phone,
-          identity_number: data.identity_number,
-          identity_issuer: data.identity_issuer,
-          voter_title: data.voter_title,
-          voter_zone: data.voter_zone,
-          voter_city: data.voter_city,
-          father_name: data.father_name,
-          mother_name: data.mother_name,
-          education_level: data.education_level,
-          civil_status: data.civil_status,
-          marriage_date: data.marriage_date || null,
-          spouse_name: data.spouse_name,
-          spouse_profession: data.spouse_profession,
-          spouse_retired: data.spouse_retired,
-          profession: data.profession,
-          is_retired: data.is_retired,
-          employer: data.employer,
-          employer_phone: data.employer_phone,
-          work_street: data.work_street,
-          work_neighborhood: data.work_neighborhood,
-          work_city: data.work_city,
-          work_state: data.work_state,
-          work_cep: data.work_cep,
-          work_time: data.work_time,
-          monthly_income: data.monthly_income,
-          opinion_masonry: data.opinion_masonry,
-          expectation_masonry: data.expectation_masonry,
-          informed_financial_values: data.informed_financial_values,
-          can_afford_financial: data.can_afford_financial,
-          agrees_investigation_fee: data.agrees_investigation_fee,
-          aware_no_refund: data.aware_no_refund,
-          opinion_family: data.opinion_family,
-          believes_supreme_being: data.believes_supreme_being,
-          opinion_freedom: data.opinion_freedom,
-          opinion_equality: data.opinion_equality,
-          opinion_fraternity: data.opinion_fraternity,
-          sponsor_name: data.sponsor_name,
-          photo_url: photoUrl,
-          status: 'proposta',
-          proposal_date: new Date().toISOString().split('T')[0],
-        })
+        .insert(profileData)
         .select()
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile insert error:', profileError);
+        throw new Error(profileError.message);
+      }
 
-      // Add children
+      console.log('Profile created:', profile);
+
+      // Add children if any
       if (children.length > 0 && profile) {
-        const childrenToInsert = children
-          .filter((c) => c.name && c.birth_date)
-          .map((c) => ({
+        const validChildren = children.filter((c) => c.name && c.birth_date);
+        
+        if (validChildren.length > 0) {
+          const childrenToInsert = validChildren.map((c) => ({
             profile_id: profile.id,
             name: c.name,
             birth_date: c.birth_date,
           }));
 
-        if (childrenToInsert.length > 0) {
           const { error: childrenError } = await supabase
             .from('children')
             .insert(childrenToInsert);
 
-          if (childrenError) throw childrenError;
+          if (childrenError) {
+            console.error('Children insert error:', childrenError);
+            // Don't throw - profile was already created
+          }
         }
       }
 
@@ -327,7 +329,7 @@ export default function Proposal() {
       console.error('Error submitting proposal:', error);
       toast({
         title: 'Erro ao enviar proposta',
-        description: error.message,
+        description: error.message || 'Ocorreu um erro inesperado',
         variant: 'destructive',
       });
     } finally {
@@ -338,26 +340,21 @@ export default function Proposal() {
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md text-center">
-          <Card className="card-elegant">
-            <CardContent className="p-8">
-              <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-              <h1 className="text-2xl font-display text-foreground mb-2">
-                Proposta Enviada!
-              </h1>
-              <p className="text-muted-foreground font-body mb-6">
-                Sua proposta de filiação foi recebida e será analisada pela administração. 
-                Você será contatado para as próximas etapas do processo.
-              </p>
-              <Link
-                to="/"
-                className="text-secondary hover:underline font-medium"
-              >
-                Voltar para a página inicial
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Proposta Enviada!
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Sua proposta de filiação foi recebida e será analisada pela administração. 
+              Você será contatado para as próximas etapas do processo.
+            </p>
+            <Link to="/" className="text-primary hover:underline font-medium">
+              Voltar para a página inicial
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -368,32 +365,31 @@ export default function Proposal() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary mb-4">
-            <span className="font-display text-3xl text-secondary">∴</span>
+            <span className="text-3xl text-primary-foreground">∴</span>
           </div>
-          <h1 className="text-2xl font-display text-foreground">Proposta de Filiação</h1>
-          <p className="text-muted-foreground font-body mt-2">
+          <h1 className="text-2xl font-bold text-foreground">Proposta de Filiação</h1>
+          <p className="text-muted-foreground mt-2">
             Grande Oriente Independente do Brasil (G.´.O.´.I.´.B.´.)
           </p>
         </div>
 
         {/* Introduction */}
-        <Card className="card-elegant mb-8">
+        <Card className="mb-8">
           <CardContent className="p-6">
             <p className="text-muted-foreground text-sm leading-relaxed">
               Passamos às mãos de V.Sa. os Princípios Gerais da Maçonaria para que deles tome conhecimento. 
               Recomendamos refletir profundamente antes de tomar a iniciativa de preencher a presente proposta. 
               Não se deixe dominar pelo entusiasmo, nem pelo espírito de curiosidade, pois o passo que V. Sa. 
-              pretende dar será da mais alta relevância em sua vida. O questionário a ser respondido pelo Senhor 
-              deverá ser preenchido, com clareza, objetividade e absoluto senso de verdade e sinceridade.
+              pretende dar será da mais alta relevância em sua vida.
             </p>
           </CardContent>
         </Card>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {/* Photo Upload */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Foto 3x4</CardTitle>
+              <CardTitle>Foto 3x4</CardTitle>
               <CardDescription>
                 Foto digital com terno preto, gravata preta e camisa social branca (fundo branco)
               </CardDescription>
@@ -414,18 +410,16 @@ export default function Proposal() {
                     onChange={handlePhotoChange}
                     className="max-w-xs"
                   />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    JPG ou PNG. Máximo 5MB.
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">JPG ou PNG. Máximo 5MB.</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Personal Data */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Dados do Candidato</CardTitle>
+              <CardTitle>Dados do Candidato</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -488,7 +482,7 @@ export default function Proposal() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="identity_number">Carteira de Identidade (RG)</Label>
+                  <Label htmlFor="identity_number">RG</Label>
                   <Input {...register('identity_number')} id="identity_number" />
                 </div>
 
@@ -516,9 +510,9 @@ export default function Proposal() {
           </Card>
 
           {/* Address */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Endereço Residencial</CardTitle>
+              <CardTitle>Endereço Residencial</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -582,9 +576,9 @@ export default function Proposal() {
           </Card>
 
           {/* Filiation */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Filiação</CardTitle>
+              <CardTitle>Filiação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -600,35 +594,35 @@ export default function Proposal() {
 
                 <div className="space-y-2">
                   <Label htmlFor="education_level">Grau de Instrução</Label>
-                  <Select onValueChange={(value) => setValue('education_level', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fundamental">Ensino Fundamental</SelectItem>
-                      <SelectItem value="medio">Ensino Médio</SelectItem>
-                      <SelectItem value="superior">Ensino Superior</SelectItem>
-                      <SelectItem value="pos">Pós-Graduação</SelectItem>
-                      <SelectItem value="mestrado">Mestrado</SelectItem>
-                      <SelectItem value="doutorado">Doutorado</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    {...register('education_level')}
+                    id="education_level"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="fundamental">Ensino Fundamental</option>
+                    <option value="medio">Ensino Médio</option>
+                    <option value="superior">Ensino Superior</option>
+                    <option value="pos">Pós-Graduação</option>
+                    <option value="mestrado">Mestrado</option>
+                    <option value="doutorado">Doutorado</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="civil_status">Estado Civil</Label>
-                  <Select onValueChange={(value) => setValue('civil_status', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="solteiro">Solteiro(a)</SelectItem>
-                      <SelectItem value="casado">Casado(a)</SelectItem>
-                      <SelectItem value="divorciado">Divorciado(a)</SelectItem>
-                      <SelectItem value="viuvo">Viúvo(a)</SelectItem>
-                      <SelectItem value="uniao">União Estável</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    {...register('civil_status')}
+                    id="civil_status"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="solteiro">Solteiro(a)</option>
+                    <option value="casado">Casado(a)</option>
+                    <option value="divorciado">Divorciado(a)</option>
+                    <option value="viuvo">Viúvo(a)</option>
+                    <option value="uniao">União Estável</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
@@ -640,19 +634,19 @@ export default function Proposal() {
           </Card>
 
           {/* Family Data */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Dados Familiares</CardTitle>
+              <CardTitle>Dados Familiares</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="spouse_name">Nome da Esposa</Label>
+                  <Label htmlFor="spouse_name">Nome do Cônjuge</Label>
                   <Input {...register('spouse_name')} id="spouse_name" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="spouse_profession">Profissão da Esposa</Label>
+                  <Label htmlFor="spouse_profession">Profissão do Cônjuge</Label>
                   <Input {...register('spouse_profession')} id="spouse_profession" />
                 </div>
 
@@ -661,7 +655,7 @@ export default function Proposal() {
                     id="spouse_retired"
                     onCheckedChange={(checked) => setValue('spouse_retired', checked as boolean)}
                   />
-                  <Label htmlFor="spouse_retired">Esposa é aposentada?</Label>
+                  <Label htmlFor="spouse_retired">Cônjuge é aposentado(a)?</Label>
                 </div>
               </div>
 
@@ -714,9 +708,9 @@ export default function Proposal() {
           </Card>
 
           {/* Professional Info */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Informações Profissionais</CardTitle>
+              <CardTitle>Informações Profissionais</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -804,9 +798,9 @@ export default function Proposal() {
           </Card>
 
           {/* Questionnaire */}
-          <Card className="card-elegant">
+          <Card>
             <CardHeader>
-              <CardTitle className="font-display">Questionário</CardTitle>
+              <CardTitle>Questionário</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -826,7 +820,7 @@ export default function Proposal() {
                     onCheckedChange={(checked) => setValue('informed_financial_values', checked as boolean)}
                   />
                   <Label htmlFor="informed_financial_values" className="text-sm">
-                    Fui informado quanto aos valores dos compromissos financeiros e mensais
+                    Fui informado dos valores financeiros
                   </Label>
                 </div>
 
@@ -836,7 +830,7 @@ export default function Proposal() {
                     onCheckedChange={(checked) => setValue('can_afford_financial', checked as boolean)}
                   />
                   <Label htmlFor="can_afford_financial" className="text-sm">
-                    Estou em condições de assumir tais compromissos sem afetar minha família
+                    Posso assumir os compromissos financeiros
                   </Label>
                 </div>
 
@@ -846,7 +840,7 @@ export default function Proposal() {
                     onCheckedChange={(checked) => setValue('agrees_investigation_fee', checked as boolean)}
                   />
                   <Label htmlFor="agrees_investigation_fee" className="text-sm">
-                    Concordo com a taxa de sindicância (R$ 100,00)
+                    Concordo com a taxa de sindicância
                   </Label>
                 </div>
 
@@ -856,106 +850,79 @@ export default function Proposal() {
                     onCheckedChange={(checked) => setValue('aware_no_refund', checked as boolean)}
                   />
                   <Label htmlFor="aware_no_refund" className="text-sm">
-                    Estou ciente de que em caso de desistência o valor não será reembolsado
+                    Ciente que não há reembolso
                   </Label>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="opinion_family">Qual a sua opinião sobre a família no âmbito social?</Label>
+                <Label htmlFor="opinion_family">Qual sua opinião sobre a família?</Label>
                 <Textarea {...register('opinion_family')} id="opinion_family" rows={3} />
               </div>
 
-              <div className="space-y-2">
-                <Label>Acredita em um Ser Supremo?</Label>
-                <RadioGroup 
-                  defaultValue="true" 
-                  onValueChange={(value) => setValue('believes_supreme_being', value === 'true')}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="true" id="believes_yes" />
-                    <Label htmlFor="believes_yes">Sim</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="false" id="believes_no" />
-                    <Label htmlFor="believes_no">Não</Label>
-                  </div>
-                </RadioGroup>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="believes_supreme_being"
+                  defaultChecked={true}
+                  onCheckedChange={(checked) => setValue('believes_supreme_being', checked as boolean)}
+                />
+                <Label htmlFor="believes_supreme_being">Acredito em um Ser Supremo</Label>
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">O que pensa sobre os 3 tópicos citados abaixo?</Label>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="opinion_freedom">Liberdade</Label>
-                  <Textarea {...register('opinion_freedom')} id="opinion_freedom" rows={3} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="opinion_equality">Igualdade</Label>
-                  <Textarea {...register('opinion_equality')} id="opinion_equality" rows={3} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="opinion_fraternity">Fraternidade</Label>
-                  <Textarea {...register('opinion_fraternity')} id="opinion_fraternity" rows={3} />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="opinion_freedom">Qual sua opinião sobre Liberdade?</Label>
+                <Textarea {...register('opinion_freedom')} id="opinion_freedom" rows={2} />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Declaration */}
-          <Card className="card-elegant">
-            <CardHeader>
-              <CardTitle className="font-display">Declaração</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Desejo de minha livre e espontânea vontade fazer parte deste Grupo de estudos Maçônicos e palestras 
-                e para tanto, coloco-me à disposição para prestar outras informações que se fizerem necessárias, 
-                tendo consciência de que para minha efetiva aprovação, serei submetido ao processo de investigação 
-                social que ateste a idoneidade necessária a todos os membros desta Loja.
-              </p>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Declaro também que O Grande Oriente Independente do Brasil (G.´.O.´.I.´.B.´.) me certificou das 
-                despesas inerentes ao ingresso, tais como os materiais, vestimenta, livros, confraternização e 
-                que estes encargos não comprometerão meu bem-estar e de minha família.
-              </p>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                Declaro estar em pleno gozo das minhas capacidades físicas e mentais e estar ciente de minhas 
-                responsabilidades com este grupo de estudos Maçônicos. Declaro também estar ciente de que minha 
-                filiação deverá ocorrer dentro de um prazo máximo de 60 (sessenta dias) a contar da assinatura desta.
-              </p>
 
               <div className="space-y-2">
-                <Label htmlFor="sponsor_name">Nome do Mestre Maçom responsável pela sindicância (Padrinho)</Label>
+                <Label htmlFor="opinion_equality">Qual sua opinião sobre Igualdade?</Label>
+                <Textarea {...register('opinion_equality')} id="opinion_equality" rows={2} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="opinion_fraternity">Qual sua opinião sobre Fraternidade?</Label>
+                <Textarea {...register('opinion_fraternity')} id="opinion_fraternity" rows={2} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sponsor_name">Nome do Padrinho/Indicante</Label>
                 <Input {...register('sponsor_name')} id="sponsor_name" />
               </div>
             </CardContent>
           </Card>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-display py-6 text-lg"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Enviando Proposta...
-              </>
-            ) : (
-              'Enviar Proposta de Filiação'
-            )}
-          </Button>
-        </form>
+          {/* Declaration */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Declaração</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-sm mb-4">
+                Declaro que todas as informações prestadas são verdadeiras e me responsabilizo 
+                pela veracidade dos dados informados. Estou ciente de que qualquer informação 
+                falsa poderá resultar no indeferimento da minha proposta ou exclusão futura.
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Back link */}
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-secondary hover:underline font-medium">
-            Voltar para a página inicial
-          </Link>
-        </div>
+          {/* Submit */}
+          <div className="flex flex-col items-center gap-4">
+            <Button type="submit" size="lg" disabled={loading} className="w-full md:w-auto">
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar Proposta'
+              )}
+            </Button>
+            
+            <Link to="/" className="text-muted-foreground hover:text-foreground text-sm">
+              Voltar para a página inicial
+            </Link>
+          </div>
+        </form>
       </div>
     </div>
   );
