@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import QRCode from 'qrcode';
 
 interface MemberCardData {
   id: string;
@@ -35,6 +36,23 @@ const formatDate = (dateStr: string | null) => {
     return '-';
   }
 };
+
+// Generate QR code as data URL
+async function generateQRCodeDataURL(text: string): Promise<string> {
+  try {
+    return await QRCode.toDataURL(text, {
+      width: 100,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    });
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    return '';
+  }
+}
 
 export async function generateBatchCardsPDF(
   members: MemberCardData[],
@@ -73,6 +91,9 @@ export async function generateBatchCardsPDF(
         : '-';
       const validationUrl = `${baseUrl}/validar/${member.id}`;
       const isActive = member.member_status === 'active';
+
+      // Generate QR code for this member
+      const qrCodeDataUrl = await generateQRCodeDataURL(validationUrl);
 
       // Create front card HTML
       const frontHTML = `
@@ -130,7 +151,7 @@ export async function generateBatchCardsPDF(
         </div>
       `;
 
-      // Create back card HTML
+      // Create back card HTML with real QR code
       const backHTML = `
         <div style="width: 428px; height: 270px; border-radius: 12px; overflow: hidden; position: relative; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);">
           <div style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: 0.1;">
@@ -179,10 +200,10 @@ export async function generateBatchCardsPDF(
             <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: auto;">
               <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="background: white; padding: 4px; border-radius: 4px;">
-                  <svg viewBox="0 0 50 50" width="50" height="50">
-                    <rect fill="white" width="50" height="50"/>
-                    <text x="25" y="30" text-anchor="middle" font-size="6" fill="#666">QR</text>
-                  </svg>
+                  ${qrCodeDataUrl 
+                    ? `<img src="${qrCodeDataUrl}" style="width: 50px; height: 50px;" />`
+                    : `<div style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #666;">QR</div>`
+                  }
                 </div>
                 <div>
                   <p style="font-size: 6px; color: rgba(255,255,255,0.5); text-transform: uppercase; margin: 0;">Validação</p>
@@ -204,7 +225,7 @@ export async function generateBatchCardsPDF(
 
       // Render front
       container.innerHTML = frontHTML;
-      await new Promise(r => setTimeout(r, 100)); // Wait for images to load
+      await new Promise(r => setTimeout(r, 150)); // Wait for images to load
       
       const frontElement = container.firstElementChild as HTMLElement;
       const canvasFront = await html2canvas(frontElement, {
@@ -223,7 +244,7 @@ export async function generateBatchCardsPDF(
 
       // Render back
       container.innerHTML = backHTML;
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 150));
       
       const backElement = container.firstElementChild as HTMLElement;
       const canvasBack = await html2canvas(backElement, {

@@ -271,22 +271,26 @@ export default function AdminMembers() {
     setGenerationProgress({ current: 0, total: selectedProfiles.length });
 
     try {
-      const membersData = selectedProfiles.map(p => ({
-        id: p.id,
-        full_name: p.full_name,
-        photo_url: p.photo_url,
-        cim_number: p.cim_number,
-        degree: (p as any).degree,
-        cargo: (p as any).cargo,
-        initiation_date: p.initiation_date,
-        birth_date: p.birth_date,
-        member_status: (p as any).member_status || 'active',
-        lodges: p.lodge ? {
-          name: p.lodge.name,
-          city: p.lodge.city,
-          state: p.lodge.state,
-        } : null,
-      }));
+      const membersData = selectedProfiles.map(p => {
+        // The hook returns 'lodges' from the join, not 'lodge'
+        const lodgeData = (p as any).lodges || p.lodge;
+        return {
+          id: p.id,
+          full_name: p.full_name,
+          photo_url: p.photo_url,
+          cim_number: p.cim_number,
+          degree: (p as any).degree,
+          cargo: (p as any).cargo,
+          initiation_date: p.initiation_date,
+          birth_date: p.birth_date,
+          member_status: (p as any).member_status || 'active',
+          lodges: lodgeData ? {
+            name: lodgeData.name,
+            city: lodgeData.city,
+            state: lodgeData.state,
+          } : null,
+        };
+      });
 
       await generateBatchCardsPDF(
         membersData,
