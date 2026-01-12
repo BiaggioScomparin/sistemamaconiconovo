@@ -60,7 +60,10 @@ export function MemberCard({ profile }: MemberCardProps) {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     try {
-      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR });
+      // Parse date string as local date to avoid timezone issues
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return format(date, 'dd/MM/yyyy', { locale: ptBR });
     } catch {
       return '-';
     }
