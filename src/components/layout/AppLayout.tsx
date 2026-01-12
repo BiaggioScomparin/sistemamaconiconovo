@@ -70,8 +70,19 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Fixed Admin Button - Top Right */}
+      {isAdmin && !isAdminRoute && (
+        <Link
+          to="/dashboard"
+          className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-bold shadow-lg transition-colors"
+        >
+          <Crown size={20} />
+          ADMIN
+        </Link>
+      )}
+
       {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground h-16 flex items-center justify-between px-4 shadow-lg">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-primary text-primary-foreground h-16 flex items-center justify-between px-4 shadow-lg">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 hover:bg-navy-light rounded-lg transition-colors"
@@ -79,7 +90,17 @@ export function AppLayout({ children }: AppLayoutProps) {
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         <h1 className="font-display text-lg">Sistema Maçônico</h1>
-        <div className="w-10" />
+        {isAdmin && !isAdminRoute ? (
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold"
+          >
+            <Crown size={16} />
+            ADMIN
+          </Link>
+        ) : (
+          <div className="w-10" />
+        )}
       </header>
 
       {/* Sidebar */}
