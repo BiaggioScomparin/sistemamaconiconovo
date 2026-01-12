@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil, Trash2, Key } from 'lucide-react';
+import { Users, Pencil, Trash2, Key, CreditCard, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { generateBatchCardsPDF } from '@/lib/generateBatchCards';
+import logoGoib from '@/assets/logo-goib.png';
 
 export default function AdminMembers() {
   const { user, loading, isAdmin } = useAuth();
@@ -45,6 +48,13 @@ export default function AdminMembers() {
   const [saving, setSaving] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  
+  // Batch card generation state
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [cardDialogOpen, setCardDialogOpen] = useState(false);
+  const [generatingCards, setGeneratingCards] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -228,6 +238,77 @@ export default function AdminMembers() {
     state: profile.state || undefined,
   });
 
+  // Card selection handlers
+  const toggleMemberSelection = (profileId: string) => {
+    const newSelection = new Set(selectedMembers);
+    if (newSelection.has(profileId)) {
+      newSelection.delete(profileId);
+    } else {
+      newSelection.add(profileId);
+    }
+    setSelectedMembers(newSelection);
+  };
+
+  const toggleAllMembers = () => {
+    if (!profiles) return;
+    if (selectedMembers.size === profiles.length) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(profiles.map(p => p.id)));
+    }
+  };
+
+  const handleGenerateCards = async () => {
+    if (selectedMembers.size === 0) {
+      toast({ title: 'Selecione membros', description: 'Selecione ao menos um membro para gerar as carteirinhas.', variant: 'destructive' });
+      return;
+    }
+
+    const selectedProfiles = profiles?.filter(p => selectedMembers.has(p.id)) || [];
+    if (selectedProfiles.length === 0) return;
+
+    setGeneratingCards(true);
+    setGenerationProgress({ current: 0, total: selectedProfiles.length });
+
+    try {
+      const membersData = selectedProfiles.map(p => ({
+        id: p.id,
+        full_name: p.full_name,
+        photo_url: p.photo_url,
+        cim_number: p.cim_number,
+        degree: (p as any).degree,
+        cargo: (p as any).cargo,
+        initiation_date: p.initiation_date,
+        birth_date: p.birth_date,
+        member_status: (p as any).member_status || 'active',
+        lodges: p.lodge ? {
+          name: p.lodge.name,
+          city: p.lodge.city,
+          state: p.lodge.state,
+        } : null,
+      }));
+
+      await generateBatchCardsPDF(
+        membersData,
+        logoGoib,
+        window.location.origin,
+        (current, total) => setGenerationProgress({ current, total })
+      );
+
+      toast({ 
+        title: 'Carteirinhas geradas!', 
+        description: `PDF com ${selectedProfiles.length} carteirinha(s) foi baixado com sucesso.` 
+      });
+      setCardDialogOpen(false);
+      setSelectedMembers(new Set());
+    } catch (error: any) {
+      console.error('Error generating cards:', error);
+      toast({ title: 'Erro', description: 'Erro ao gerar as carteirinhas. Tente novamente.', variant: 'destructive' });
+    } finally {
+      setGeneratingCards(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -238,10 +319,25 @@ export default function AdminMembers() {
 
         <Card className="card-elegant">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-display">
-              <Users className="h-5 w-5 text-secondary" />
-              Membros Ativos ({profiles?.length || 0})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 font-display">
+                <Users className="h-5 w-5 text-secondary" />
+                Membros Ativos ({profiles?.length || 0})
+              </CardTitle>
+              <Button
+                onClick={() => setCardDialogOpen(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                Gerar Carteirinhas
+                {selectedMembers.size > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs">
+                    {selectedMembers.size}
+                  </span>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -253,6 +349,13 @@ export default function AdminMembers() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={profiles && profiles.length > 0 && selectedMembers.size === profiles.length}
+                          onCheckedChange={toggleAllMembers}
+                          aria-label="Selecionar todos"
+                        />
+                      </TableHead>
                       <TableHead>Membro</TableHead>
                       <TableHead>CPF</TableHead>
                       <TableHead>CIM</TableHead>
@@ -266,6 +369,13 @@ export default function AdminMembers() {
                   <TableBody>
                     {profiles?.map((profile) => (
                       <TableRow key={profile.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedMembers.has(profile.id)}
+                            onCheckedChange={() => toggleMemberSelection(profile.id)}
+                            aria-label={`Selecionar ${profile.full_name}`}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar>
@@ -448,6 +558,111 @@ export default function AdminMembers() {
               disabled={resettingPassword || newPassword.length < 6}
             >
               {resettingPassword ? 'Alterando...' : 'Alterar Senha'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Cards Dialog */}
+      <Dialog open={cardDialogOpen} onOpenChange={(open) => !generatingCards && setCardDialogOpen(open)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Gerar Carteirinhas em PDF
+            </DialogTitle>
+            <DialogDescription>
+              Selecione os membros para gerar as carteirinhas em um único arquivo PDF.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {selectedMembers.size === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  Nenhum membro selecionado. Selecione os membros na tabela usando as caixas de seleção.
+                </p>
+                <Button variant="outline" onClick={() => setCardDialogOpen(false)}>
+                  Voltar e selecionar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="font-medium mb-2">
+                    {selectedMembers.size} membro(s) selecionado(s):
+                  </p>
+                  <div className="max-h-48 overflow-y-auto space-y-2">
+                    {profiles?.filter(p => selectedMembers.has(p.id)).map(profile => (
+                      <div key={profile.id} className="flex items-center gap-3 bg-background p-2 rounded">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={profile.photo_url || undefined} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                            {profile.full_name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{profile.full_name}</p>
+                          <p className="text-xs text-muted-foreground">CIM: {profile.cim_number || '-'}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleMemberSelection(profile.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {generatingCards && (
+                  <div className="bg-secondary/10 p-4 rounded-lg">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-secondary" />
+                      <p className="font-medium">Gerando carteirinhas...</p>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-secondary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${generationProgress.total > 0 ? (generationProgress.current / generationProgress.total) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {generationProgress.current} de {generationProgress.total} carteirinha(s)
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCardDialogOpen(false)}
+              disabled={generatingCards}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleGenerateCards}
+              disabled={generatingCards || selectedMembers.size === 0}
+              className="bg-secondary hover:bg-gold-dark text-secondary-foreground"
+            >
+              {generatingCards ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Gerar PDF ({selectedMembers.size})
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
