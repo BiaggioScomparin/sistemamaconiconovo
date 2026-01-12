@@ -46,16 +46,40 @@ interface LodgeData {
   state?: string | null;
 }
 
+interface EditalConfig {
+  oriente: string;
+  endereco: string;
+  sessaoHora: string;
+  rito: string;
+  lodgeNumber: string;
+}
+
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
   return date.toLocaleDateString('pt-BR');
 };
 
+const loadImage = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
 export async function generateEditalPDF(
   profile: ProfileData,
   children: Child[] = [],
-  lodge?: LodgeData | null
+  lodge?: LodgeData | null,
+  config?: EditalConfig
 ): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -67,143 +91,244 @@ export async function generateEditalPDF(
   const margin = 15;
   let y = 15;
 
-  // Header
-  doc.setFontSize(12);
+  // Colors
+  const primaryBlue = [25, 84, 123];
+  const darkBlue = [15, 50, 80];
+  const gold = [180, 150, 50];
+
+  // Try to load the logo
+  const logoUrl = `${window.location.origin}/images/logo-goib-edital.png`;
+  const logoData = await loadImage(logoUrl);
+
+  // Header with modern design
+  doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+  doc.rect(0, 0, pageWidth, 45, 'F');
+
+  // Add logo if loaded
+  if (logoData) {
+    doc.addImage(logoData, 'PNG', margin, 5, 35, 35);
+  }
+
+  // Header text
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('GOIB', margin, y);
-  doc.text('GRANDE ORIENTE INDEPENDENTE DO BRASIL', pageWidth / 2, y, { align: 'center' });
+  doc.text('GRANDE ORIENTE INDEPENDENTE DO BRASIL', pageWidth / 2 + 10, 15, { align: 'center' });
   
-  y += 8;
   doc.setFontSize(14);
-  doc.text('A∴R∴L∴S∴ LEALDADE E JUSTIÇA', pageWidth / 2, y, { align: 'center' });
+  doc.text(`A∴R∴L∴S∴ ${lodge?.name || 'LEALDADE E JUSTIÇA'}`, pageWidth / 2 + 10, 24, { align: 'center' });
   
-  y += 6;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Nº _________`, pageWidth - margin - 30, y);
+  const lodgeNumber = config?.lodgeNumber ? `Nº ${config.lodgeNumber}` : '';
+  if (lodgeNumber) {
+    doc.text(lodgeNumber, pageWidth / 2 + 10, 32, { align: 'center' });
+  }
   
-  y += 6;
-  doc.text(`Oriente de ${lodge?.city || '_________'} ${lodge?.state || '__'}`, margin, y);
+  const orienteText = `Oriente de ${lodge?.city || config?.oriente || '_________'}`;
+  doc.text(orienteText, pageWidth / 2 + 10, 38, { align: 'center' });
+
+  y = 52;
+
+  // Lodge info bar
+  doc.setFillColor(240, 240, 240);
+  doc.rect(margin, y, pageWidth - margin * 2, 14, 'F');
   
-  y += 5;
-  doc.text(`Endereço ___________________________________`, margin, y);
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(9);
+  const endereco = config?.endereco || 'Endereço não informado';
+  doc.text(`Endereço: ${endereco}`, margin + 3, y + 5);
+  doc.text(`Sessões às: ${config?.sessaoHora || '20:00'} hrs`, margin + 3, y + 10);
+  doc.text(`Rito: ${config?.rito || 'REEA'}`, pageWidth - margin - 40, y + 5);
+
+  y += 20;
+
+  // EDITAL Title with decoration
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(margin, y, pageWidth - margin * 2, 0.5, 'F');
   
-  y += 5;
-  doc.text(`Sessões às _______ E.A.A.`, margin, y);
-  doc.text(`Rito _________________`, pageWidth - margin - 50, y);
-  
-  // EDITAL Title
-  y += 10;
-  doc.setFontSize(16);
+  y += 8;
+  doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.text('EDITAL', pageWidth / 2, y, { align: 'center' });
   
+  y += 5;
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(margin, y, pageWidth - margin * 2, 0.5, 'F');
+
   y += 8;
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('TORNAMOS PÚBLICO, que o Candidato abaixo assinado requereu nesta Loja', margin, y);
+  doc.setTextColor(60, 60, 60);
+  doc.text('TORNAMOS PÚBLICO, que o Candidato abaixo assinado requereu nesta Loja:', margin, y);
   
   y += 6;
+  doc.setFont('helvetica', 'bold');
   doc.text('☒ ADMISSÃO     ☐ REGULARIZAÇÃO', margin, y);
-  
-  // Photo placeholder
-  const photoX = pageWidth - margin - 25;
+
+  // Photo box (right side)
+  const photoX = pageWidth - margin - 30;
   const photoY = y + 5;
-  doc.rect(photoX, photoY, 25, 30);
-  doc.setFontSize(7);
-  doc.text('FOTO 3x4', photoX + 12.5, photoY + 15, { align: 'center' });
+  const photoWidth = 30;
+  const photoHeight = 40;
   
-  // Data table
+  // Photo border
+  doc.setDrawColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+  doc.setLineWidth(0.5);
+  doc.rect(photoX - 1, photoY - 1, photoWidth + 2, photoHeight + 2);
+  
+  // Try to add candidate photo
+  if (profile.photo_url) {
+    const photoData = await loadImage(profile.photo_url);
+    if (photoData) {
+      doc.addImage(photoData, 'JPEG', photoX, photoY, photoWidth, photoHeight);
+    } else {
+      doc.setFillColor(245, 245, 245);
+      doc.rect(photoX, photoY, photoWidth, photoHeight, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('FOTO 3x4', photoX + photoWidth / 2, photoY + photoHeight / 2, { align: 'center' });
+    }
+  } else {
+    doc.setFillColor(245, 245, 245);
+    doc.rect(photoX, photoY, photoWidth, photoHeight, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('FOTO 3x4', photoX + photoWidth / 2, photoY + photoHeight / 2, { align: 'center' });
+  }
+
   y += 12;
-  const labelWidth = 35;
-  const valueWidth = 70;
-  const col2LabelX = margin + labelWidth + valueWidth + 5;
-  const lineHeight = 5;
+  const contentWidth = pageWidth - margin * 2 - photoWidth - 10;
   
-  const drawRow = (label1: string, value1: string, label2?: string, value2?: string) => {
+  // Section helper function
+  const drawSection = (title: string) => {
+    y += 6;
+    doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+    doc.rect(margin, y, contentWidth, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, margin + 3, y + 4.5);
+    y += 9;
+    doc.setTextColor(60, 60, 60);
+  };
+
+  // Data row helper
+  const drawRow = (label: string, value: string, label2?: string, value2?: string) => {
+    const col1Width = 30;
+    const val1Width = 60;
+    const col2X = margin + col1Width + val1Width + 5;
+    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text(label1, margin, y);
+    doc.text(label, margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(value1 || '', margin + labelWidth, y);
+    doc.text(value || '-', margin + col1Width, y);
     
-    if (label2 !== undefined) {
+    if (label2 !== undefined && (margin + col1Width + val1Width + 30) < photoX) {
       doc.setFont('helvetica', 'bold');
-      doc.text(label2, col2LabelX, y);
+      doc.text(label2, col2X, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(value2 || '', col2LabelX + 25, y);
+      doc.text(value2 || '-', col2X + 20, y);
     }
-    y += lineHeight;
+    y += 5;
   };
+
+  // Personal Data Section
+  drawSection('DADOS PESSOAIS');
   
-  drawRow('Nome:', profile.full_name);
-  drawRow('Nasc.:', formatDate(profile.birth_date), 'Natural de:', profile.naturality || '');
-  drawRow('Nacionalidade:', profile.nationality || 'Brasileiro', 'UF:', profile.state || '');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+  doc.text(profile.full_name.toUpperCase(), margin, y);
+  y += 6;
+  doc.setTextColor(60, 60, 60);
+
+  drawRow('Nascimento:', formatDate(profile.birth_date), 'Natural:', profile.naturality || '');
+  drawRow('Nacionalidade:', profile.nationality || 'Brasileiro(a)', 'UF:', profile.state || '');
   
   const fullAddress = [profile.street, profile.number, profile.neighborhood].filter(Boolean).join(', ');
-  drawRow('Resid. atual:', fullAddress);
-  drawRow('Cidade:', `${profile.city || ''} ${profile.state || ''}`, 'CEP:', profile.cep || '');
-  drawRow('Tempo:', profile.residence_time || '');
+  drawRow('Endereço:', fullAddress.substring(0, 50) + (fullAddress.length > 50 ? '...' : ''));
+  drawRow('Cidade:', `${profile.city || ''} - ${profile.state || ''}`, 'CEP:', profile.cep || '');
+  drawRow('Tempo res.:', profile.residence_time || '');
+
+  // Documents section after photo area
+  y = photoY + photoHeight + 5;
   
-  drawRow('Titulo de Eleitor:', profile.voter_title || '', 'Zona:', profile.voter_zone || '');
+  drawSection('DOCUMENTOS');
+  drawRow('Título Eleitor:', profile.voter_title || '', 'Zona:', profile.voter_zone || '');
   drawRow('CPF:', profile.cpf || '');
-  drawRow('Identidade:', `${profile.identity_number || ''} ${profile.identity_issuer || ''}`);
-  
-  y += 2;
+  drawRow('Identidade:', `${profile.identity_number || ''} - ${profile.identity_issuer || ''}`);
+
+  // Family section
+  drawSection('FILIAÇÃO E FAMÍLIA');
   drawRow('Pai:', profile.father_name || '');
   drawRow('Mãe:', profile.mother_name || '');
-  drawRow('Grau instrução:', profile.education_level || '');
-  drawRow('Est. civil:', profile.civil_status || '');
+  drawRow('Instrução:', profile.education_level || '', 'Estado civil:', profile.civil_status || '');
   
   if (profile.spouse_name) {
-    drawRow('Nome cônjuge:', profile.spouse_name, 'Data nasc.:', formatDate(profile.marriage_date));
+    drawRow('Cônjuge:', profile.spouse_name, 'Casamento:', formatDate(profile.marriage_date));
   }
-  
+
   // Children
-  y += 2;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Filhos:', margin, y);
-  y += lineHeight;
-  
-  doc.setFont('helvetica', 'normal');
   if (children.length > 0) {
-    children.slice(0, 5).forEach((child) => {
-      doc.text(`${child.name}`, margin + 10, y);
-      doc.text(`Data nasc.: ${formatDate(child.birth_date)}`, col2LabelX, y);
-      y += lineHeight;
+    y += 2;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('Filhos:', margin, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    children.slice(0, 4).forEach((child) => {
+      doc.text(`• ${child.name} - Nasc: ${formatDate(child.birth_date)}`, margin + 5, y);
+      y += 4;
     });
-  } else {
-    y += lineHeight * 2;
   }
-  
-  // Professional data
-  y += 2;
+
+  // Professional section
+  drawSection('DADOS PROFISSIONAIS');
   drawRow('Profissão:', profile.profession || '', 'Aposentado:', profile.is_retired ? 'SIM' : 'NÃO');
   drawRow('Empregador:', profile.employer || '');
   
   const workAddress = [profile.work_street, profile.work_neighborhood].filter(Boolean).join(', ');
-  drawRow('End. trabalho:', workAddress);
-  drawRow('Cidade:', `${profile.work_city || ''} ${profile.work_state || ''}`, 'CEP:', profile.work_cep || '');
-  drawRow('Tempo:', profile.work_time || '');
-  
+  if (workAddress) {
+    drawRow('End. trabalho:', workAddress.substring(0, 50));
+    drawRow('Cidade trab.:', `${profile.work_city || ''} - ${profile.work_state || ''}`, 'CEP:', profile.work_cep || '');
+  }
+  drawRow('Tempo trab.:', profile.work_time || '');
+
   // Footer notice
   y += 10;
+  doc.setFillColor(255, 248, 220);
+  doc.rect(margin, y, pageWidth - margin * 2, 10, 'F');
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
-  doc.text('É dever de todo Obreiro dar ciência à Loja de qualquer fato que possa impedir a admissão do candidato.', pageWidth / 2, y, { align: 'center' });
-  
+  doc.setTextColor(100, 80, 20);
+  doc.text('É dever de todo Obreiro dar ciência à Loja de qualquer fato que possa impedir a admissão do candidato.', pageWidth / 2, y + 6, { align: 'center' });
+
   // Signatures
-  y += 15;
+  y += 20;
+  doc.setTextColor(60, 60, 60);
   doc.setFont('helvetica', 'normal');
-  const sigLineWidth = 60;
+  const sigLineWidth = 65;
   
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.3);
   doc.line(margin, y, margin + sigLineWidth, y);
   doc.line(pageWidth - margin - sigLineWidth, y, pageWidth - margin, y);
   
   y += 5;
+  doc.setFontSize(9);
   doc.text('Candidato', margin + sigLineWidth / 2, y, { align: 'center' });
   doc.text('Secretário', pageWidth - margin - sigLineWidth / 2, y, { align: 'center' });
-  
+
+  // Footer with date
+  y += 15;
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  doc.text(`Documento gerado em ${today}`, pageWidth / 2, y, { align: 'center' });
+
   // Save PDF
   doc.save(`Edital_${profile.full_name.replace(/\s+/g, '_')}.pdf`);
 }

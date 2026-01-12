@@ -29,6 +29,7 @@ import {
   Printer
 } from 'lucide-react';
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
+import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
 
 type ProfileStatus = 'proposta' | 'sindicancia' | 'reprovado' | 'membro' | 'pending' | 'approved' | 'rejected';
 
@@ -115,6 +116,8 @@ export default function AdminProposals() {
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('proposta');
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
+  const [editalDialogOpen, setEditalDialogOpen] = useState(false);
+  const [editalProfile, setEditalProfile] = useState<Profile | null>(null);
 
   if (loading) {
     return (
@@ -297,27 +300,9 @@ export default function AdminProposals() {
           </Button>
           <Button
             variant="outline"
-            onClick={async () => {
-              setGeneratingPDF(profile.id);
-              try {
-                // Fetch children for this profile
-                const { data: children } = await supabase
-                  .from('children')
-                  .select('name, birth_date')
-                  .eq('profile_id', profile.id);
-                
-                await generateEditalPDF(
-                  profile,
-                  children || [],
-                  profile.lodges
-                );
-                toast({ title: 'PDF gerado com sucesso!' });
-              } catch (error: any) {
-                console.error('Error generating PDF:', error);
-                toast({ title: 'Erro ao gerar PDF', description: error.message, variant: 'destructive' });
-              } finally {
-                setGeneratingPDF(null);
-              }
+            onClick={() => {
+              setEditalProfile(profile);
+              setEditalDialogOpen(true);
             }}
             disabled={generatingPDF === profile.id}
           >
@@ -553,6 +538,42 @@ export default function AdminProposals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edital Form Dialog */}
+      <EditalFormDialog
+        open={editalDialogOpen}
+        onOpenChange={setEditalDialogOpen}
+        profileName={editalProfile?.full_name || ''}
+        lodgeName={editalProfile?.lodges?.name}
+        lodgeCity={editalProfile?.lodges?.city}
+        lodgeState={editalProfile?.lodges?.state}
+        isGenerating={!!generatingPDF}
+        onGenerate={async (formData: EditalFormData) => {
+          if (!editalProfile) return;
+          setGeneratingPDF(editalProfile.id);
+          try {
+            // Fetch children for this profile
+            const { data: children } = await supabase
+              .from('children')
+              .select('name, birth_date')
+              .eq('profile_id', editalProfile.id);
+            
+            await generateEditalPDF(
+              editalProfile,
+              children || [],
+              editalProfile.lodges,
+              formData
+            );
+            toast({ title: 'PDF gerado com sucesso!' });
+            setEditalDialogOpen(false);
+          } catch (error: any) {
+            console.error('Error generating PDF:', error);
+            toast({ title: 'Erro ao gerar PDF', description: error.message, variant: 'destructive' });
+          } finally {
+            setGeneratingPDF(null);
+          }
+        }}
+      />
     </AppLayout>
   );
 }
