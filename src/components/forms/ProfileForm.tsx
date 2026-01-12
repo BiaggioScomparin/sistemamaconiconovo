@@ -23,12 +23,15 @@ const profileSchema = z.object({
   email: z.string().email('E-mail inválido'),
   cpf: z.string().min(14, 'CPF inválido').max(14),
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
-  initiation_date: z.string().optional(),
   mother_name: z.string().max(100).optional(),
   spouse_name: z.string().max(100).optional(),
+  // Masonry fields
+  initiation_date: z.string().optional(),
   cim_number: z.string().max(20).optional(),
   degree: z.string().optional(),
+  cargo: z.string().max(100).optional(),
   lodge_id: z.string().optional(),
+  // Address fields
   cep: z.string().max(9).optional(),
   street: z.string().max(200).optional(),
   number: z.string().max(20).optional(),
@@ -217,38 +220,6 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="initiation_date">Data de Iniciação</Label>
-            <Input {...register('initiation_date')} id="initiation_date" type="date" />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cim_number">Número do CIM</Label>
-            <Input {...register('cim_number')} id="cim_number" disabled={!showAdminFields} />
-            {!showAdminFields && (
-              <p className="text-xs text-muted-foreground">Gerado automaticamente</p>
-            )}
-          </div>
-
-          {showAdminFields && (
-            <div className="space-y-2">
-              <Label htmlFor="degree">Grau</Label>
-              <Select
-                onValueChange={(value) => setValue('degree', value)}
-                defaultValue={initialData?.degree || 'Aprendiz'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o grau" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Aprendiz">Aprendiz</SelectItem>
-                  <SelectItem value="Companheiro">Companheiro</SelectItem>
-                  <SelectItem value="Mestre">Mestre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
             <Label htmlFor="mother_name">Nome da Mãe</Label>
             <Input {...register('mother_name')} id="mother_name" />
           </div>
@@ -257,7 +228,16 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             <Label htmlFor="spouse_name">Nome da Esposa</Label>
             <Input {...register('spouse_name')} id="spouse_name" />
           </div>
+        </div>
+      </div>
 
+      {/* Masonry info */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-display text-foreground border-b border-border pb-2">
+          Informações Maçônicas
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="lodge_id">Loja Maçônica</Label>
             <Select
@@ -276,6 +256,45 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="initiation_date">Data de Iniciação</Label>
+            <Input {...register('initiation_date')} id="initiation_date" type="date" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cim_number">Número do CIM</Label>
+            <Input {...register('cim_number')} id="cim_number" disabled={!showAdminFields} />
+            {!showAdminFields && (
+              <p className="text-xs text-muted-foreground">Gerado automaticamente</p>
+            )}
+          </div>
+
+          {showAdminFields && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="degree">Grau</Label>
+                <Select
+                  onValueChange={(value) => setValue('degree', value)}
+                  defaultValue={initialData?.degree || 'Aprendiz'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o grau" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Aprendiz">Aprendiz</SelectItem>
+                    <SelectItem value="Companheiro">Companheiro</SelectItem>
+                    <SelectItem value="Mestre">Mestre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cargo">Cargo</Label>
+                <Input {...register('cargo')} id="cargo" placeholder="Ex: Venerável Mestre, Secretário..." />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
