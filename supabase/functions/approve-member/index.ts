@@ -67,7 +67,7 @@ serve(async (req) => {
       );
     }
 
-    const { profileId, email } = await req.json();
+    const { profileId, email, lodgeId } = await req.json();
 
     if (!profileId || !email) {
       return new Response(
@@ -119,13 +119,19 @@ serve(async (req) => {
       console.error('Role error:', roleInsertError);
     }
 
-    // Update profile with user_id and status
+    // Update profile with user_id, status, and optionally lodge_id
+    const updateData: Record<string, unknown> = {
+      user_id: userData.user.id,
+      status: 'membro'
+    };
+    
+    if (lodgeId) {
+      updateData.lodge_id = lodgeId;
+    }
+
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        user_id: userData.user.id,
-        status: 'approved'
-      })
+      .update(updateData)
       .eq('id', profileId);
 
     if (profileError) {
