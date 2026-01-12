@@ -152,13 +152,37 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
           member_status: 'active',
         };
 
-        const { error } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
-          .insert(profileData);
+          .insert(profileData)
+          .select()
+          .single();
 
         if (error) throw error;
 
-        results[i] = { ...result, status: 'success', message: 'Importado com sucesso' };
+        // Create user access if email and cpf are valid
+        if (profile && member.email && member.cpf) {
+          const cpfDigits = member.cpf.replace(/\D/g, '');
+          if (cpfDigits.length === 11) {
+            try {
+              await supabase.functions.invoke('create-member-access', {
+                body: {
+                  profileId: profile.id,
+                  email: member.email,
+                  cpf: member.cpf,
+                },
+              });
+              results[i] = { ...result, status: 'success', message: 'Importado com acesso ao sistema' };
+            } catch (accessError: any) {
+              console.error('Error creating access for', member.full_name, accessError);
+              results[i] = { ...result, status: 'success', message: 'Importado (sem acesso: ' + accessError.message + ')' };
+            }
+          } else {
+            results[i] = { ...result, status: 'success', message: 'Importado (CPF inválido para acesso)' };
+          }
+        } else {
+          results[i] = { ...result, status: 'success', message: 'Importado (sem email/cpf para acesso)' };
+        }
         successCount++;
       } catch (error: any) {
         results[i] = { 
