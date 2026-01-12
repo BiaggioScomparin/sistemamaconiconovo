@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 
 const formatCPF = (value: string): string => {
@@ -49,6 +50,7 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
   const [lodges, setLodges] = useState<Lodge[]>([]);
   const [selectedLodgeId, setSelectedLodgeId] = useState<string>('');
   const [selectedDegree, setSelectedDegree] = useState<string>('Aprendiz');
+  const [createAccess, setCreateAccess] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -84,6 +86,7 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
     setLoading(true);
 
     try {
+      // First create the profile with status approved (triggers CIM generation)
       const profileData = {
         full_name: data.full_name,
         email: data.email,
@@ -98,20 +101,54 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
         member_status: 'active',
       };
 
-      const { error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .insert(profileData);
+        .insert(profileData)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      toast({
-        title: 'Membro criado!',
-        description: `${data.full_name} foi adicionado com sucesso.`,
-      });
+      // If createAccess is enabled, create auth user
+      if (createAccess && profile) {
+        const { data: accessResult, error: accessError } = await supabase.functions.invoke('create-member-access', {
+          body: {
+            profileId: profile.id,
+            email: data.email,
+            cpf: data.cpf,
+          },
+        });
+
+        if (accessError) {
+          console.error('Error creating access:', accessError);
+          toast({
+            title: 'Membro criado',
+            description: `${data.full_name} foi adicionado, mas houve erro ao criar acesso: ${accessError.message}`,
+            variant: 'default',
+          });
+        } else if (accessResult?.error) {
+          toast({
+            title: 'Membro criado',
+            description: `${data.full_name} foi adicionado, mas houve erro ao criar acesso: ${accessResult.error}`,
+            variant: 'default',
+          });
+        } else {
+          toast({
+            title: 'Membro criado com acesso!',
+            description: `${data.full_name} foi adicionado. Senha: CPF sem pontos (${data.cpf.replace(/\D/g, '')})`,
+          });
+        }
+      } else {
+        toast({
+          title: 'Membro criado!',
+          description: `${data.full_name} foi adicionado com sucesso.`,
+        });
+      }
 
       reset();
       setSelectedLodgeId('');
       setSelectedDegree('Aprendiz');
+      setCreateAccess(true);
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
     } catch (error: any) {
@@ -220,6 +257,17 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
               <Label htmlFor="cell_phone">Celular</Label>
               <Input {...register('cell_phone')} id="cell_phone" placeholder="(00) 00000-0000" />
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2 border-t">
+            <Checkbox 
+              id="create-access" 
+              checked={createAccess}
+              onCheckedChange={(checked) => setCreateAccess(checked === true)}
+            />
+            <Label htmlFor="create-access" className="text-sm font-normal cursor-pointer">
+              Criar acesso ao sistema (senha = CPF sem pontos)
+            </Label>
           </div>
 
           <DialogFooter>
