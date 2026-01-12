@@ -88,6 +88,7 @@ export type Database = {
           complement: string | null
           cpf: string | null
           created_at: string
+          degree: string | null
           education_level: string | null
           email: string | null
           employer: string | null
@@ -152,6 +153,7 @@ export type Database = {
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          degree?: string | null
           education_level?: string | null
           email?: string | null
           employer?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          degree?: string | null
           education_level?: string | null
           email?: string | null
           employer?: string | null
@@ -302,6 +305,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_cim_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

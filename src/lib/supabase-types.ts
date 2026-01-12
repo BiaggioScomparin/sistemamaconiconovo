@@ -12,6 +12,8 @@ export interface Lodge {
   updated_at: string;
 }
 
+export type MasonicDegree = 'Aprendiz' | 'Companheiro' | 'Mestre';
+
 export interface Profile {
   id: string;
   user_id: string | null;
@@ -33,6 +35,7 @@ export interface Profile {
   city: string | null;
   state: string | null;
   status: ProfileStatus;
+  degree: MasonicDegree | null;
   created_at: string;
   updated_at: string;
   lodge?: Lodge;
