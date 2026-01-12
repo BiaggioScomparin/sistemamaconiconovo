@@ -9,6 +9,7 @@ export interface UserPermissions {
   can_view_attendance: boolean;
   can_register_attendance: boolean;
   can_edit_profile: boolean;
+  can_view_daily_attendances: boolean;
   created_at: string;
   updated_at: string;
 }
