@@ -119,35 +119,33 @@ export function AppLayout({ children }: AppLayoutProps) {
             <p className="text-sm text-sidebar-foreground/70 text-center mt-1 font-body">
               {isAdminRoute && isAdmin ? 'Administração' : 'Área do Membro'}
             </p>
-          </div>
-
-          {/* Admin Button for admins viewing member area */}
-          {isAdmin && !isAdminRoute && (
-            <div className="px-4 pt-4">
+            
+            {/* Admin Access Button */}
+            {isAdmin && !isAdminRoute && (
               <Link
                 to="/dashboard"
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-medium transition-colors"
+                className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-bold shadow-md transition-all hover:shadow-lg"
               >
-                <Crown size={20} />
-                ADMIN
+                <Crown size={18} />
+                Acessar Admin
               </Link>
-            </div>
-          )}
-
-          {/* Back to Member Area button for admins in admin routes */}
-          {isAdmin && isAdminRoute && (
-            <div className="px-4 pt-4">
+            )}
+            
+            {/* Back to Member Area */}
+            {isAdmin && isAdminRoute && (
               <Link
                 to="/member/profile"
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary font-medium transition-colors"
+                className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground font-medium transition-colors"
               >
-                <User size={20} />
+                <User size={18} />
                 Área do Membro
               </Link>
-            </div>
-          )}
+            )}
+          </div>
+
+
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
