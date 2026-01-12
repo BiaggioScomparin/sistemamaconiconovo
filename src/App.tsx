@@ -14,8 +14,10 @@ import AdminLodges from "./pages/admin/Lodges";
 import AdminMembers from "./pages/admin/Members";
 import AdminApprovals from "./pages/admin/Approvals";
 import AdminProposals from "./pages/admin/Proposals";
+import AdminAttendances from "./pages/admin/Attendances";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
+import MemberAttendance from "./pages/member/Attendance";
 import ValidateMember from "./pages/ValidateMember";
 import NotFound from "./pages/NotFound";
 
@@ -40,9 +42,11 @@ const App = () => (
             <Route path="/admin/members" element={<AdminMembers />} />
             <Route path="/admin/approvals" element={<AdminApprovals />} />
             <Route path="/admin/proposals" element={<AdminProposals />} />
+            <Route path="/admin/attendances" element={<AdminAttendances />} />
             {/* Member routes */}
             <Route path="/member/card" element={<MemberCard />} />
             <Route path="/member/profile" element={<MemberProfile />} />
+            <Route path="/member/attendance" element={<MemberAttendance />} />
             {/* Public validation route */}
             <Route path="/validar/:profileId" element={<ValidateMember />} />
             {/* Catch-all */}
