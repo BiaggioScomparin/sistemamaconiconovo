@@ -75,76 +75,196 @@ export type Database = {
       }
       profiles: {
         Row: {
+          agrees_investigation_fee: boolean | null
+          aware_no_refund: boolean | null
+          believes_supreme_being: boolean | null
           birth_date: string
+          can_afford_financial: boolean | null
+          cell_phone: string | null
           cep: string | null
           cim_number: string | null
           city: string | null
+          civil_status: string | null
           complement: string | null
           cpf: string | null
           created_at: string
+          education_level: string | null
           email: string | null
+          employer: string | null
+          employer_phone: string | null
+          expectation_masonry: string | null
+          father_name: string | null
           full_name: string
           id: string
+          identity_issuer: string | null
+          identity_number: string | null
+          informed_financial_values: boolean | null
           initiation_date: string | null
+          is_retired: boolean | null
           lodge_id: string | null
+          marriage_date: string | null
+          monthly_income: string | null
           mother_name: string | null
+          nationality: string | null
+          naturality: string | null
           neighborhood: string | null
           number: string | null
+          opinion_equality: string | null
+          opinion_family: string | null
+          opinion_fraternity: string | null
+          opinion_freedom: string | null
+          opinion_masonry: string | null
+          phone: string | null
           photo_url: string | null
+          profession: string | null
+          proposal_date: string | null
+          residence_time: string | null
+          sponsor_name: string | null
           spouse_name: string | null
+          spouse_profession: string | null
+          spouse_retired: boolean | null
           state: string | null
           status: string
           street: string | null
           updated_at: string
           user_id: string | null
+          voter_city: string | null
+          voter_title: string | null
+          voter_zone: string | null
+          work_cep: string | null
+          work_city: string | null
+          work_neighborhood: string | null
+          work_state: string | null
+          work_street: string | null
+          work_time: string | null
         }
         Insert: {
+          agrees_investigation_fee?: boolean | null
+          aware_no_refund?: boolean | null
+          believes_supreme_being?: boolean | null
           birth_date: string
+          can_afford_financial?: boolean | null
+          cell_phone?: string | null
           cep?: string | null
           cim_number?: string | null
           city?: string | null
+          civil_status?: string | null
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          education_level?: string | null
           email?: string | null
+          employer?: string | null
+          employer_phone?: string | null
+          expectation_masonry?: string | null
+          father_name?: string | null
           full_name: string
           id?: string
+          identity_issuer?: string | null
+          identity_number?: string | null
+          informed_financial_values?: boolean | null
           initiation_date?: string | null
+          is_retired?: boolean | null
           lodge_id?: string | null
+          marriage_date?: string | null
+          monthly_income?: string | null
           mother_name?: string | null
+          nationality?: string | null
+          naturality?: string | null
           neighborhood?: string | null
           number?: string | null
+          opinion_equality?: string | null
+          opinion_family?: string | null
+          opinion_fraternity?: string | null
+          opinion_freedom?: string | null
+          opinion_masonry?: string | null
+          phone?: string | null
           photo_url?: string | null
+          profession?: string | null
+          proposal_date?: string | null
+          residence_time?: string | null
+          sponsor_name?: string | null
           spouse_name?: string | null
+          spouse_profession?: string | null
+          spouse_retired?: boolean | null
           state?: string | null
           status?: string
           street?: string | null
           updated_at?: string
           user_id?: string | null
+          voter_city?: string | null
+          voter_title?: string | null
+          voter_zone?: string | null
+          work_cep?: string | null
+          work_city?: string | null
+          work_neighborhood?: string | null
+          work_state?: string | null
+          work_street?: string | null
+          work_time?: string | null
         }
         Update: {
+          agrees_investigation_fee?: boolean | null
+          aware_no_refund?: boolean | null
+          believes_supreme_being?: boolean | null
           birth_date?: string
+          can_afford_financial?: boolean | null
+          cell_phone?: string | null
           cep?: string | null
           cim_number?: string | null
           city?: string | null
+          civil_status?: string | null
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          education_level?: string | null
           email?: string | null
+          employer?: string | null
+          employer_phone?: string | null
+          expectation_masonry?: string | null
+          father_name?: string | null
           full_name?: string
           id?: string
+          identity_issuer?: string | null
+          identity_number?: string | null
+          informed_financial_values?: boolean | null
           initiation_date?: string | null
+          is_retired?: boolean | null
           lodge_id?: string | null
+          marriage_date?: string | null
+          monthly_income?: string | null
           mother_name?: string | null
+          nationality?: string | null
+          naturality?: string | null
           neighborhood?: string | null
           number?: string | null
+          opinion_equality?: string | null
+          opinion_family?: string | null
+          opinion_fraternity?: string | null
+          opinion_freedom?: string | null
+          opinion_masonry?: string | null
+          phone?: string | null
           photo_url?: string | null
+          profession?: string | null
+          proposal_date?: string | null
+          residence_time?: string | null
+          sponsor_name?: string | null
           spouse_name?: string | null
+          spouse_profession?: string | null
+          spouse_retired?: boolean | null
           state?: string | null
           status?: string
           street?: string | null
           updated_at?: string
           user_id?: string | null
+          voter_city?: string | null
+          voter_title?: string | null
+          voter_zone?: string | null
+          work_cep?: string | null
+          work_city?: string | null
+          work_neighborhood?: string | null
+          work_state?: string | null
+          work_street?: string | null
+          work_time?: string | null
         }
         Relationships: [
           {
