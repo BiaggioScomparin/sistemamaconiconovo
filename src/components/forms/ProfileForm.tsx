@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLodges } from '@/hooks/useLodges';
 import { fetchAddressByCEP, formatCEP } from '@/lib/viacep';
+import { validateImageFile, ALLOWED_IMAGE_TYPES } from '@/lib/fileValidation';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, Plus, Trash2 } from 'lucide-react';
 
 const formatCPF = (value: string): string => {
@@ -60,6 +62,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ initialData, initialChildren = [], onSubmit, loading, photoUrl, hidePhoto, showAdminFields }: ProfileFormProps) {
+  const { toast } = useToast();
   const { data: lodges } = useLodges();
   const [fetchingCEP, setFetchingCEP] = useState(false);
   const [children, setChildren] = useState<Child[]>(initialChildren);
@@ -118,6 +121,19 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate the file before accepting
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        toast({ 
+          title: 'Erro', 
+          description: validation.error || 'Arquivo inválido', 
+          variant: 'destructive' 
+        });
+        // Reset the input
+        e.target.value = '';
+        return;
+      }
+      
       setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -162,12 +178,12 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             <div>
               <Input
                 type="file"
-                accept="image/*"
+                accept={ALLOWED_IMAGE_TYPES.join(',')}
                 onChange={handlePhotoChange}
                 className="max-w-xs"
               />
               <p className="text-sm text-muted-foreground mt-2">
-                JPG, PNG ou GIF. Máximo 5MB.
+                JPG, PNG ou WEBP. Máximo 5MB.
               </p>
             </div>
           </div>
