@@ -1,18 +1,29 @@
+import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { usePendingProfiles, useUpdateProfileStatus } from '@/hooks/useAdmin';
+import { usePendingProfiles } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { UserCheck, Check, X, Calendar, MapPin, Building2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { UserCheck, Check, X, Calendar, MapPin, Building2, CreditCard } from 'lucide-react';
+import { Profile } from '@/lib/supabase-types';
 
 export default function AdminApprovals() {
   const { user, loading, isAdmin } = useAuth();
   const { data: profiles, isLoading } = usePendingProfiles();
-  const updateStatus = useUpdateProfileStatus();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [approving, setApproving] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [email, setEmail] = useState('');
 
   if (loading) {
     return (
@@ -26,12 +37,53 @@ export default function AdminApprovals() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleApprove = async (profileId: string) => {
+  const handleApproveClick = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setEmail('');
+  };
+
+  const handleApprove = async () => {
+    if (!selectedProfile || !email) return;
+
+    const cpf = (selectedProfile as any).cpf;
+    if (!cpf) {
+      toast({ 
+        title: 'Erro', 
+        description: 'CPF é obrigatório para aprovação.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    setApproving(true);
     try {
-      await updateStatus.mutateAsync({ profileId, status: 'approved' });
-      toast({ title: 'Membro aprovado com sucesso!' });
+      const response = await supabase.functions.invoke('approve-member', {
+        body: {
+          profileId: selectedProfile.id,
+          email,
+          cpf,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast({ 
+        title: 'Membro aprovado com sucesso!',
+        description: `Senha provisória: CPF sem pontuação (${cpf.replace(/\D/g, '')})`,
+      });
+      setSelectedProfile(null);
+      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
     } catch (error: any) {
+      console.error('Approval error:', error);
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -39,8 +91,15 @@ export default function AdminApprovals() {
     if (!confirm('Tem certeza que deseja rejeitar este cadastro?')) return;
     
     try {
-      await updateStatus.mutateAsync({ profileId, status: 'rejected' });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: 'rejected' })
+        .eq('id', profileId);
+
+      if (error) throw error;
+
       toast({ title: 'Cadastro rejeitado.' });
+      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
@@ -85,6 +144,12 @@ export default function AdminApprovals() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {(profile as any).cpf && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CreditCard className="h-4 w-4" />
+                        <span>CPF: {(profile as any).cpf}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>Nascimento: {formatDate(profile.birth_date)}</span>
@@ -121,8 +186,9 @@ export default function AdminApprovals() {
                   
                   <div className="flex gap-3">
                     <Button
-                      onClick={() => handleApprove(profile.id)}
+                      onClick={() => handleApproveClick(profile)}
                       className="bg-green-600 hover:bg-green-700 text-white"
+                      disabled={!(profile as any).cpf}
                     >
                       <Check className="mr-2 h-4 w-4" />
                       Aprovar
@@ -134,6 +200,11 @@ export default function AdminApprovals() {
                       <X className="mr-2 h-4 w-4" />
                       Rejeitar
                     </Button>
+                    {!(profile as any).cpf && (
+                      <span className="text-sm text-amber-600 flex items-center">
+                        CPF não informado - necessário para aprovação
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -141,6 +212,64 @@ export default function AdminApprovals() {
           </div>
         )}
       </div>
+
+      {/* Approval Dialog */}
+      <Dialog open={!!selectedProfile} onOpenChange={(open) => !open && setSelectedProfile(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Aprovar Membro</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input value={selectedProfile?.full_name || ''} disabled />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>CPF</Label>
+              <Input value={(selectedProfile as any)?.cpf || ''} disabled />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail para login *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@exemplo.com"
+              />
+              <p className="text-sm text-muted-foreground">
+                O e-mail será usado para login do membro
+              </p>
+            </div>
+
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm font-medium">Senha provisória:</p>
+              <p className="text-lg font-mono">
+                {(selectedProfile as any)?.cpf?.replace(/\D/g, '') || ''}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O membro deve alterar a senha no primeiro acesso
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedProfile(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={!email || approving}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {approving ? 'Aprovando...' : 'Confirmar Aprovação'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

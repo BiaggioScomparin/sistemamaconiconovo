@@ -9,10 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useLodges } from '@/hooks/useLodges';
 import { fetchAddressByCEP, formatCEP } from '@/lib/viacep';
 import { Loader2, Search, Plus, Trash2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+
+const formatCPF = (value: string): string => {
+  const clean = value.replace(/\D/g, '').slice(0, 11);
+  if (clean.length <= 3) return clean;
+  if (clean.length <= 6) return `${clean.slice(0, 3)}.${clean.slice(3)}`;
+  if (clean.length <= 9) return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6)}`;
+  return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
+};
 
 const profileSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
+  cpf: z.string().min(14, 'CPF inválido').max(14),
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
   initiation_date: z.string().optional(),
   mother_name: z.string().max(100).optional(),
@@ -42,9 +50,10 @@ interface ProfileFormProps {
   onSubmit: (data: ProfileFormData, children: Child[], photoFile: File | null) => Promise<void>;
   loading?: boolean;
   photoUrl?: string | null;
+  hidePhoto?: boolean;
 }
 
-export function ProfileForm({ initialData, initialChildren = [], onSubmit, loading, photoUrl }: ProfileFormProps) {
+export function ProfileForm({ initialData, initialChildren = [], onSubmit, loading, photoUrl, hidePhoto }: ProfileFormProps) {
   const { data: lodges } = useLodges();
   const [fetchingCEP, setFetchingCEP] = useState(false);
   const [children, setChildren] = useState<Child[]>(initialChildren);
@@ -70,6 +79,10 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
     }
   }, [photoUrl]);
 
+  useEffect(() => {
+    setChildren(initialChildren);
+  }, [initialChildren]);
+
   const handleCEPSearch = async () => {
     if (!cepValue) return;
 
@@ -89,6 +102,11 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCEP(e.target.value);
     setValue('cep', formatted);
+  };
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    setValue('cpf', formatted);
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,29 +142,31 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
       {/* Photo upload */}
-      <div className="space-y-4">
-        <Label className="text-lg font-display">Foto</Label>
-        <div className="flex items-center gap-6">
-          <div className="w-32 h-32 rounded-lg border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted">
-            {photoPreview ? (
-              <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-muted-foreground text-sm text-center p-2">Sem foto</span>
-            )}
-          </div>
-          <div>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              className="max-w-xs"
-            />
-            <p className="text-sm text-muted-foreground mt-2">
-              JPG, PNG ou GIF. Máximo 5MB.
-            </p>
+      {!hidePhoto && (
+        <div className="space-y-4">
+          <Label className="text-lg font-display">Foto</Label>
+          <div className="flex items-center gap-6">
+            <div className="w-32 h-32 rounded-lg border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted">
+              {photoPreview ? (
+                <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-muted-foreground text-sm text-center p-2">Sem foto</span>
+              )}
+            </div>
+            <div>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="max-w-xs"
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                JPG, PNG ou GIF. Máximo 5MB.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Personal info */}
       <div className="space-y-4">
@@ -160,6 +180,20 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             <Input {...register('full_name')} id="full_name" />
             {errors.full_name && (
               <p className="text-sm text-destructive">{errors.full_name.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cpf">CPF *</Label>
+            <Input
+              {...register('cpf')}
+              id="cpf"
+              onChange={handleCPFChange}
+              placeholder="000.000.000-00"
+              maxLength={14}
+            />
+            {errors.cpf && (
+              <p className="text-sm text-destructive">{errors.cpf.message}</p>
             )}
           </div>
 

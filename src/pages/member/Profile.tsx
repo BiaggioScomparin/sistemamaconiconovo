@@ -96,6 +96,7 @@ export default function MemberProfile() {
 
   const initialData = profile ? {
     full_name: profile.full_name,
+    cpf: profile.cpf || '',
     birth_date: profile.birth_date,
     initiation_date: profile.initiation_date || undefined,
     mother_name: profile.mother_name || undefined,
