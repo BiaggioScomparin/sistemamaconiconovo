@@ -16,6 +16,7 @@ import AdminApprovals from "./pages/admin/Approvals";
 import AdminProposals from "./pages/admin/Proposals";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
+import ValidateMember from "./pages/ValidateMember";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,8 @@ const App = () => (
             {/* Member routes */}
             <Route path="/member/card" element={<MemberCard />} />
             <Route path="/member/profile" element={<MemberProfile />} />
+            {/* Public validation route */}
+            <Route path="/validar/:profileId" element={<ValidateMember />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
