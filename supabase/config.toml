@@ -1,1 +1,7 @@
 project_id = "fqvvfslqeajyrgyvjwpp"
+
+[functions.approve-member]
+verify_jwt = false
+
+[functions.create-admin]
+verify_jwt = false
