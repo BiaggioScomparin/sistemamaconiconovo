@@ -24,6 +24,7 @@ interface MemberWithPermissions {
     can_view_attendance: boolean;
     can_register_attendance: boolean;
     can_edit_profile: boolean;
+    can_view_daily_attendances: boolean;
   } | null;
 }
 
@@ -32,6 +33,7 @@ const permissionLabels = {
   can_view_attendance: 'Ver Frequência',
   can_register_attendance: 'Registrar Frequência',
   can_edit_profile: 'Editar Perfil',
+  can_view_daily_attendances: 'Ver Presenças do Dia',
 };
 
 const Permissions = () => {
@@ -113,6 +115,7 @@ const Permissions = () => {
         can_view_attendance: enableAll,
         can_register_attendance: enableAll,
         can_edit_profile: enableAll,
+        can_view_daily_attendances: enableAll,
       };
 
       if (permissionId) {
@@ -177,7 +180,8 @@ const Permissions = () => {
       permissions.can_view_card &&
       permissions.can_view_attendance &&
       permissions.can_register_attendance &&
-      permissions.can_edit_profile
+      permissions.can_edit_profile &&
+      permissions.can_view_daily_attendances
     );
   };
 
@@ -222,6 +226,7 @@ const Permissions = () => {
                       <TableHead className="text-center">Ver Frequência</TableHead>
                       <TableHead className="text-center">Registrar Frequência</TableHead>
                       <TableHead className="text-center">Editar Perfil</TableHead>
+                      <TableHead className="text-center">Ver Presenças do Dia</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -293,6 +298,19 @@ const Permissions = () => {
                                   permissions?.id ?? null,
                                   'can_edit_profile',
                                   permissions?.can_edit_profile ?? false
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Switch
+                              checked={permissions?.can_view_daily_attendances ?? false}
+                              onCheckedChange={() =>
+                                handleTogglePermission(
+                                  member.id,
+                                  permissions?.id ?? null,
+                                  'can_view_daily_attendances',
+                                  permissions?.can_view_daily_attendances ?? false
                                 )
                               }
                             />

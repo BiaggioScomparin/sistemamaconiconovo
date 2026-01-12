@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock, Lock } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Lock, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ const Attendance = () => {
   const [lodgeId, setLodgeId] = useState('');
   const [sessionType, setSessionType] = useState<'magna' | 'ordinaria'>('ordinaria');
   const [sessionDate, setSessionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dailyViewDate, setDailyViewDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: attendances, refetch: refetchAttendances } = useQuery({
@@ -45,6 +46,22 @@ const Attendance = () => {
       return data;
     },
     enabled: !!profile?.id,
+  });
+
+  // Query for daily attendances (when user has permission)
+  const { data: dailyAttendances } = useQuery({
+    queryKey: ['daily-attendances', dailyViewDate, permissions?.can_view_daily_attendances],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('attendances')
+        .select('*, profiles:profile_id(full_name, cim_number), lodges:lodge_id(name)')
+        .eq('session_date', dailyViewDate)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!permissions?.can_view_daily_attendances,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -301,6 +318,88 @@ const Attendance = () => {
           </Card>
           )}
         </div>
+
+        {/* Daily Attendances View - for users with permission */}
+        {permissions?.can_view_daily_attendances && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Presenças do Dia
+              </CardTitle>
+              <CardDescription>
+                Visualize todos os membros que registraram presença em uma data específica
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="daily_view_date">Selecionar Data</Label>
+                  <Input
+                    id="daily_view_date"
+                    type="date"
+                    value={dailyViewDate}
+                    onChange={(e) => setDailyViewDate(e.target.value)}
+                    className="w-[200px]"
+                  />
+                </div>
+              </div>
+
+              {dailyAttendances && dailyAttendances.length > 0 ? (
+                <div className="max-h-[400px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Membro</TableHead>
+                        <TableHead>CIM</TableHead>
+                        <TableHead>Loja</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailyAttendances.map((attendance: any) => (
+                        <TableRow key={attendance.id}>
+                          <TableCell className="font-medium">
+                            {attendance.profiles?.full_name}
+                          </TableCell>
+                          <TableCell>
+                            {attendance.profiles?.cim_number || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {attendance.lodges?.name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={attendance.session_type === 'magna' ? 'default' : 'secondary'}>
+                              {attendance.session_type === 'magna' ? 'Magna' : 'Ordinária'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {attendance.confirmed ? (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="text-sm">Confirmado</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-yellow-600">
+                                <Clock className="h-4 w-4" />
+                                <span className="text-sm">Pendente</span>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhuma presença registrada para esta data.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );
