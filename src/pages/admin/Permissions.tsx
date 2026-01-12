@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Search, User } from 'lucide-react';
+import { Shield, Search, User, Crown } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 interface MemberWithPermissions {
@@ -18,6 +17,7 @@ interface MemberWithPermissions {
   cim_number: string | null;
   email: string | null;
   member_status: string;
+  user_id: string | null;
   user_permissions: {
     id: string;
     can_view_card: boolean;
@@ -26,6 +26,7 @@ interface MemberWithPermissions {
     can_edit_profile: boolean;
     can_view_daily_attendances: boolean;
   } | null;
+  is_admin?: boolean;
 }
 
 const permissionLabels = {
@@ -44,14 +45,29 @@ const Permissions = () => {
   const { data: members, isLoading } = useQuery({
     queryKey: ['members-with-permissions'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get profiles with permissions
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, cim_number, email, member_status, user_permissions(*)')
+        .select('id, full_name, cim_number, email, member_status, user_id, user_permissions(*)')
         .not('user_id', 'is', null)
         .order('full_name', { ascending: true });
 
-      if (error) throw error;
-      return data as MemberWithPermissions[];
+      if (profilesError) throw profilesError;
+
+      // Get admin roles
+      const { data: adminRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('role', 'admin');
+
+      if (rolesError) throw rolesError;
+
+      const adminUserIds = new Set(adminRoles?.map(r => r.user_id) || []);
+
+      return profiles?.map(p => ({
+        ...p,
+        is_admin: p.user_id ? adminUserIds.has(p.user_id) : false
+      })) as MemberWithPermissions[];
     },
   });
 
@@ -149,6 +165,44 @@ const Permissions = () => {
     },
   });
 
+  const toggleAdminMutation = useMutation({
+    mutationFn: async ({ userId, makeAdmin }: { userId: string; makeAdmin: boolean }) => {
+      if (makeAdmin) {
+        // Add admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: 'admin' });
+
+        if (error) throw error;
+      } else {
+        // Remove admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'admin');
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, { makeAdmin }) => {
+      queryClient.invalidateQueries({ queryKey: ['members-with-permissions'] });
+      toast({
+        title: makeAdmin ? 'Admin liberado' : 'Admin removido',
+        description: makeAdmin 
+          ? 'O usuário agora tem acesso às funcionalidades de administrador.' 
+          : 'O acesso de administrador foi removido.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleTogglePermission = (
     profileId: string,
     permissionId: string | null,
@@ -161,6 +215,18 @@ const Permissions = () => {
       field,
       value: !currentValue,
     });
+  };
+
+  const handleToggleAdmin = (userId: string | null, isCurrentlyAdmin: boolean) => {
+    if (!userId) {
+      toast({
+        title: 'Erro',
+        description: 'Este membro não possui conta de usuário vinculada.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toggleAdminMutation.mutate({ userId, makeAdmin: !isCurrentlyAdmin });
   };
 
   const handleToggleAll = (profileId: string, permissionId: string | null, enableAll: boolean) => {
@@ -222,6 +288,7 @@ const Permissions = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[200px]">Membro</TableHead>
+                      <TableHead className="text-center">Admin</TableHead>
                       <TableHead className="text-center">Ver Carteirinha</TableHead>
                       <TableHead className="text-center">Ver Frequência</TableHead>
                       <TableHead className="text-center">Registrar Frequência</TableHead>
@@ -240,15 +307,33 @@ const Permissions = () => {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="h-5 w-5 text-primary" />
+                                {member.is_admin ? (
+                                  <Crown className="h-5 w-5 text-yellow-500" />
+                                ) : (
+                                  <User className="h-5 w-5 text-primary" />
+                                )}
                               </div>
                               <div>
-                                <p className="font-medium">{member.full_name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{member.full_name}</p>
+                                  {member.is_admin && (
+                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                      Admin
+                                    </Badge>
+                                  )}
+                                </div>
                                 <p className="text-sm text-muted-foreground">
                                   CIM: {member.cim_number || 'N/A'}
                                 </p>
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Switch
+                              checked={member.is_admin ?? false}
+                              onCheckedChange={() => handleToggleAdmin(member.user_id, member.is_admin ?? false)}
+                              className="data-[state=checked]:bg-yellow-500"
+                            />
                           </TableCell>
                           <TableCell className="text-center">
                             <Switch

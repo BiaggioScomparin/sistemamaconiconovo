@@ -14,7 +14,8 @@ import {
   User,
   FileText,
   Calendar,
-  Shield
+  Shield,
+  Crown
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Check if current route is an admin route
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
 
   const handleSignOut = async () => {
     await signOut();
@@ -62,7 +66,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     return links;
   };
 
-  const links = isAdmin ? adminLinks : getMemberLinks();
+  const links = isAdminRoute && isAdmin ? adminLinks : getMemberLinks();
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,9 +96,37 @@ export function AppLayout({ children }: AppLayoutProps) {
               Sistema Maçônico
             </h1>
             <p className="text-sm text-sidebar-foreground/70 text-center mt-1 font-body">
-              {isAdmin ? 'Administração' : 'Área do Membro'}
+              {isAdminRoute && isAdmin ? 'Administração' : 'Área do Membro'}
             </p>
           </div>
+
+          {/* Admin Button for admins viewing member area */}
+          {isAdmin && !isAdminRoute && (
+            <div className="px-4 pt-4">
+              <Link
+                to="/dashboard"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-medium transition-colors"
+              >
+                <Crown size={20} />
+                ADMIN
+              </Link>
+            </div>
+          )}
+
+          {/* Back to Member Area button for admins in admin routes */}
+          {isAdmin && isAdminRoute && (
+            <div className="px-4 pt-4">
+              <Link
+                to="/member/profile"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary font-medium transition-colors"
+              >
+                <User size={20} />
+                Área do Membro
+              </Link>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
