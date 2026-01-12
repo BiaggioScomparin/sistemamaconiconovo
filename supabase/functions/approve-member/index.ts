@@ -28,17 +28,18 @@ serve(async (req) => {
       { global: { headers: { authorization: authHeader } } }
     );
 
-    // Verify the JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    // Verify the user is authenticated
+    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !authUser) {
+      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = authUser.id;
 
     // Create admin client for role check and user creation
     const supabaseAdmin = createClient(
@@ -61,6 +62,7 @@ serve(async (req) => {
       .single();
 
     if (roleError || !roleData) {
+      console.error('Role check error:', roleError);
       return new Response(
         JSON.stringify({ error: 'Forbidden: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -87,10 +89,11 @@ serve(async (req) => {
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: securePassword,
-      email_confirm: false, // Send confirmation email with password reset link
+      email_confirm: true, // Auto-confirm email
     });
 
     if (createError) {
+      console.error('Create user error:', createError);
       return new Response(
         JSON.stringify({ error: createError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -116,7 +119,7 @@ serve(async (req) => {
       });
 
     if (roleInsertError) {
-      console.error('Role error:', roleInsertError);
+      console.error('Role insert error:', roleInsertError);
     }
 
     // Update profile with user_id, status, and optionally lodge_id
@@ -135,6 +138,7 @@ serve(async (req) => {
       .eq('id', profileId);
 
     if (profileError) {
+      console.error('Profile update error:', profileError);
       return new Response(
         JSON.stringify({ error: profileError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -151,6 +155,7 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
+    console.error('Unexpected error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
