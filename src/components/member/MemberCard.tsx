@@ -42,7 +42,11 @@ export function MemberCard({ profile }: MemberCardProps) {
     }
   };
 
-  const lodgeName = profile.lodge?.name || '-';
+  // Access lodge data - Supabase returns as 'lodges' from the join
+  const lodge = (profile as any).lodges;
+  const lodgeInfo = lodge 
+    ? `${lodge.name}${lodge.city ? ` - ${lodge.city}` : ''}${lodge.state ? `/${lodge.state}` : ''}`
+    : '-';
 
   return (
     <div className="space-y-6">
@@ -93,7 +97,7 @@ export function MemberCard({ profile }: MemberCardProps) {
                 <p className="text-[10px] text-white/50 uppercase mb-0.5">Loja Maçônica</p>
                 <div className="border-b border-white/30 pb-1">
                   <p className="font-body text-sm text-white">
-                    {lodgeName}
+                    {lodgeInfo}
                   </p>
                 </div>
               </div>
