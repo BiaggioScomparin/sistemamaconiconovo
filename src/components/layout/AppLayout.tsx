@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu,
   X,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const adminLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/proposals', label: 'Propostas', icon: FileText },
     { href: '/admin/members', label: 'Membros', icon: Users },
     { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
     { href: '/admin/approvals', label: 'Aprovações', icon: UserCheck },
