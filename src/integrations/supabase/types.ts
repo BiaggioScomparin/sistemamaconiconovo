@@ -352,6 +352,7 @@ export type Database = {
           can_register_attendance: boolean
           can_view_attendance: boolean
           can_view_card: boolean
+          can_view_daily_attendances: boolean
           created_at: string
           id: string
           profile_id: string
@@ -362,6 +363,7 @@ export type Database = {
           can_register_attendance?: boolean
           can_view_attendance?: boolean
           can_view_card?: boolean
+          can_view_daily_attendances?: boolean
           created_at?: string
           id?: string
           profile_id: string
@@ -372,6 +374,7 @@ export type Database = {
           can_register_attendance?: boolean
           can_view_attendance?: boolean
           can_view_card?: boolean
+          can_view_daily_attendances?: boolean
           created_at?: string
           id?: string
           profile_id?: string
