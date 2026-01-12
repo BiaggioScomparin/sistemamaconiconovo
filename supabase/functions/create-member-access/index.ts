@@ -23,11 +23,11 @@ serve(async (req) => {
       }
     );
 
-    // Verify caller is admin
+    // Verify caller is authenticated
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized: No auth header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -39,23 +39,37 @@ serve(async (req) => {
       { global: { headers: { authorization: authHeader } } }
     );
 
-    const { data: { user: callerUser }, error: callerError } = await supabaseClient.auth.getUser();
-    if (callerError || !callerUser) {
+    // Use getClaims to verify the token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('Claims error:', claimsError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized: Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if caller is admin
+    const userId = claimsData.claims.sub as string;
+
+    // Check if caller is admin using service role
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', callerUser.id)
+      .eq('user_id', userId)
       .eq('role', 'admin')
       .maybeSingle();
 
-    if (roleError || !roleData) {
+    if (roleError) {
+      console.error('Role check error:', roleError);
+      return new Response(
+        JSON.stringify({ error: 'Error checking permissions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!roleData) {
       return new Response(
         JSON.stringify({ error: 'Forbidden: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -76,7 +90,7 @@ serve(async (req) => {
     
     if (password.length !== 11) {
       return new Response(
-        JSON.stringify({ error: 'Invalid CPF format' }),
+        JSON.stringify({ error: 'Invalid CPF format - must have 11 digits' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -103,6 +117,7 @@ serve(async (req) => {
     });
 
     if (createError) {
+      console.error('Create user error:', createError);
       return new Response(
         JSON.stringify({ error: createError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -116,6 +131,7 @@ serve(async (req) => {
       .eq('id', profileId);
 
     if (updateError) {
+      console.error('Update profile error:', updateError);
       // Rollback: delete the created user
       await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
       return new Response(
@@ -165,6 +181,7 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
+    console.error('Unexpected error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
