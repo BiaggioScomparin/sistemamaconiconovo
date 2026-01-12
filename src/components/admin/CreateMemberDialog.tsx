@@ -1,0 +1,244 @@
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
+
+const formatCPF = (value: string): string => {
+  const clean = value.replace(/\D/g, '').slice(0, 11);
+  if (clean.length <= 3) return clean;
+  if (clean.length <= 6) return `${clean.slice(0, 3)}.${clean.slice(3)}`;
+  if (clean.length <= 9) return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6)}`;
+  return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
+};
+
+const memberSchema = z.object({
+  full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
+  email: z.string().email('E-mail inválido'),
+  cpf: z.string().min(14, 'CPF inválido').max(14),
+  birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
+  initiation_date: z.string().optional(),
+  degree: z.string().optional(),
+  lodge_id: z.string().optional(),
+  phone: z.string().optional(),
+  cell_phone: z.string().optional(),
+});
+
+type MemberFormData = z.infer<typeof memberSchema>;
+
+interface Lodge {
+  id: string;
+  name: string;
+}
+
+interface CreateMemberDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogProps) {
+  const [loading, setLoading] = useState(false);
+  const [lodges, setLodges] = useState<Lodge[]>([]);
+  const [selectedLodgeId, setSelectedLodgeId] = useState<string>('');
+  const [selectedDegree, setSelectedDegree] = useState<string>('Aprendiz');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<MemberFormData>({
+    resolver: zodResolver(memberSchema),
+  });
+
+  useEffect(() => {
+    const fetchLodges = async () => {
+      const { data } = await supabase
+        .from('lodges')
+        .select('id, name')
+        .order('name');
+      if (data) setLodges(data);
+    };
+    if (open) {
+      fetchLodges();
+    }
+  }, [open]);
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    setValue('cpf', formatted);
+  };
+
+  const onSubmit = async (data: MemberFormData) => {
+    setLoading(true);
+
+    try {
+      const profileData = {
+        full_name: data.full_name,
+        email: data.email,
+        cpf: data.cpf,
+        birth_date: data.birth_date,
+        initiation_date: data.initiation_date || null,
+        degree: selectedDegree || 'Aprendiz',
+        lodge_id: selectedLodgeId || null,
+        phone: data.phone || null,
+        cell_phone: data.cell_phone || null,
+        status: 'approved',
+        member_status: 'active',
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .insert(profileData);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Membro criado!',
+        description: `${data.full_name} foi adicionado com sucesso.`,
+      });
+
+      reset();
+      setSelectedLodgeId('');
+      setSelectedDegree('Aprendiz');
+      onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+    } catch (error: any) {
+      console.error('Error creating member:', error);
+      toast({
+        title: 'Erro ao criar membro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display">Criar Novo Membro</DialogTitle>
+          <DialogDescription>
+            Preencha os dados para adicionar um novo membro ao sistema.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="full_name">Nome Completo *</Label>
+              <Input {...register('full_name')} id="full_name" />
+              {errors.full_name && (
+                <p className="text-sm text-destructive">{errors.full_name.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail *</Label>
+              <Input {...register('email')} id="email" type="email" />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF *</Label>
+              <Input
+                {...register('cpf')}
+                id="cpf"
+                onChange={handleCPFChange}
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+              {errors.cpf && (
+                <p className="text-sm text-destructive">{errors.cpf.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birth_date">Data de Nascimento *</Label>
+              <Input {...register('birth_date')} id="birth_date" type="date" />
+              {errors.birth_date && (
+                <p className="text-sm text-destructive">{errors.birth_date.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="initiation_date">Data de Iniciação</Label>
+              <Input {...register('initiation_date')} id="initiation_date" type="date" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Grau</Label>
+              <Select value={selectedDegree} onValueChange={setSelectedDegree}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-border z-50">
+                  <SelectItem value="Aprendiz">Aprendiz</SelectItem>
+                  <SelectItem value="Companheiro">Companheiro</SelectItem>
+                  <SelectItem value="Mestre">Mestre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Loja Maçônica</Label>
+              <Select value={selectedLodgeId} onValueChange={setSelectedLodgeId}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione uma loja" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-border z-50">
+                  {lodges.map((lodge) => (
+                    <SelectItem key={lodge.id} value={lodge.id}>
+                      {lodge.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input {...register('phone')} id="phone" placeholder="(00) 0000-0000" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cell_phone">Celular</Label>
+              <Input {...register('cell_phone')} id="cell_phone" placeholder="(00) 00000-0000" />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                'Criar Membro'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil, Trash2, Key, CreditCard, Loader2 } from 'lucide-react';
+import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -36,7 +36,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { generateBatchCardsPDF } from '@/lib/generateBatchCards';
+import { downloadMembersTemplate } from '@/lib/excelMembersTemplate';
+import { CreateMemberDialog } from '@/components/admin/CreateMemberDialog';
+import { ImportMembersDialog } from '@/components/admin/ImportMembersDialog';
 import logoGoib from '@/assets/logo-goib.png';
 
 export default function AdminMembers() {
@@ -54,6 +63,10 @@ export default function AdminMembers() {
   const [cardDialogOpen, setCardDialogOpen] = useState(false);
   const [generatingCards, setGeneratingCards] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  
+  // Create member dialogs
+  const [createMemberOpen, setCreateMemberOpen] = useState(false);
+  const [importMembersOpen, setImportMembersOpen] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -323,24 +336,48 @@ export default function AdminMembers() {
 
         <Card className="card-elegant">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2 font-display">
                 <Users className="h-5 w-5 text-secondary" />
                 Membros Ativos ({profiles?.length || 0})
               </CardTitle>
-              <Button
-                onClick={() => setCardDialogOpen(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <CreditCard className="h-4 w-4" />
-                Gerar Carteirinhas
-                {selectedMembers.size > 0 && (
-                  <span className="ml-1 px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs">
-                    {selectedMembers.size}
-                  </span>
-                )}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="default" className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Adicionar Membro
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background border border-border z-50">
+                    <DropdownMenuItem onClick={() => setCreateMemberOpen(true)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Criar Manualmente
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setImportMembersOpen(true)}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Importar do Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={downloadMembersTemplate}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar Modelo Excel
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  onClick={() => setCardDialogOpen(true)}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Gerar Carteirinhas
+                  {selectedMembers.size > 0 && (
+                    <span className="ml-1 px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs">
+                      {selectedMembers.size}
+                    </span>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -671,6 +708,18 @@ export default function AdminMembers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Member Dialog */}
+      <CreateMemberDialog 
+        open={createMemberOpen} 
+        onOpenChange={setCreateMemberOpen} 
+      />
+
+      {/* Import Members Dialog */}
+      <ImportMembersDialog 
+        open={importMembersOpen} 
+        onOpenChange={setImportMembersOpen} 
+      />
     </AppLayout>
   );
 }
