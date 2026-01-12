@@ -33,6 +33,10 @@ export function MemberCard({ profile }: MemberCardProps) {
     pdf.save(`carteirinha-${profile.full_name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
   };
 
+  const lodgeFullName = profile.lodge 
+    ? `${profile.lodge.name}${profile.lodge.city ? ` - ${profile.lodge.city}` : ''}${profile.lodge.state ? `/${profile.lodge.state}` : ''}`
+    : '-';
+
   return (
     <div className="space-y-6">
       {/* Card preview */}
@@ -43,55 +47,73 @@ export function MemberCard({ profile }: MemberCardProps) {
           background: 'linear-gradient(135deg, hsl(222 47% 15%) 0%, hsl(222 55% 8%) 100%)',
         }}
       >
-        <div className="h-full flex flex-col p-5 text-white">
-          {/* Header with Logo */}
-          <div className="flex items-center justify-center mb-3">
-            <img 
-              src={logoGoib} 
-              alt="GOIB Logo" 
-              className="h-16 w-16 object-contain"
-            />
-          </div>
+        <div className="h-full flex flex-col p-4 text-white">
+          {/* Header with Logo and Photo */}
+          <div className="flex items-start justify-between mb-2">
+            {/* Logo */}
+            <div className="flex flex-col items-center">
+              <img 
+                src={logoGoib} 
+                alt="GOIB Logo" 
+                className="h-14 w-14 object-contain"
+              />
+              <p className="text-[7px] text-white/60 font-body text-center mt-1 leading-tight">
+                Grande Oriente<br/>Independente do Brasil
+              </p>
+            </div>
 
-          {/* Title */}
-          <div className="text-center mb-3">
-            <h3 className="font-display text-sm tracking-widest text-amber-400 uppercase">
-              Carteira de Identificação
-            </h3>
-            <p className="text-[10px] text-white/60 font-body">
-              Grande Oriente Independente do Brasil
-            </p>
+            {/* Title */}
+            <div className="flex-1 text-center px-2">
+              <h3 className="font-display text-xs tracking-widest text-amber-400 uppercase">
+                Carteira de Identificação
+              </h3>
+            </div>
+
+            {/* Photo */}
+            <div className="w-16 h-20 rounded-md overflow-hidden bg-white/10 flex-shrink-0 border border-white/20">
+              {profile.photo_url ? (
+                <img
+                  src={profile.photo_url}
+                  alt={profile.full_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white/40 font-display text-xl">
+                  ?
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Content */}
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 space-y-1.5">
             {/* Full Name */}
             <div className="text-center">
-              <p className="text-[10px] text-white/50 uppercase tracking-wide">Nome</p>
-              <h2 className="font-display text-base text-amber-300 leading-tight">
+              <p className="text-[8px] text-white/50 uppercase tracking-wide">Nome</p>
+              <h2 className="font-display text-sm text-amber-300 leading-tight">
                 {profile.full_name}
               </h2>
             </div>
 
-            {/* Lodge */}
-            <div className="text-center">
-              <p className="text-[10px] text-white/50 uppercase tracking-wide">Loja</p>
-              <p className="font-body text-sm text-white/90">
-                {profile.lodge?.name || '-'}
+            {/* Lodge with black background */}
+            <div className="bg-black/60 rounded-md py-1.5 px-2 text-center">
+              <p className="text-[8px] text-white/50 uppercase tracking-wide">Loja Maçônica</p>
+              <p className="font-body text-xs text-white/90 leading-tight">
+                {lodgeFullName}
               </p>
             </div>
 
             {/* Degree and CIM */}
-            <div className="flex justify-center gap-8">
+            <div className="flex justify-center gap-6">
               <div className="text-center">
-                <p className="text-[10px] text-white/50 uppercase tracking-wide">Grau</p>
-                <p className="font-display text-sm text-amber-300">
+                <p className="text-[8px] text-white/50 uppercase tracking-wide">Grau</p>
+                <p className="font-display text-xs text-amber-300">
                   {profile.degree || 'Aprendiz'}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-white/50 uppercase tracking-wide">CIM</p>
-                <p className="font-display text-sm text-amber-300">
+                <p className="text-[8px] text-white/50 uppercase tracking-wide">CIM</p>
+                <p className="font-display text-xs text-amber-300">
                   {profile.cim_number || '-'}
                 </p>
               </div>
@@ -99,8 +121,8 @@ export function MemberCard({ profile }: MemberCardProps) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-center mt-2 pt-2 border-t border-white/10">
-            <p className="text-[9px] text-white/40 font-body">
+          <div className="flex items-center justify-center pt-1.5 border-t border-white/10">
+            <p className="text-[8px] text-white/40 font-body">
               Válido enquanto membro ativo
             </p>
           </div>
