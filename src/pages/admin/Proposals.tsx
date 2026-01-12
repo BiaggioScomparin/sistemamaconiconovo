@@ -25,8 +25,10 @@ import {
   Mail, 
   Phone,
   CreditCard,
-  Eye
+  Eye,
+  Printer
 } from 'lucide-react';
+import { generateEditalPDF } from '@/lib/generateEditalPDF';
 
 type ProfileStatus = 'proposta' | 'sindicancia' | 'reprovado' | 'membro' | 'pending' | 'approved' | 'rejected';
 
@@ -46,7 +48,32 @@ interface Profile {
   lodge_id: string | null;
   proposal_date: string | null;
   created_at: string;
-  lodges?: { id: string; name: string } | null;
+  naturality: string | null;
+  nationality: string | null;
+  street: string | null;
+  number: string | null;
+  neighborhood: string | null;
+  cep: string | null;
+  residence_time: string | null;
+  voter_title: string | null;
+  voter_zone: string | null;
+  identity_number: string | null;
+  identity_issuer: string | null;
+  father_name: string | null;
+  mother_name: string | null;
+  education_level: string | null;
+  civil_status: string | null;
+  spouse_name: string | null;
+  marriage_date: string | null;
+  is_retired: boolean | null;
+  employer: string | null;
+  work_street: string | null;
+  work_neighborhood: string | null;
+  work_city: string | null;
+  work_state: string | null;
+  work_cep: string | null;
+  work_time: string | null;
+  lodges?: { id: string; name: string; city?: string | null; state?: string | null } | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -87,6 +114,7 @@ export default function AdminProposals() {
   const [selectedLodge, setSelectedLodge] = useState<string>('');
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('proposta');
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -266,6 +294,35 @@ export default function AdminProposals() {
           >
             <Eye className="mr-2 h-4 w-4" />
             Ver Detalhes
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setGeneratingPDF(profile.id);
+              try {
+                // Fetch children for this profile
+                const { data: children } = await supabase
+                  .from('children')
+                  .select('name, birth_date')
+                  .eq('profile_id', profile.id);
+                
+                await generateEditalPDF(
+                  profile,
+                  children || [],
+                  profile.lodges
+                );
+                toast({ title: 'PDF gerado com sucesso!' });
+              } catch (error: any) {
+                console.error('Error generating PDF:', error);
+                toast({ title: 'Erro ao gerar PDF', description: error.message, variant: 'destructive' });
+              } finally {
+                setGeneratingPDF(null);
+              }
+            }}
+            disabled={generatingPDF === profile.id}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            {generatingPDF === profile.id ? 'Gerando...' : 'Imprimir Edital'}
           </Button>
           <Button
             onClick={() => {
