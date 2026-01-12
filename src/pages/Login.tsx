@@ -1,4 +1,4 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -36,21 +36,6 @@ export default function Login() {
           <LoginForm />
         </div>
 
-        {/* Links */}
-        <div className="mt-6 text-center space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Não tem uma conta?{' '}
-            <Link to="/signup" className="text-secondary hover:underline font-medium">
-              Criar conta
-            </Link>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Quer se cadastrar como membro?{' '}
-            <Link to="/register" className="text-secondary hover:underline font-medium">
-              Pré-cadastro
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
