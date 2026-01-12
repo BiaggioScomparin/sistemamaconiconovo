@@ -166,14 +166,48 @@ const Permissions = () => {
   });
 
   const toggleAdminMutation = useMutation({
-    mutationFn: async ({ userId, makeAdmin }: { userId: string; makeAdmin: boolean }) => {
+    mutationFn: async ({ 
+      userId, 
+      profileId, 
+      permissionId, 
+      makeAdmin 
+    }: { 
+      userId: string; 
+      profileId: string;
+      permissionId: string | null;
+      makeAdmin: boolean;
+    }) => {
       if (makeAdmin) {
         // Add admin role
-        const { error } = await supabase
+        const { error: roleError } = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: 'admin' });
 
-        if (error) throw error;
+        if (roleError) throw roleError;
+
+        // Enable all permissions when making admin
+        const allPermissions = {
+          can_view_card: true,
+          can_view_attendance: true,
+          can_register_attendance: true,
+          can_edit_profile: true,
+          can_view_daily_attendances: true,
+        };
+
+        if (permissionId) {
+          const { error: permError } = await supabase
+            .from('user_permissions')
+            .update(allPermissions)
+            .eq('id', permissionId);
+
+          if (permError) throw permError;
+        } else {
+          const { error: permError } = await supabase
+            .from('user_permissions')
+            .insert({ profile_id: profileId, ...allPermissions });
+
+          if (permError) throw permError;
+        }
       } else {
         // Remove admin role
         const { error } = await supabase
@@ -190,7 +224,7 @@ const Permissions = () => {
       toast({
         title: makeAdmin ? 'Admin liberado' : 'Admin removido',
         description: makeAdmin 
-          ? 'O usuário agora tem acesso às funcionalidades de administrador.' 
+          ? 'O usuário agora tem acesso total ao sistema como administrador.' 
           : 'O acesso de administrador foi removido.',
       });
     },
@@ -217,7 +251,12 @@ const Permissions = () => {
     });
   };
 
-  const handleToggleAdmin = (userId: string | null, isCurrentlyAdmin: boolean) => {
+  const handleToggleAdmin = (
+    userId: string | null, 
+    profileId: string, 
+    permissionId: string | null, 
+    isCurrentlyAdmin: boolean
+  ) => {
     if (!userId) {
       toast({
         title: 'Erro',
@@ -226,7 +265,12 @@ const Permissions = () => {
       });
       return;
     }
-    toggleAdminMutation.mutate({ userId, makeAdmin: !isCurrentlyAdmin });
+    toggleAdminMutation.mutate({ 
+      userId, 
+      profileId, 
+      permissionId, 
+      makeAdmin: !isCurrentlyAdmin 
+    });
   };
 
   const handleToggleAll = (profileId: string, permissionId: string | null, enableAll: boolean) => {
@@ -331,7 +375,12 @@ const Permissions = () => {
                           <TableCell className="text-center">
                             <Switch
                               checked={member.is_admin ?? false}
-                              onCheckedChange={() => handleToggleAdmin(member.user_id, member.is_admin ?? false)}
+                              onCheckedChange={() => handleToggleAdmin(
+                                member.user_id, 
+                                member.id, 
+                                permissions?.id ?? null, 
+                                member.is_admin ?? false
+                              )}
                               className="data-[state=checked]:bg-yellow-500"
                             />
                           </TableCell>
