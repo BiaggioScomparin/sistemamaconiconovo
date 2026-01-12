@@ -24,10 +24,6 @@ export default function MemberCardPage() {
     return <Navigate to="/login" replace />;
   }
 
-  if (isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   // Check permission
   if (!permissions?.can_view_card) {
     return (
