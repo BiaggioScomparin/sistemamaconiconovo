@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     // Validate authorization header
-    const authHeader = req.headers.get('authorization');
+    const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -21,30 +21,31 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user's auth to verify identity
+    // Create client with user's auth
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { authorization: authHeader } } }
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Verify the user is authenticated
-    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
+    // Verify the user using getClaims
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
     
-    if (authError || !authUser) {
-      console.error('Auth error:', authError);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Claims error:', claimsError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = authUser.id;
+    const userId = claimsData.claims.sub;
 
     // Create admin client for role check and user creation
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       {
         auth: {
           autoRefreshToken: false,
@@ -85,11 +86,11 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Create the user with secure random password (user must reset via email)
+    // Create the user with secure random password
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: securePassword,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: true,
     });
 
     if (createError) {
