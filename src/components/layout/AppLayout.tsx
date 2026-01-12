@@ -174,9 +174,17 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* User info & logout */}
           <div className="p-4 border-t border-sidebar-border">
-            <p className="text-sm text-sidebar-foreground/70 mb-3 truncate font-body">
-              {user?.email}
-            </p>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-sm text-sidebar-foreground/70 truncate font-body flex-1">
+                {user?.email}
+              </p>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-semibold">
+                  <Crown size={12} />
+                  Admin
+                </span>
+              )}
+            </div>
             <Button
               variant="outline"
               onClick={handleSignOut}
