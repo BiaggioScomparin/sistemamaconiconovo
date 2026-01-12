@@ -104,6 +104,7 @@ export type Database = {
           is_retired: boolean | null
           lodge_id: string | null
           marriage_date: string | null
+          member_status: string
           monthly_income: string | null
           mother_name: string | null
           nationality: string | null
@@ -169,6 +170,7 @@ export type Database = {
           is_retired?: boolean | null
           lodge_id?: string | null
           marriage_date?: string | null
+          member_status?: string
           monthly_income?: string | null
           mother_name?: string | null
           nationality?: string | null
@@ -234,6 +236,7 @@ export type Database = {
           is_retired?: boolean | null
           lodge_id?: string | null
           marriage_date?: string | null
+          member_status?: string
           monthly_income?: string | null
           mother_name?: string | null
           nationality?: string | null

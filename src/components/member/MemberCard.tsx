@@ -79,7 +79,7 @@ export function MemberCard({ profile }: MemberCardProps) {
   // QR Code URL for validation - links to a public validation page
   const validationUrl = `${window.location.origin}/validar/${profile.id}`;
 
-  const isActive = profile.status === 'approved';
+  const isActive = (profile as any).member_status === 'active';
 
   return (
     <div className="space-y-6">
