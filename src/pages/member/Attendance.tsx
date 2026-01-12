@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useLodges } from '@/hooks/useLodges';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,15 +14,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Lock } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
 const Attendance = () => {
-  const { user } = useAuth();
-  const { data: profile } = useProfile();
+  const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: lodges } = useLodges();
+  const { data: permissions, isLoading: permissionsLoading } = useUserPermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [lodgeId, setLodgeId] = useState('');
@@ -97,6 +99,46 @@ const Attendance = () => {
     }
   };
 
+  if (authLoading || profileLoading || permissionsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check if user has any attendance permission
+  const canViewAttendance = permissions?.can_view_attendance;
+  const canRegisterAttendance = permissions?.can_register_attendance;
+
+  if (!canViewAttendance && !canRegisterAttendance) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto py-6 space-y-6">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold">Registro de Frequência</h1>
+          </div>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground font-medium">
+                Acesso não liberado
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Entre em contato com a administração para liberar esta funcionalidade.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (!profile) {
     return (
       <AppLayout>
@@ -116,35 +158,36 @@ const Attendance = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Registration Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Nova Presença</CardTitle>
-              <CardDescription>
-                Registre sua presença em uma sessão maçônica
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cim">CIM</Label>
-                  <Input
-                    id="cim"
-                    value={profile.cim_number || 'Não atribuído'}
-                    disabled
-                    className="bg-muted"
-                  />
-                </div>
+          {/* Registration Form - only show if user can register */}
+          {canRegisterAttendance && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Nova Presença</CardTitle>
+                <CardDescription>
+                  Registre sua presença em uma sessão maçônica
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cim">CIM</Label>
+                    <Input
+                      id="cim"
+                      value={profile.cim_number || 'Não atribuído'}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <Input
-                    id="cpf"
-                    value={profile.cpf || 'Não informado'}
-                    disabled
-                    className="bg-muted"
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF</Label>
+                    <Input
+                      id="cpf"
+                      value={profile.cpf || 'Não informado'}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="session_date">Data da Sessão</Label>
@@ -197,8 +240,10 @@ const Attendance = () => {
               </form>
             </CardContent>
           </Card>
+          )}
 
-          {/* Attendance History */}
+          {/* Attendance History - show if user can view attendance */}
+          {canViewAttendance && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -254,6 +299,7 @@ const Attendance = () => {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     </AppLayout>

@@ -15,6 +15,7 @@ import AdminMembers from "./pages/admin/Members";
 import AdminApprovals from "./pages/admin/Approvals";
 import AdminProposals from "./pages/admin/Proposals";
 import AdminAttendances from "./pages/admin/Attendances";
+import AdminPermissions from "./pages/admin/Permissions";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
 import MemberAttendance from "./pages/member/Attendance";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/admin/approvals" element={<AdminApprovals />} />
             <Route path="/admin/proposals" element={<AdminProposals />} />
             <Route path="/admin/attendances" element={<AdminAttendances />} />
+            <Route path="/admin/permissions" element={<AdminPermissions />} />
             {/* Member routes */}
             <Route path="/member/card" element={<MemberCard />} />
             <Route path="/member/profile" element={<MemberProfile />} />
