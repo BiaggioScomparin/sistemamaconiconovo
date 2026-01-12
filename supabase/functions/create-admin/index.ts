@@ -12,16 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password } = await req.json();
-
-    if (!email || !password) {
-      return new Response(
-        JSON.stringify({ error: 'Email and password are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create admin client with service role key
+    // Create admin client to check if any admins exist
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -32,6 +23,82 @@ serve(async (req) => {
         }
       }
     );
+
+    // Check if any admin already exists
+    const { data: existingAdmins, error: adminCheckError } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('role', 'admin')
+      .limit(1);
+
+    if (adminCheckError) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to check existing admins' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If admins already exist, require authentication and admin role
+    if (existingAdmins && existingAdmins.length > 0) {
+      const authHeader = req.headers.get('authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Create client with user's auth to verify identity
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { authorization: authHeader } } }
+      );
+
+      // Verify the JWT token
+      const token = authHeader.replace('Bearer ', '');
+      const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const userId = claimsData.claims.sub;
+
+      // Verify caller has admin role
+      const { data: roleData, error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
+
+      if (roleError || !roleData) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const { email, password } = await req.json();
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: 'Email and password are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate password strength
+    if (password.length < 12) {
+      return new Response(
+        JSON.stringify({ error: 'Password must be at least 12 characters long' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Create the user
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
