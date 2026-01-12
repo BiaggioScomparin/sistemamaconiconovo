@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Search, CheckCircle, Plus, Trash2 } from 'lucide-react';
+import { validateImageFile, getValidatedFileName, ALLOWED_IMAGE_TYPES } from '@/lib/fileValidation';
 
 const formatCPF = (value: string): string => {
   const clean = value.replace(/\D/g, '').slice(0, 11);
@@ -167,10 +168,19 @@ export default function Proposal() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ title: 'Erro', description: 'A foto deve ter no máximo 5MB.', variant: 'destructive' });
+      // Validate the file before accepting
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        toast({ 
+          title: 'Erro', 
+          description: validation.error || 'Arquivo inválido', 
+          variant: 'destructive' 
+        });
+        // Reset the input
+        e.target.value = '';
         return;
       }
+      
       setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setPhotoPreview(reader.result as string);
@@ -198,14 +208,22 @@ export default function Proposal() {
     try {
       let photoUrl = null;
 
-      // Upload photo if provided
+      // Upload photo if provided (with validation)
       if (photoFile) {
-        const fileExt = photoFile.name.split('.').pop();
-        const fileName = `proposals/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        // Re-validate the file before upload (double-check)
+        const validation = validateImageFile(photoFile);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
+
+        const fileName = getValidatedFileName(photoFile, 'proposals');
 
         const { error: uploadError } = await supabase.storage
           .from('photos')
-          .upload(fileName, photoFile);
+          .upload(fileName, photoFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) throw uploadError;
 
@@ -392,7 +410,7 @@ export default function Proposal() {
                 <div>
                   <Input
                     type="file"
-                    accept="image/*"
+                    accept={ALLOWED_IMAGE_TYPES.join(',')}
                     onChange={handlePhotoChange}
                     className="max-w-xs"
                   />

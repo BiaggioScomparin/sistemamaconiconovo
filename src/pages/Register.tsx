@@ -4,6 +4,7 @@ import { ProfileForm } from '@/components/forms/ProfileForm';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle } from 'lucide-react';
+import { validateImageFile, getValidatedFileName } from '@/lib/fileValidation';
 
 export default function Register() {
   const [loading, setLoading] = useState(false);
@@ -16,14 +17,22 @@ export default function Register() {
     try {
       let photoUrl = null;
 
-      // Upload photo if provided
+      // Upload photo if provided (with validation)
       if (photoFile) {
-        const fileExt = photoFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        // Validate the file before upload
+        const validation = validateImageFile(photoFile);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
 
-        const { error: uploadError, data: uploadData } = await supabase.storage
+        const fileName = getValidatedFileName(photoFile, 'registrations');
+
+        const { error: uploadError } = await supabase.storage
           .from('photos')
-          .upload(fileName, photoFile);
+          .upload(fileName, photoFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) throw uploadError;
 
