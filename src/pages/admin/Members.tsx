@@ -13,7 +13,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil } from 'lucide-react';
+import { Users, Pencil, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Profile } from '@/lib/supabase-types';
 
 export default function AdminMembers() {
@@ -21,6 +32,7 @@ export default function AdminMembers() {
   const { data: profiles, isLoading } = useApprovedProfiles();
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -116,6 +128,27 @@ export default function AdminMembers() {
     }
   };
 
+  const handleDelete = async (profileId: string, fullName: string) => {
+    setDeleting(profileId);
+    try {
+      // Delete children first
+      await supabase.from('children').delete().eq('profile_id', profileId);
+
+      // Delete the profile
+      const { error } = await supabase.from('profiles').delete().eq('id', profileId);
+
+      if (error) throw error;
+
+      toast({ title: 'Membro excluído', description: `${fullName} foi removido com sucesso.` });
+      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+    } catch (error: any) {
+      console.error('Error deleting member:', error);
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const getInitialData = (profile: Profile) => ({
     full_name: profile.full_name,
     email: profile.email || '',
@@ -187,13 +220,45 @@ export default function AdminMembers() {
                         <TableCell>{profile.lodge?.name || '-'}</TableCell>
                         <TableCell>{formatDate(profile.initiation_date)}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(profile)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(profile)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  disabled={deleting === profile.id}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir Membro</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir <strong>{profile.full_name}</strong>? 
+                                    Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(profile.id, profile.full_name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
