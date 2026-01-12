@@ -29,8 +29,10 @@ const Attendance = () => {
   const [lodgeId, setLodgeId] = useState('');
   const [sessionType, setSessionType] = useState<'magna' | 'ordinaria'>('ordinaria');
   const [sessionDate, setSessionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [dailyViewDate, setDailyViewDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Today's date for daily view (fixed, not selectable)
+  const todayDate = format(new Date(), 'yyyy-MM-dd');
 
   const { data: attendances, refetch: refetchAttendances } = useQuery({
     queryKey: ['my-attendances', profile?.id],
@@ -48,14 +50,14 @@ const Attendance = () => {
     enabled: !!profile?.id,
   });
 
-  // Query for daily attendances (when user has permission)
+  // Query for today's attendances (when user has permission)
   const { data: dailyAttendances } = useQuery({
-    queryKey: ['daily-attendances', dailyViewDate, permissions?.can_view_daily_attendances],
+    queryKey: ['daily-attendances', todayDate, permissions?.can_view_daily_attendances],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('attendances')
         .select('*, profiles:profile_id(full_name, cim_number), lodges:lodge_id(name)')
-        .eq('session_date', dailyViewDate)
+        .eq('session_date', todayDate)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -325,25 +327,13 @@ const Attendance = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Presenças do Dia
+                Presenças de Hoje
               </CardTitle>
               <CardDescription>
-                Visualize todos os membros que registraram presença em uma data específica
+                Membros que registraram presença hoje ({format(new Date(), 'dd/MM/yyyy')})
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4 items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="daily_view_date">Selecionar Data</Label>
-                  <Input
-                    id="daily_view_date"
-                    type="date"
-                    value={dailyViewDate}
-                    onChange={(e) => setDailyViewDate(e.target.value)}
-                    className="w-[200px]"
-                  />
-                </div>
-              </div>
+            <CardContent>
 
               {dailyAttendances && dailyAttendances.length > 0 ? (
                 <div className="max-h-[400px] overflow-y-auto">
