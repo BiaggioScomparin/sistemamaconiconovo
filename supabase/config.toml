@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
+
+[functions.create-member-access]
+verify_jwt = false
+
+[functions.validate-member]
+verify_jwt = false
