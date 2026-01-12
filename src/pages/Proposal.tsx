@@ -279,7 +279,7 @@ export default function Proposal() {
         sponsor_name: data.sponsor_name || null,
         photo_url: photoUrl,
         status: 'proposta',
-        member_status: 'pending',
+        member_status: 'active',
         proposal_date: new Date().toISOString().split('T')[0],
       };
 
