@@ -7,7 +7,6 @@ import {
   LayoutDashboard, 
   Users, 
   Building2, 
-  UserCheck, 
   CreditCard, 
   LogOut, 
   Menu,
@@ -41,7 +40,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/proposals', label: 'Propostas', icon: FileText },
     { href: '/admin/members', label: 'Membros', icon: Users },
     { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
-    { href: '/admin/approvals', label: 'Aprovações', icon: UserCheck },
     { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
   ];
