@@ -27,7 +27,19 @@ export function usePendingProfiles() {
 }
 
 export function useApprovedProfiles() {
-  return useAllProfiles('approved');
+  return useQuery({
+    queryKey: ['all-profiles', 'members'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, lodges(*)')
+        .in('status', ['approved', 'membro'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Profile[];
+    },
+  });
 }
 
 export function useUpdateProfileStatus() {
@@ -59,7 +71,7 @@ export function useDashboardStats() {
       const { count: totalMembers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved');
+        .in('status', ['approved', 'membro']);
 
       // Pending approvals
       const { count: pendingApprovals } = await supabase
@@ -76,14 +88,14 @@ export function useDashboardStats() {
       const { data: lodgesWithMembers } = await supabase
         .from('lodges')
         .select('id, name, profiles(id)')
-        .eq('profiles.status', 'approved');
+        .in('profiles.status', ['approved', 'membro']);
 
       // Birthday this month
       const currentMonth = new Date().getMonth() + 1;
       const { data: birthdays } = await supabase
         .from('profiles')
         .select('id, full_name, birth_date')
-        .eq('status', 'approved');
+        .in('status', ['approved', 'membro']);
 
       const birthdaysThisMonth = birthdays?.filter((profile) => {
         const birthMonth = new Date(profile.birth_date).getMonth() + 1;

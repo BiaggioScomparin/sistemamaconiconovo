@@ -6,14 +6,16 @@ import { useApprovedProfiles } from '@/hooks/useAdmin';
 import { useProfileChildren } from '@/hooks/useProfile';
 import { ProfileForm } from '@/components/forms/ProfileForm';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil, Trash2 } from 'lucide-react';
+import { Users, Pencil, Trash2, Key } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +33,10 @@ export default function AdminMembers() {
   const { user, loading, isAdmin } = useAuth();
   const { data: profiles, isLoading } = useApprovedProfiles();
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [resetPasswordProfile, setResetPasswordProfile] = useState<Profile | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -58,6 +63,53 @@ export default function AdminMembers() {
 
   const handleEdit = (profile: Profile) => {
     setEditingProfile(profile);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordProfile || !newPassword) return;
+
+    if (!resetPasswordProfile.user_id) {
+      toast({ 
+        title: 'Erro', 
+        description: 'Este membro não possui acesso ao sistema.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({ 
+        title: 'Erro', 
+        description: 'A senha deve ter pelo menos 6 caracteres.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const response = await supabase.functions.invoke('reset-password', {
+        body: {
+          userId: resetPasswordProfile.user_id,
+          newPassword: newPassword,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+
+      toast({ 
+        title: 'Senha alterada!', 
+        description: `A senha de ${resetPasswordProfile.full_name} foi atualizada com sucesso.` 
+      });
+      setResetPasswordProfile(null);
+      setNewPassword('');
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const handleSave = async (data: any, children: any[], photoFile: File | null) => {
@@ -198,7 +250,7 @@ export default function AdminMembers() {
                       <TableHead>CIM</TableHead>
                       <TableHead>Loja</TableHead>
                       <TableHead>Iniciação</TableHead>
-                      <TableHead className="w-20">Ações</TableHead>
+                      <TableHead className="w-32">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -212,7 +264,12 @@ export default function AdminMembers() {
                                 {profile.full_name.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{profile.full_name}</span>
+                            <div>
+                              <span className="font-medium">{profile.full_name}</span>
+                              {profile.user_id && (
+                                <p className="text-xs text-muted-foreground">Com acesso</p>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{(profile as any).cpf || '-'}</TableCell>
@@ -225,9 +282,23 @@ export default function AdminMembers() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleEdit(profile)}
+                              title="Editar"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
+                            {profile.user_id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setResetPasswordProfile(profile);
+                                  setNewPassword('');
+                                }}
+                                title="Resetar Senha"
+                              >
+                                <Key className="h-4 w-4" />
+                              </Button>
+                            )}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -235,6 +306,7 @@ export default function AdminMembers() {
                                   size="icon"
                                   className="text-destructive hover:text-destructive"
                                   disabled={deleting === profile.id}
+                                  title="Excluir"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -289,6 +361,44 @@ export default function AdminMembers() {
               photoUrl={editingProfile.photo_url}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetPasswordProfile} onOpenChange={(open) => !open && setResetPasswordProfile(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Resetar Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para {resetPasswordProfile?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nova Senha</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                minLength={6}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPasswordProfile(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              disabled={resettingPassword || newPassword.length < 6}
+            >
+              {resettingPassword ? 'Alterando...' : 'Alterar Senha'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
