@@ -84,13 +84,14 @@ export function MemberCard({ profile }: MemberCardProps) {
   return (
     <div className="space-y-6">
       {/* FRONT OF CARD */}
-      <div>
+      <div className="overflow-x-auto pb-2">
         <p className="text-center text-sm text-muted-foreground mb-2 font-display">Frente</p>
         <div
           ref={cardFrontRef}
-          className="w-full max-w-lg mx-auto aspect-[1.7/1] rounded-xl overflow-hidden shadow-2xl relative"
+          className="min-w-[340px] w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-2xl relative"
           style={{
             background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
+            aspectRatio: '1.7 / 1',
           }}
         >
           {/* Watermark logo */}
@@ -98,30 +99,30 @@ export function MemberCard({ profile }: MemberCardProps) {
             <img 
               src={logoGoib} 
               alt="" 
-              className="h-32 w-32 object-contain"
+              className="h-24 sm:h-32 w-24 sm:w-32 object-contain"
             />
           </div>
 
-          <div className="h-full flex p-4 text-white relative z-10">
+          <div className="h-full flex p-3 sm:p-4 text-white relative z-10">
             {/* Left content */}
-            <div className="flex-1 flex flex-col pr-4">
+            <div className="flex-1 flex flex-col pr-2 sm:pr-4 min-w-0">
               {/* Header */}
-              <div className="mb-4">
-                <h1 className="font-display text-base tracking-wide text-amber-400 uppercase font-bold">
+              <div className="mb-2 sm:mb-4">
+                <h1 className="font-display text-xs sm:text-base tracking-wide text-amber-400 uppercase font-bold leading-tight">
                   Cédula de Identidade Maçônica
                 </h1>
-                <p className="text-xs text-amber-300/80 font-display tracking-widest">
+                <p className="text-[10px] sm:text-xs text-amber-300/80 font-display tracking-widest">
                   G.O.I.B
                 </p>
               </div>
 
               {/* Fields */}
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 space-y-1.5 sm:space-y-3">
                 {/* Nome completo */}
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase mb-0.5">Nome completo</p>
-                  <div className="border-b border-white/30 pb-1">
-                    <p className="font-body text-sm text-white">
+                  <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Nome completo</p>
+                  <div className="border-b border-white/30 pb-0.5 sm:pb-1">
+                    <p className="font-body text-xs sm:text-sm text-white truncate">
                       {profile.full_name}
                     </p>
                   </div>
@@ -129,9 +130,9 @@ export function MemberCard({ profile }: MemberCardProps) {
 
                 {/* Loja Maçônica */}
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase mb-0.5">Loja Maçônica</p>
-                  <div className="border-b border-white/30 pb-1">
-                    <p className="font-body text-sm text-white">
+                  <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Loja Maçônica</p>
+                  <div className="border-b border-white/30 pb-0.5 sm:pb-1">
+                    <p className="font-body text-xs sm:text-sm text-white truncate">
                       {lodgeInfo}
                     </p>
                   </div>
@@ -139,9 +140,9 @@ export function MemberCard({ profile }: MemberCardProps) {
 
                 {/* Grau */}
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase mb-0.5">Grau</p>
-                  <div className="border-b border-white/30 pb-1">
-                    <p className="font-display text-sm text-amber-300">
+                  <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Grau</p>
+                  <div className="border-b border-white/30 pb-0.5 sm:pb-1">
+                    <p className="font-display text-xs sm:text-sm text-amber-300">
                       {getDegreeAbbrev(profile.degree)}
                     </p>
                   </div>
@@ -149,8 +150,8 @@ export function MemberCard({ profile }: MemberCardProps) {
               </div>
 
               {/* Footer */}
-              <div className="mt-auto pt-2">
-                <p className="text-[8px] text-white/40 font-body leading-tight">
+              <div className="mt-auto pt-1 sm:pt-2">
+                <p className="text-[7px] sm:text-[8px] text-white/40 font-body leading-tight">
                   Este cartão é seu documento pessoal para inscrição<br/>
                   nas programações do Oriente.
                 </p>
@@ -158,9 +159,9 @@ export function MemberCard({ profile }: MemberCardProps) {
             </div>
 
             {/* Right side - Photo and CIM */}
-            <div className="flex flex-col items-center justify-center w-28">
+            <div className="flex flex-col items-center justify-center w-20 sm:w-28 flex-shrink-0">
               {/* Photo */}
-              <div className="w-24 h-28 rounded-md overflow-hidden bg-white/10 border border-white/20 mb-2">
+              <div className="w-16 h-20 sm:w-24 sm:h-28 rounded-md overflow-hidden bg-white/10 border border-white/20 mb-1 sm:mb-2">
                 {profile.photo_url ? (
                   <img
                     src={profile.photo_url}
@@ -168,7 +169,7 @@ export function MemberCard({ profile }: MemberCardProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/40 font-display text-2xl">
+                  <div className="w-full h-full flex items-center justify-center text-white/40 font-display text-xl sm:text-2xl">
                     ?
                   </div>
                 )}
@@ -176,8 +177,8 @@ export function MemberCard({ profile }: MemberCardProps) {
 
               {/* CIM */}
               <div className="text-center">
-                <p className="text-[10px] text-white/50 uppercase">CIM</p>
-                <p className="font-display text-lg text-amber-400 font-bold">
+                <p className="text-[8px] sm:text-[10px] text-white/50 uppercase">CIM</p>
+                <p className="font-display text-sm sm:text-lg text-amber-400 font-bold">
                   {profile.cim_number || '-'}
                 </p>
               </div>
@@ -187,32 +188,33 @@ export function MemberCard({ profile }: MemberCardProps) {
       </div>
 
       {/* BACK OF CARD */}
-      <div>
+      <div className="overflow-x-auto pb-2">
         <p className="text-center text-sm text-muted-foreground mb-2 font-display">Verso</p>
         <div
           ref={cardBackRef}
-          className="w-full max-w-lg mx-auto aspect-[1.7/1] rounded-xl overflow-hidden shadow-2xl relative"
+          className="min-w-[340px] w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-2xl relative"
           style={{
             background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
+            aspectRatio: '1.7 / 1',
           }}
         >
           {/* Watermark logo */}
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-10 pointer-events-none">
+          <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 opacity-10 pointer-events-none">
             <img 
               src={logoGoib} 
               alt="" 
-              className="h-40 w-40 object-contain"
+              className="h-28 w-28 sm:h-40 sm:w-40 object-contain"
             />
           </div>
 
-          <div className="h-full flex flex-col p-4 text-white relative z-10">
+          <div className="h-full flex flex-col p-3 sm:p-4 text-white relative z-10">
             {/* Top row - Dates */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-2 sm:mb-4">
               {/* Data de Iniciação */}
               <div>
-                <p className="text-[10px] text-white/50 uppercase mb-0.5">Data de Iniciação</p>
-                <div className="bg-white rounded px-2 py-1">
-                  <p className="font-body text-xs text-black">
+                <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Iniciação</p>
+                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1">
+                  <p className="font-body text-[10px] sm:text-xs text-black">
                     {formatDate(profile.initiation_date)}
                   </p>
                 </div>
@@ -220,9 +222,9 @@ export function MemberCard({ profile }: MemberCardProps) {
 
               {/* Data de Nascimento */}
               <div>
-                <p className="text-[10px] text-white/50 uppercase mb-0.5">Data de nascimento</p>
-                <div className="bg-white rounded px-2 py-1">
-                  <p className="font-body text-xs text-black">
+                <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Nascimento</p>
+                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1">
+                  <p className="font-body text-[10px] sm:text-xs text-black">
                     {formatDate(profile.birth_date)}
                   </p>
                 </div>
@@ -230,22 +232,22 @@ export function MemberCard({ profile }: MemberCardProps) {
 
               {/* Validade */}
               <div>
-                <p className="text-[10px] text-white/50 uppercase mb-0.5">Validade</p>
-                <div className="bg-white rounded px-2 py-1">
-                  <p className="font-body text-[9px] text-black leading-tight">
-                    Válido enquanto<br/>membro ativo
+                <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Validade</p>
+                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1">
+                  <p className="font-body text-[8px] sm:text-[9px] text-black leading-tight">
+                    Membro ativo
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Second row - Cargo and Oriente */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-3 mb-2 sm:mb-4">
               {/* Cargo */}
               <div>
-                <p className="text-[10px] text-white/50 uppercase mb-0.5">Cargo</p>
-                <div className="bg-white rounded px-2 py-1 min-h-[28px] flex items-center">
-                  <p className="font-body text-xs text-black">
+                <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Cargo</p>
+                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1 min-h-[20px] sm:min-h-[28px] flex items-center">
+                  <p className="font-body text-[10px] sm:text-xs text-black truncate">
                     {(profile as any).cargo || '-'}
                   </p>
                 </div>
@@ -253,9 +255,9 @@ export function MemberCard({ profile }: MemberCardProps) {
 
               {/* Oriente */}
               <div>
-                <p className="text-[10px] text-white/50 uppercase mb-0.5">Oriente</p>
-                <div className="bg-white rounded px-2 py-1 min-h-[28px] flex items-center">
-                  <p className="font-body text-xs text-black">
+                <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Oriente</p>
+                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1 min-h-[20px] sm:min-h-[28px] flex items-center">
+                  <p className="font-body text-[10px] sm:text-xs text-black truncate">
                     {orienteInfo}
                   </p>
                 </div>
@@ -264,7 +266,7 @@ export function MemberCard({ profile }: MemberCardProps) {
 
             {/* Title */}
             <div className="text-center flex-1 flex flex-col justify-center">
-              <h2 className="font-display text-lg text-amber-400 font-bold tracking-wide">
+              <h2 className="font-display text-xs sm:text-lg text-amber-400 font-bold tracking-wide">
                 Grande Oriente Independente do Brasil
               </h2>
             </div>
@@ -272,15 +274,16 @@ export function MemberCard({ profile }: MemberCardProps) {
             {/* Bottom section - QR Code and Status */}
             <div className="flex items-end justify-between mt-auto">
               {/* QR Code */}
-              <div className="flex items-center gap-3">
-                <div className="bg-white p-1 rounded">
+              <div className="flex items-center gap-1.5 sm:gap-3">
+                <div className="bg-white p-0.5 sm:p-1 rounded">
                   <QRCodeSVG 
                     value={validationUrl} 
-                    size={50}
+                    size={36}
                     level="M"
+                    className="sm:w-[50px] sm:h-[50px]"
                   />
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <p className="text-[8px] text-white/50 uppercase">Validação</p>
                   <p className="text-[10px] text-white/70">Escaneie para verificar</p>
                 </div>
@@ -288,10 +291,10 @@ export function MemberCard({ profile }: MemberCardProps) {
 
               {/* Status indicator */}
               <div className="text-right">
-                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded ${isActive ? 'bg-green-600' : 'bg-red-600'}`}>
-                  <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-300' : 'bg-red-300'} animate-pulse`} />
-                  <span className="text-[10px] font-display text-white uppercase">
-                    {isActive ? 'Membro Ativo' : 'Inativo'}
+                <div className={`inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${isActive ? 'bg-green-600' : 'bg-red-600'}`}>
+                  <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isActive ? 'bg-green-300' : 'bg-red-300'} animate-pulse`} />
+                  <span className="text-[8px] sm:text-[10px] font-display text-white uppercase">
+                    {isActive ? 'Ativo' : 'Inativo'}
                   </span>
                 </div>
               </div>
