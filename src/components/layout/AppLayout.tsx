@@ -39,7 +39,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   ];
 
   const memberLinks = [
-    { href: '/dashboard', label: 'Meu Perfil', icon: User },
+    { href: '/member/profile', label: 'Meu Perfil', icon: User },
     { href: '/member/card', label: 'Carteirinha', icon: CreditCard },
   ];
 
