@@ -8,10 +8,12 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Register from "./pages/Register";
+import Proposal from "./pages/Proposal";
 import Dashboard from "./pages/Dashboard";
 import AdminLodges from "./pages/admin/Lodges";
 import AdminMembers from "./pages/admin/Members";
 import AdminApprovals from "./pages/admin/Approvals";
+import AdminProposals from "./pages/admin/Proposals";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
 import NotFound from "./pages/NotFound";
@@ -30,11 +32,13 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/proposta" element={<Proposal />} />
             <Route path="/dashboard" element={<Dashboard />} />
             {/* Admin routes */}
             <Route path="/admin/lodges" element={<AdminLodges />} />
             <Route path="/admin/members" element={<AdminMembers />} />
             <Route path="/admin/approvals" element={<AdminApprovals />} />
+            <Route path="/admin/proposals" element={<AdminProposals />} />
             {/* Member routes */}
             <Route path="/member/card" element={<MemberCard />} />
             <Route path="/member/profile" element={<MemberProfile />} />
