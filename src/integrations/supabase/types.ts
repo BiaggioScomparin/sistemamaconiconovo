@@ -80,6 +80,7 @@ export type Database = {
           believes_supreme_being: boolean | null
           birth_date: string
           can_afford_financial: boolean | null
+          cargo: string | null
           cell_phone: string | null
           cep: string | null
           cim_number: string | null
@@ -146,6 +147,7 @@ export type Database = {
           believes_supreme_being?: boolean | null
           birth_date: string
           can_afford_financial?: boolean | null
+          cargo?: string | null
           cell_phone?: string | null
           cep?: string | null
           cim_number?: string | null
@@ -212,6 +214,7 @@ export type Database = {
           believes_supreme_being?: boolean | null
           birth_date?: string
           can_afford_financial?: boolean | null
+          cargo?: string | null
           cell_phone?: string | null
           cep?: string | null
           cim_number?: string | null

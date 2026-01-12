@@ -246,7 +246,7 @@ export function MemberCard({ profile }: MemberCardProps) {
                 <p className="text-[10px] text-white/50 uppercase mb-0.5">Cargo</p>
                 <div className="bg-white rounded px-2 py-1 min-h-[28px] flex items-center">
                   <p className="font-body text-xs text-black">
-                    {profile.degree || '-'}
+                    {(profile as any).cargo || '-'}
                   </p>
                 </div>
               </div>
