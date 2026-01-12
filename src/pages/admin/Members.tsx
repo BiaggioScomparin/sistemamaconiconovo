@@ -259,6 +259,7 @@ export default function AdminMembers() {
                       <TableHead>Grau</TableHead>
                       <TableHead>Loja</TableHead>
                       <TableHead>Iniciação</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="w-32">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -286,6 +287,45 @@ export default function AdminMembers() {
                         <TableCell>{(profile as any).degree || 'Aprendiz'}</TableCell>
                         <TableCell>{profile.lodge?.name || '-'}</TableCell>
                         <TableCell>{formatDate(profile.initiation_date)}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={(profile as any).member_status || 'active'}
+                            onValueChange={async (value) => {
+                              try {
+                                const { error } = await supabase
+                                  .from('profiles')
+                                  .update({ member_status: value })
+                                  .eq('id', profile.id);
+                                if (error) throw error;
+                                queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+                                toast({ 
+                                  title: 'Status atualizado', 
+                                  description: `${profile.full_name} agora está ${value === 'active' ? 'ativo' : 'inativo'}.` 
+                                });
+                              } catch (error: any) {
+                                toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                                  Ativo
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="inactive">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                                  Inativo
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Button

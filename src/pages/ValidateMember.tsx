@@ -7,7 +7,7 @@ import logoGoib from '@/assets/logo-goib.png';
 interface MemberData {
   full_name: string;
   cim_number: string | null;
-  status: string;
+  member_status: string;
   lodge_name: string | null;
   lodge_city: string | null;
   lodge_state: string | null;
@@ -41,7 +41,7 @@ export default function ValidateMember() {
     enabled: !!profileId,
   });
 
-  const isActive = member?.status === 'approved';
+  const isActive = member?.member_status === 'active';
 
   const lodgeInfo = member?.lodge_name 
     ? `${member.lodge_name}${member.lodge_city ? ` - ${member.lodge_city}` : ''}${member.lodge_state ? `/${member.lodge_state}` : ''}`

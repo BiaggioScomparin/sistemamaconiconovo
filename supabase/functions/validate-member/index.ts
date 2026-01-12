@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('full_name, status, cim_number, lodges:lodge_id(name, city, state)')
+      .select('full_name, member_status, cim_number, lodges:lodge_id(name, city, state)')
       .eq('id', profileId)
       .maybeSingle()
 
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     const response = {
       full_name: profile.full_name,
       cim_number: profile.cim_number,
-      status: profile.status,
+      member_status: profile.member_status,
       lodge_name: lodge?.name || null,
       lodge_city: lodge?.city || null,
       lodge_state: lodge?.state || null,
