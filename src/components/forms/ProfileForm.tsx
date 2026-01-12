@@ -27,6 +27,7 @@ const profileSchema = z.object({
   mother_name: z.string().max(100).optional(),
   spouse_name: z.string().max(100).optional(),
   cim_number: z.string().max(20).optional(),
+  degree: z.string().optional(),
   lodge_id: z.string().optional(),
   cep: z.string().max(9).optional(),
   street: z.string().max(200).optional(),
@@ -52,9 +53,10 @@ interface ProfileFormProps {
   loading?: boolean;
   photoUrl?: string | null;
   hidePhoto?: boolean;
+  showAdminFields?: boolean;
 }
 
-export function ProfileForm({ initialData, initialChildren = [], onSubmit, loading, photoUrl, hidePhoto }: ProfileFormProps) {
+export function ProfileForm({ initialData, initialChildren = [], onSubmit, loading, photoUrl, hidePhoto, showAdminFields }: ProfileFormProps) {
   const { data: lodges } = useLodges();
   const [fetchingCEP, setFetchingCEP] = useState(false);
   const [children, setChildren] = useState<Child[]>(initialChildren);
@@ -221,8 +223,30 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
 
           <div className="space-y-2">
             <Label htmlFor="cim_number">Número do CIM</Label>
-            <Input {...register('cim_number')} id="cim_number" />
+            <Input {...register('cim_number')} id="cim_number" disabled={!showAdminFields} />
+            {!showAdminFields && (
+              <p className="text-xs text-muted-foreground">Gerado automaticamente</p>
+            )}
           </div>
+
+          {showAdminFields && (
+            <div className="space-y-2">
+              <Label htmlFor="degree">Grau</Label>
+              <Select
+                onValueChange={(value) => setValue('degree', value)}
+                defaultValue={initialData?.degree || 'Aprendiz'}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o grau" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aprendiz">Aprendiz</SelectItem>
+                  <SelectItem value="Companheiro">Companheiro</SelectItem>
+                  <SelectItem value="Mestre">Mestre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="mother_name">Nome da Mãe</Label>

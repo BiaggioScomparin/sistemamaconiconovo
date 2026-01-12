@@ -27,7 +27,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Profile } from '@/lib/supabase-types';
+import { Profile, MasonicDegree } from '@/lib/supabase-types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AdminMembers() {
   const { user, loading, isAdmin } = useAuth();
@@ -210,6 +217,7 @@ export default function AdminMembers() {
     mother_name: profile.mother_name || undefined,
     spouse_name: profile.spouse_name || undefined,
     cim_number: profile.cim_number || undefined,
+    degree: (profile as any).degree || 'Aprendiz',
     lodge_id: profile.lodge_id || undefined,
     cep: profile.cep || undefined,
     street: profile.street || undefined,
@@ -248,6 +256,7 @@ export default function AdminMembers() {
                       <TableHead>Membro</TableHead>
                       <TableHead>CPF</TableHead>
                       <TableHead>CIM</TableHead>
+                      <TableHead>Grau</TableHead>
                       <TableHead>Loja</TableHead>
                       <TableHead>Iniciação</TableHead>
                       <TableHead className="w-32">Ações</TableHead>
@@ -274,6 +283,7 @@ export default function AdminMembers() {
                         </TableCell>
                         <TableCell>{(profile as any).cpf || '-'}</TableCell>
                         <TableCell>{profile.cim_number || '-'}</TableCell>
+                        <TableCell>{(profile as any).degree || 'Aprendiz'}</TableCell>
                         <TableCell>{profile.lodge?.name || '-'}</TableCell>
                         <TableCell>{formatDate(profile.initiation_date)}</TableCell>
                         <TableCell>
@@ -359,6 +369,7 @@ export default function AdminMembers() {
               onSubmit={handleSave}
               loading={saving}
               photoUrl={editingProfile.photo_url}
+              showAdminFields={true}
             />
           )}
         </DialogContent>
