@@ -12,26 +12,35 @@ serve(async (req) => {
   }
 
   try {
-    const { profileId, email, cpf } = await req.json();
-
-    if (!profileId || !email || !cpf) {
+    // Validate authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Profile ID, email and CPF are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Remove punctuation from CPF to use as password
-    const password = cpf.replace(/\D/g, '');
+    // Create client with user's auth to verify identity
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { authorization: authHeader } } }
+    );
 
-    if (password.length !== 11) {
+    // Verify the JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       return new Response(
-        JSON.stringify({ error: 'Invalid CPF' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create admin client with service role key
+    const userId = claimsData.claims.sub;
+
+    // Create admin client for role check and user creation
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -43,11 +52,42 @@ serve(async (req) => {
       }
     );
 
-    // Create the user with CPF as password
+    // Verify caller has admin role
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .single();
+
+    if (roleError || !roleData) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { profileId, email } = await req.json();
+
+    if (!profileId || !email) {
+      return new Response(
+        JSON.stringify({ error: 'Profile ID and email are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Generate a cryptographically secure random password
+    const randomBytes = new Uint8Array(24);
+    crypto.getRandomValues(randomBytes);
+    const securePassword = Array.from(randomBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Create the user with secure random password (user must reset via email)
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
-      email_confirm: true,
+      password: securePassword,
+      email_confirm: false, // Send confirmation email with password reset link
     });
 
     if (createError) {
@@ -57,16 +97,26 @@ serve(async (req) => {
       );
     }
 
+    // Send password reset email so user can set their own password
+    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+    });
+
+    if (resetError) {
+      console.error('Failed to send password reset email:', resetError);
+    }
+
     // Add member role
-    const { error: roleError } = await supabaseAdmin
+    const { error: roleInsertError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: userData.user.id,
         role: 'member'
       });
 
-    if (roleError) {
-      console.error('Role error:', roleError);
+    if (roleInsertError) {
+      console.error('Role error:', roleInsertError);
     }
 
     // Update profile with user_id and status
@@ -88,7 +138,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Member approved and user created successfully',
+        message: 'Member approved successfully. A password reset email has been sent.',
         user_id: userData.user.id 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
