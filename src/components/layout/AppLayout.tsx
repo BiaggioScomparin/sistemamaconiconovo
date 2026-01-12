@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   User,
-  FileText
+  FileText,
+  Calendar
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -38,11 +39,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/members', label: 'Membros', icon: Users },
     { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
     { href: '/admin/approvals', label: 'Aprovações', icon: UserCheck },
+    { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
   ];
 
   const memberLinks = [
     { href: '/member/profile', label: 'Meu Perfil', icon: User },
     { href: '/member/card', label: 'Carteirinha', icon: CreditCard },
+    { href: '/member/attendance', label: 'Frequência', icon: Calendar },
   ];
 
   const links = isAdmin ? adminLinks : memberLinks;

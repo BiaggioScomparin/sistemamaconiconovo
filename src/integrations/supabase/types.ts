@@ -14,6 +14,67 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendances: {
+        Row: {
+          confirmed: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          lodge_id: string
+          profile_id: string
+          session_date: string
+          session_type: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          lodge_id: string
+          profile_id: string
+          session_date?: string
+          session_type: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          lodge_id?: string
+          profile_id?: string
+          session_date?: string
+          session_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendances_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_lodge_id_fkey"
+            columns: ["lodge_id"]
+            isOneToOne: false
+            referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       children: {
         Row: {
           birth_date: string
