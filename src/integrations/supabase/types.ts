@@ -346,6 +346,47 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          can_edit_profile: boolean
+          can_register_attendance: boolean
+          can_view_attendance: boolean
+          can_view_card: boolean
+          created_at: string
+          id: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_edit_profile?: boolean
+          can_register_attendance?: boolean
+          can_view_attendance?: boolean
+          can_view_card?: boolean
+          created_at?: string
+          id?: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_edit_profile?: boolean
+          can_register_attendance?: boolean
+          can_view_attendance?: boolean
+          can_view_card?: boolean
+          created_at?: string
+          id?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

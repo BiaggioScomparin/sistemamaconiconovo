@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
@@ -13,7 +14,8 @@ import {
   X,
   User,
   FileText,
-  Calendar
+  Calendar,
+  Shield
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, isAdmin, signOut } = useAuth();
+  const { data: permissions } = useUserPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,15 +43,28 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
     { href: '/admin/approvals', label: 'Aprovações', icon: UserCheck },
     { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
+    { href: '/admin/permissions', label: 'Permissões', icon: Shield },
   ];
 
-  const memberLinks = [
-    { href: '/member/profile', label: 'Meu Perfil', icon: User },
-    { href: '/member/card', label: 'Carteirinha', icon: CreditCard },
-    { href: '/member/attendance', label: 'Frequência', icon: Calendar },
-  ];
+  // Filter member links based on permissions
+  const getMemberLinks = () => {
+    const links = [];
+    
+    // Profile is always visible but editing depends on permission
+    links.push({ href: '/member/profile', label: 'Meu Perfil', icon: User });
+    
+    if (permissions?.can_view_card) {
+      links.push({ href: '/member/card', label: 'Carteirinha', icon: CreditCard });
+    }
+    
+    if (permissions?.can_view_attendance || permissions?.can_register_attendance) {
+      links.push({ href: '/member/attendance', label: 'Frequência', icon: Calendar });
+    }
+    
+    return links;
+  };
 
-  const links = isAdmin ? adminLinks : memberLinks;
+  const links = isAdmin ? adminLinks : getMemberLinks();
 
   return (
     <div className="min-h-screen bg-background">

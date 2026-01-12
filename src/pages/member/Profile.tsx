@@ -3,15 +3,17 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile, useProfileChildren, useUpdateProfile, useAddChild, useRemoveChild } from '@/hooks/useProfile';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { ProfileForm } from '@/components/forms/ProfileForm';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User } from 'lucide-react';
+import { User, Lock } from 'lucide-react';
 
 export default function MemberProfile() {
   const { user, loading } = useAuth();
   const { data: profile, isLoading } = useProfile();
+  const { data: permissions, isLoading: permissionsLoading } = useUserPermissions();
   const { data: children } = useProfileChildren(profile?.id);
   const updateProfile = useUpdateProfile();
   const addChild = useAddChild();
@@ -19,7 +21,9 @@ export default function MemberProfile() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
-  if (loading || isLoading) {
+  const canEditProfile = permissions?.can_edit_profile ?? false;
+
+  if (loading || isLoading || permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-foreground">Carregando...</div>
@@ -145,7 +149,17 @@ export default function MemberProfile() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {profile ? (
+            {!canEditProfile ? (
+              <div className="py-8 text-center">
+                <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground font-medium">
+                  Edição de perfil não liberada
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Entre em contato com a administração para liberar esta funcionalidade.
+                </p>
+              </div>
+            ) : profile ? (
               <ProfileForm
                 initialData={initialData}
                 initialChildren={initialChildren}
