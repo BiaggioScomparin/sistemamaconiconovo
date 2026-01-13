@@ -256,43 +256,43 @@ export default function Payments() {
                     </div>
                   )}
                   {payment.status !== 'paid' && (
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
                       {payment.pix_qr_code ? (
                         <Button 
                           variant="outline" 
-                          className="flex-1"
+                          className="flex-1 text-xs sm:text-sm"
                           onClick={() => setSelectedPayment(payment)}
                         >
-                          <QrCode className="h-4 w-4 mr-2" />
-                          PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}
+                          <QrCode className="h-4 w-4 mr-1 shrink-0" />
+                          <span>PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}</span>
                         </Button>
                       ) : (
                         <Button 
                           variant="outline" 
-                          className="flex-1"
+                          className="flex-1 text-xs sm:text-sm"
                           onClick={() => handleGeneratePix(payment)}
                           disabled={generatingPixId === payment.id}
                         >
                           {generatingPixId === payment.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" />
                           ) : (
-                            <QrCode className="h-4 w-4 mr-2" />
+                            <QrCode className="h-4 w-4 mr-1 shrink-0" />
                           )}
-                          PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}
+                          <span>PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}</span>
                         </Button>
                       )}
                       <Button 
                         variant="default" 
-                        className="flex-1"
+                        className="flex-1 text-xs sm:text-sm"
                         onClick={() => handleCardPayment(payment)}
                         disabled={generatingCardCheckoutId === payment.id}
                       >
                         {generatingCardCheckoutId === payment.id ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" />
                         ) : (
-                          <CreditCard className="h-4 w-4 mr-2" />
+                          <CreditCard className="h-4 w-4 mr-1 shrink-0" />
                         )}
-                        Cartão - R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}
+                        <span>Cartão - R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}</span>
                       </Button>
                     </div>
                   )}
