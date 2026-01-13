@@ -146,79 +146,59 @@ export default function Dashboard() {
         {!isAdmin && profile?.status !== 'pending' && profile?.lodge_id && (
           <div className="space-y-6">
             {/* Lodge Info Card */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="card-elegant">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-body text-muted-foreground">
-                    Sua Loja
-                  </CardTitle>
-                  <Building2 className="h-5 w-5 text-secondary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-display text-foreground">
-                    {(profile as any).lodges?.name || 'Loja não encontrada'}
-                  </div>
-                  {(profile as any).lodges?.city && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {(profile as any).lodges.city}
-                      {(profile as any).lodges.state && ` - ${(profile as any).lodges.state}`}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="card-elegant">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-body text-muted-foreground">
-                    Membros da Loja
-                  </CardTitle>
-                  <Users className="h-5 w-5 text-secondary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-display text-foreground">
-                    {lodgeMembers.length}
-                  </div>
+            <Card className="card-elegant">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-body text-muted-foreground">
+                  Sua Loja
+                </CardTitle>
+                <Building2 className="h-5 w-5 text-secondary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-display text-foreground">
+                  {(profile as any).lodges?.name || 'Loja não encontrada'}
+                </div>
+                {(profile as any).lodges?.city && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    membros ativos
+                    {(profile as any).lodges.city}
+                    {(profile as any).lodges.state && ` - ${(profile as any).lodges.state}`}
                   </p>
-                </CardContent>
-              </Card>
-            </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Lodge Positions */}
             <Card className="card-elegant">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-display text-foreground">
                   <Crown className="h-5 w-5 text-secondary" />
-                  Oficiais da Loja
+                  Cargos da Loja
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {sortedPositions.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-3">
                     {sortedPositions.map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
                       >
-                        <Avatar className="h-12 w-12 border-2 border-secondary/30">
-                          <AvatarImage src={member.photo_url || ''} alt={member.full_name} />
-                          <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                            {getInitials(member.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {member.full_name}
-                          </p>
-                          <p className="text-sm text-secondary font-medium">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border-2 border-secondary/30">
+                            <AvatarImage src={member.photo_url || ''} alt={member.full_name} />
+                            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                              {getInitials(member.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {member.full_name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-secondary font-semibold">
                             {member.lodge_position}
                           </p>
-                          {member.degree && (
-                            <p className="text-xs text-muted-foreground">
-                              {member.degree}
-                            </p>
-                          )}
                         </div>
                       </div>
                     ))}
