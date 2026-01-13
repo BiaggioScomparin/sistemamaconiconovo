@@ -146,7 +146,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             {/* Back to Member Area */}
             {isAdmin && isAdminRoute && (
               <Link
-                to="/member/profile"
+                to="/member/inicial"
                 onClick={() => setSidebarOpen(false)}
                 className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground font-medium transition-colors"
               >
