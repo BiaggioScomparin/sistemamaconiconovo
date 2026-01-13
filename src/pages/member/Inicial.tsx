@@ -64,14 +64,14 @@ export default function Inicial() {
       return dayA - dayB;
     });
 
-  // Group members by their lodge position - show all positions
+  // Group members by their lodge position - show only filled positions
   const membersByPosition = LODGE_POSITIONS.map(position => {
     const members = lodgeMembers.filter(m => m.lodge_position === position.value);
     return {
       ...position,
       members,
     };
-  });
+  }).filter(p => p.members.length > 0);
 
   // Members without a position
   const membersWithoutPosition = lodgeMembers.filter(m => !m.lodge_position);
@@ -209,6 +209,14 @@ export default function Inicial() {
 
           {membersLoading ? (
             <div className="animate-pulse text-muted-foreground">Carregando cargos...</div>
+          ) : membersByPosition.length === 0 ? (
+            <Card className="card-elegant">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground">
+                  Nenhum cargo atribuído ainda.
+                </p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {membersByPosition.map(position => (
@@ -219,25 +227,19 @@ export default function Inicial() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {position.members.length > 0 ? (
-                      position.members.map(member => (
-                        <div key={member.id} className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={member.photo_url || undefined} />
-                            <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
-                              {getInitials(member.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-foreground text-sm font-body">
-                            {member.full_name}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-muted-foreground text-sm italic">
-                        Vago
-                      </span>
-                    )}
+                    {position.members.map(member => (
+                      <div key={member.id} className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.photo_url || undefined} />
+                          <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
+                            {getInitials(member.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-foreground text-sm font-body">
+                          {member.full_name}
+                        </span>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               ))}
