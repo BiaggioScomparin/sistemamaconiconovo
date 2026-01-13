@@ -18,7 +18,8 @@ import {
   Crown,
   DollarSign,
   Settings,
-  Home
+  Home,
+  BookOpen
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
     { href: '/admin/calendar', label: 'Calendário', icon: Calendar },
     { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
+    { href: '/admin/library', label: 'Biblioteca', icon: BookOpen },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
     { href: '/admin/settings', label: 'Configurações', icon: Settings },
   ];
@@ -74,6 +76,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     
     // Payments always visible for members
     links.push({ href: '/member/payments', label: 'Mensalidades', icon: DollarSign });
+    
+    // Library always visible for members
+    links.push({ href: '/member/library', label: 'Biblioteca', icon: BookOpen });
     
     // Calendar always visible for members
     links.push({ href: '/member/calendar', label: 'Calendário', icon: Calendar });
