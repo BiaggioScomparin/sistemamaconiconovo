@@ -23,7 +23,7 @@ export default function AdminLodges() {
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLodge, setEditingLodge] = useState<Lodge | null>(null);
-  const [formData, setFormData] = useState({ name: '', city: '', state: '' });
+  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200' });
 
   if (loading) {
     return (
@@ -40,10 +40,15 @@ export default function AdminLodges() {
   const handleOpenDialog = (lodge?: Lodge) => {
     if (lodge) {
       setEditingLodge(lodge);
-      setFormData({ name: lodge.name, city: lodge.city || '', state: lodge.state || '' });
+      setFormData({ 
+        name: lodge.name, 
+        city: lodge.city || '', 
+        state: lodge.state || '',
+        default_payment_amount: String((lodge as any).default_payment_amount || 200)
+      });
     } else {
       setEditingLodge(null);
-      setFormData({ name: '', city: '', state: '' });
+      setFormData({ name: '', city: '', state: '', default_payment_amount: '200' });
     }
     setDialogOpen(true);
   };
@@ -51,12 +56,19 @@ export default function AdminLodges() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const dataToSave = {
+      name: formData.name,
+      city: formData.city,
+      state: formData.state,
+      default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
+    };
+    
     try {
       if (editingLodge) {
-        await updateLodge.mutateAsync({ id: editingLodge.id, ...formData });
+        await updateLodge.mutateAsync({ id: editingLodge.id, ...dataToSave });
         toast({ title: 'Loja atualizada com sucesso!' });
       } else {
-        await createLodge.mutateAsync(formData);
+        await createLodge.mutateAsync(dataToSave);
         toast({ title: 'Loja criada com sucesso!' });
       }
       setDialogOpen(false);
@@ -127,6 +139,20 @@ export default function AdminLodges() {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="default_payment_amount">Valor Padrão da Mensalidade (R$)</Label>
+                  <Input
+                    id="default_payment_amount"
+                    type="number"
+                    value={formData.default_payment_amount}
+                    onChange={(e) => setFormData({ ...formData, default_payment_amount: e.target.value })}
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este valor será usado ao gerar mensalidades automaticamente. Após vencimento, será acrescido R$50,00 de multa.
+                  </p>
+                </div>
                 <Button type="submit" className="w-full bg-primary hover:bg-navy-light text-primary-foreground">
                   {editingLodge ? 'Salvar Alterações' : 'Criar Loja'}
                 </Button>
@@ -154,6 +180,7 @@ export default function AdminLodges() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Cidade</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead>Valor Mensalidade</TableHead>
                     <TableHead className="w-24">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -163,6 +190,9 @@ export default function AdminLodges() {
                       <TableCell className="font-medium">{lodge.name}</TableCell>
                       <TableCell>{lodge.city || '-'}</TableCell>
                       <TableCell>{lodge.state || '-'}</TableCell>
+                      <TableCell>
+                        R$ {Number((lodge as any).default_payment_amount || 200).toFixed(2).replace('.', ',')}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(lodge)}>
