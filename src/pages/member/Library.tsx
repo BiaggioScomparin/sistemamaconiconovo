@@ -23,6 +23,20 @@ export default function MemberLibrary() {
   const { data: items, isLoading } = useLibraryItems();
   const { data: profile } = useProfile();
 
+  // Filter items based on member's degree
+  const filteredItems = items?.filter((item) => {
+    const memberDegree = profile?.degree || 'Aprendiz';
+    
+    if (memberDegree === 'Mestre') {
+      return true; // Masters can see all
+    }
+    if (memberDegree === 'Companheiro') {
+      return item.degree === 'Aprendiz' || item.degree === 'Companheiro';
+    }
+    // Aprendiz can only see Aprendiz
+    return item.degree === 'Aprendiz';
+  });
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -37,7 +51,7 @@ export default function MemberLibrary() {
           <div className="flex justify-center py-12">
             <div className="animate-pulse text-muted-foreground">Carregando...</div>
           </div>
-        ) : items?.length === 0 ? (
+        ) : filteredItems?.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
@@ -46,7 +60,7 @@ export default function MemberLibrary() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {items?.map((item) => (
+            {filteredItems?.map((item) => (
               <Card key={item.id} className="flex flex-col hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
