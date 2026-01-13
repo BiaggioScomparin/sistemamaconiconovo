@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.validate-member]
 verify_jwt = false
+
+[functions.generate-pix]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
