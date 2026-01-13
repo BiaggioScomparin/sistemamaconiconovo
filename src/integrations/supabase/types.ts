@@ -503,6 +503,7 @@ export type Database = {
     }
     Functions: {
       generate_cim_number: { Args: never; Returns: string }
+      generate_monthly_payments_for_all: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
