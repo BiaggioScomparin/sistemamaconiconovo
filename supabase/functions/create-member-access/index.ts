@@ -39,18 +39,19 @@ serve(async (req) => {
       { global: { headers: { authorization: authHeader } } }
     );
 
-    // Use getUser to verify the token (more reliable than getClaims)
-    const { data: authUserData, error: userError } = await supabaseClient.auth.getUser();
+    // Verify the token using getClaims
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
     
-    if (userError || !authUserData?.user) {
-      console.error('User verification error:', userError);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Claims verification error:', claimsError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = authUserData.user.id;
+    const userId = claimsData.claims.sub as string;
 
     // Check if caller is admin using service role
     const { data: roleData, error: roleError } = await supabaseAdmin
