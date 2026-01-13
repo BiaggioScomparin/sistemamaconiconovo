@@ -52,6 +52,9 @@ interface PaymentWithProfile {
   profiles: {
     full_name: string;
     cim_number: string | null;
+    lodges: {
+      name: string;
+    } | null;
   };
 }
 
@@ -96,7 +99,7 @@ export default function Financeiro() {
         .from('monthly_payments')
         .select(`
           *,
-          profiles!inner(full_name, cim_number)
+          profiles!inner(full_name, cim_number, lodges(name))
         `)
         .order('reference_year', { ascending: false })
         .order('reference_month', { ascending: false });
@@ -431,6 +434,7 @@ export default function Financeiro() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Membro</TableHead>
+                    <TableHead>Loja</TableHead>
                     <TableHead>CIM</TableHead>
                     <TableHead>Referência</TableHead>
                     <TableHead>Valor</TableHead>
@@ -443,6 +447,7 @@ export default function Financeiro() {
                   {filteredPayments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell className="font-medium">{payment.profiles.full_name}</TableCell>
+                      <TableCell>{payment.profiles.lodges?.name || '-'}</TableCell>
                       <TableCell>{payment.profiles.cim_number || '-'}</TableCell>
                       <TableCell>
                         {monthNames[payment.reference_month - 1]} {payment.reference_year}
