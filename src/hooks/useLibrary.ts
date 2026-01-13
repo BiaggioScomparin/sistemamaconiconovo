@@ -9,7 +9,7 @@ export interface LibraryItem {
   content: string | null;
   file_url: string | null;
   file_type: string | null;
-  degree: 'Aprendiz' | 'Companheiro' | 'Mestre';
+  degree: 'Aprendiz' | 'Companheiro' | 'Mestre' | 'Mestre Instalado';
   created_by: string | null;
   created_at: string;
   updated_at: string;

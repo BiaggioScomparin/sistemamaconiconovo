@@ -12,7 +12,7 @@ export interface Lodge {
   updated_at: string;
 }
 
-export type MasonicDegree = 'Aprendiz' | 'Companheiro' | 'Mestre';
+export type MasonicDegree = 'Aprendiz' | 'Companheiro' | 'Mestre' | 'Mestre Instalado';
 
 export interface Profile {
   id: string;

@@ -13,10 +13,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-const degreeColors = {
+const degreeColors: Record<string, string> = {
   Aprendiz: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
   Companheiro: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
   Mestre: 'bg-red-500/10 text-red-500 border-red-500/20',
+  'Mestre Instalado': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
 };
 
 export default function MemberLibrary() {
@@ -27,8 +28,11 @@ export default function MemberLibrary() {
   const filteredItems = items?.filter((item) => {
     const memberDegree = profile?.degree || 'Aprendiz';
     
+    if (memberDegree === 'Mestre Instalado') {
+      return true; // Installed Masters can see all
+    }
     if (memberDegree === 'Mestre') {
-      return true; // Masters can see all
+      return ['Aprendiz', 'Companheiro', 'Mestre'].includes(item.degree);
     }
     if (memberDegree === 'Companheiro') {
       return item.degree === 'Aprendiz' || item.degree === 'Companheiro';
