@@ -173,7 +173,8 @@ export default function Financeiro() {
     mutationFn: async (payment: PaymentWithProfile) => {
       const now = new Date();
       const due = parseISO(payment.due_date);
-      const amount = now > due ? 250 : 200;
+      // Usa o valor armazenado + multa de 50 se em atraso
+      const amount = now > due ? Number(payment.amount) + 50 : Number(payment.amount);
 
       const response = await supabase.functions.invoke('generate-pix', {
         body: {

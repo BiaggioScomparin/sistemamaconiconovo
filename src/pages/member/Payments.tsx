@@ -70,7 +70,8 @@ export default function Payments() {
     mutationFn: async (payment: Payment) => {
       const now = new Date();
       const due = parseISO(payment.due_date);
-      const amount = now > due ? 250 : 200;
+      // Usa o valor armazenado + multa de 50 se em atraso
+      const amount = now > due ? payment.amount + 50 : payment.amount;
 
       const response = await supabase.functions.invoke('generate-pix', {
         body: {
@@ -100,8 +101,9 @@ export default function Payments() {
   const getAmount = (payment: Payment) => {
     const now = new Date();
     const due = parseISO(payment.due_date);
+    // Se está em atraso e não pago, adiciona 50 reais de multa
     if (now > due && payment.status !== 'paid') {
-      return 250;
+      return payment.amount + 50;
     }
     return payment.amount;
   };
