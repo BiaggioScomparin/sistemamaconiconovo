@@ -33,8 +33,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Check if current route is an admin route
-  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
+  // Check if current route is an admin route (only /admin/* routes, not /dashboard)
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   const handleSignOut = async () => {
     await signOut();
