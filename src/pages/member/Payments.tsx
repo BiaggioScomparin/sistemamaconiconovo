@@ -256,43 +256,52 @@ export default function Payments() {
                     </div>
                   )}
                   {payment.status !== 'paid' && (
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                    <div className="grid grid-cols-2 gap-2 mt-3">
                       {payment.pix_qr_code ? (
                         <Button 
                           variant="outline" 
-                          className="flex-1 text-xs sm:text-sm"
+                          className="w-full h-auto py-2 px-3"
                           onClick={() => setSelectedPayment(payment)}
                         >
-                          <QrCode className="h-4 w-4 mr-1 shrink-0" />
-                          <span>PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}</span>
+                          <div className="flex flex-col items-center gap-1">
+                            <QrCode className="h-5 w-5" />
+                            <span className="text-xs font-medium">PIX</span>
+                            <span className="text-xs">R$ {getAmount(payment).toFixed(2).replace('.', ',')}</span>
+                          </div>
                         </Button>
                       ) : (
                         <Button 
                           variant="outline" 
-                          className="flex-1 text-xs sm:text-sm"
+                          className="w-full h-auto py-2 px-3"
                           onClick={() => handleGeneratePix(payment)}
                           disabled={generatingPixId === payment.id}
                         >
-                          {generatingPixId === payment.id ? (
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" />
-                          ) : (
-                            <QrCode className="h-4 w-4 mr-1 shrink-0" />
-                          )}
-                          <span>PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}</span>
+                          <div className="flex flex-col items-center gap-1">
+                            {generatingPixId === payment.id ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <QrCode className="h-5 w-5" />
+                            )}
+                            <span className="text-xs font-medium">PIX</span>
+                            <span className="text-xs">R$ {getAmount(payment).toFixed(2).replace('.', ',')}</span>
+                          </div>
                         </Button>
                       )}
                       <Button 
                         variant="default" 
-                        className="flex-1 text-xs sm:text-sm"
+                        className="w-full h-auto py-2 px-3"
                         onClick={() => handleCardPayment(payment)}
                         disabled={generatingCardCheckoutId === payment.id}
                       >
-                        {generatingCardCheckoutId === payment.id ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" />
-                        ) : (
-                          <CreditCard className="h-4 w-4 mr-1 shrink-0" />
-                        )}
-                        <span>Cartão - R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}</span>
+                        <div className="flex flex-col items-center gap-1">
+                          {generatingCardCheckoutId === payment.id ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <CreditCard className="h-5 w-5" />
+                          )}
+                          <span className="text-xs font-medium">Cartão</span>
+                          <span className="text-xs">R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}</span>
+                        </div>
                       </Button>
                     </div>
                   )}
