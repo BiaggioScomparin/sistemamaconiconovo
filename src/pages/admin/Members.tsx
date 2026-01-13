@@ -436,7 +436,7 @@ export default function AdminMembers() {
                         <TableCell>{(profile as any).cpf || '-'}</TableCell>
                         <TableCell>{profile.cim_number || '-'}</TableCell>
                         <TableCell>{(profile as any).degree || 'Aprendiz'}</TableCell>
-                        <TableCell>{profile.lodge?.name || '-'}</TableCell>
+                        <TableCell>{(profile as any).lodges?.name || '-'}</TableCell>
                         <TableCell>{formatDate(profile.initiation_date)}</TableCell>
                         <TableCell>
                           <Select
