@@ -83,6 +83,13 @@ export type Database = {
             foreignKeyName: "attendances_confirmed_by_fkey"
             columns: ["confirmed_by"]
             isOneToOne: false
+            referencedRelation: "lodge_members_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -91,6 +98,13 @@ export type Database = {
             columns: ["lodge_id"]
             isOneToOne: false
             referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "lodge_members_public"
             referencedColumns: ["id"]
           },
           {
@@ -125,6 +139,13 @@ export type Database = {
           profile_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "children_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "lodge_members_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "children_profile_id_fkey"
             columns: ["profile_id"]
@@ -214,6 +235,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "monthly_payments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "lodge_members_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "monthly_payments_profile_id_fkey"
             columns: ["profile_id"]
@@ -477,6 +505,13 @@ export type Database = {
             foreignKeyName: "user_permissions_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "lodge_members_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -505,7 +540,53 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      lodge_members_public: {
+        Row: {
+          birth_date: string | null
+          degree: string | null
+          full_name: string | null
+          id: string | null
+          initiation_date: string | null
+          lodge_id: string | null
+          lodge_position: string | null
+          member_status: string | null
+          photo_url: string | null
+          status: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          degree?: string | null
+          full_name?: string | null
+          id?: string | null
+          initiation_date?: string | null
+          lodge_id?: string | null
+          lodge_position?: string | null
+          member_status?: string | null
+          photo_url?: string | null
+          status?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          degree?: string | null
+          full_name?: string | null
+          id?: string | null
+          initiation_date?: string | null
+          lodge_id?: string | null
+          lodge_position?: string | null
+          member_status?: string | null
+          photo_url?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_lodge_id_fkey"
+            columns: ["lodge_id"]
+            isOneToOne: false
+            referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       generate_cim_number: { Args: never; Returns: string }

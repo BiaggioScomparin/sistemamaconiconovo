@@ -16,8 +16,9 @@ export function useLodgeMembers(lodgeId: string | undefined) {
     queryFn: async () => {
       if (!lodgeId) return [];
 
+      // Using the secure view that only exposes public member data
       const { data, error } = await supabase
-        .from('profiles')
+        .from('lodge_members_public' as any)
         .select('id, full_name, lodge_position, member_status, photo_url, birth_date')
         .eq('lodge_id', lodgeId)
         .in('status', ['approved', 'membro'])
@@ -25,7 +26,7 @@ export function useLodgeMembers(lodgeId: string | undefined) {
         .order('full_name');
 
       if (error) throw error;
-      return data as LodgeMember[];
+      return (data as unknown) as LodgeMember[];
     },
     enabled: !!lodgeId,
   });
