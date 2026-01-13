@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +90,15 @@ export function LoginForm() {
           </>
         )}
       </Button>
+
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground">
+          Não tem uma conta?{' '}
+          <Link to="/register" className="text-primary hover:underline font-medium">
+            Criar conta
+          </Link>
+        </p>
+      </div>
     </form>
   );
 }
