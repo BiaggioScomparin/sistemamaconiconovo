@@ -1,11 +1,12 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useLodgeMembers } from '@/hooks/useLodgeMembers';
+import { useEvents } from '@/hooks/useEvents';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Building2, Users, Crown, User, Cake } from 'lucide-react';
+import { Building2, Users, Crown, User, Cake, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -34,6 +35,7 @@ export default function Inicial() {
   const { user, loading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: lodgeMembers = [], isLoading: membersLoading } = useLodgeMembers(profile?.lodge_id || undefined);
+  const { data: events = [], isLoading: eventsLoading } = useEvents(profile?.lodge_id || undefined);
 
   if (loading || profileLoading) {
     return (
@@ -75,6 +77,13 @@ export default function Inicial() {
 
   // Members without a position
   const membersWithoutPosition = lodgeMembers.filter(m => !m.lodge_position);
+
+  // Upcoming events (next 5)
+  const today = new Date();
+  const upcomingEvents = events
+    .filter((event) => new Date(event.event_date) >= today)
+    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+    .slice(0, 5);
 
   const getInitials = (name: string) => {
     return name
@@ -153,6 +162,67 @@ export default function Inicial() {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Upcoming Events */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-display text-foreground flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-secondary" />
+              Próximos Eventos
+            </h2>
+            <Link 
+              to="/member/calendar" 
+              className="text-sm text-primary hover:underline"
+            >
+              Ver calendário completo
+            </Link>
+          </div>
+
+          {eventsLoading ? (
+            <div className="animate-pulse text-muted-foreground">Carregando eventos...</div>
+          ) : upcomingEvents.length === 0 ? (
+            <Card className="card-elegant">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground">
+                  Nenhum evento agendado.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {upcomingEvents.map(event => (
+                <Card key={event.id} className="card-elegant hover:shadow-md transition-shadow">
+                  <CardContent className="pt-6">
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center justify-center w-14 h-14 rounded-lg bg-primary/10 text-primary shrink-0">
+                        <span className="text-xl font-bold leading-none">
+                          {format(new Date(event.event_date + 'T00:00:00'), 'd')}
+                        </span>
+                        <span className="text-xs uppercase">
+                          {format(new Date(event.event_date + 'T00:00:00'), 'MMM', { locale: ptBR })}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">{event.title}</h3>
+                        {event.event_time && (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            {event.event_time.slice(0, 5)}
+                          </div>
+                        )}
+                        {event.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {event.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Birthdays this month */}
