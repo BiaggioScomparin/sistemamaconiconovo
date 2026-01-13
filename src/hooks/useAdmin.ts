@@ -102,12 +102,34 @@ export function useDashboardStats() {
         return birthMonth === currentMonth;
       }) || [];
 
+      // Members by degree (only active members)
+      const { data: membersByDegree } = await supabase
+        .from('profiles')
+        .select('degree')
+        .in('status', ['approved', 'membro'])
+        .eq('member_status', 'active');
+
+      const degreeCount: Record<string, number> = {
+        'Aprendiz': 0,
+        'Companheiro': 0,
+        'Mestre': 0,
+        'Mestre Instalado': 0,
+      };
+
+      membersByDegree?.forEach((profile) => {
+        const degree = profile.degree || 'Aprendiz';
+        if (degreeCount[degree] !== undefined) {
+          degreeCount[degree]++;
+        }
+      });
+
       return {
         totalMembers: totalMembers || 0,
         pendingApprovals: pendingApprovals || 0,
         totalLodges: totalLodges || 0,
         lodgesWithMembers: lodgesWithMembers || [],
         birthdaysThisMonth,
+        membersByDegree: degreeCount,
       };
     },
   });
