@@ -4,7 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useDashboardStats } from '@/hooks/useAdmin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Building2, UserCheck, Cake } from 'lucide-react';
+import { Users, Building2, Cake } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const DEGREE_COLORS: Record<string, string> = {
@@ -80,19 +80,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="card-elegant">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-body text-muted-foreground">
-                    Pendentes
-                  </CardTitle>
-                  <UserCheck className="h-5 w-5 text-secondary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-display text-foreground">
-                    {stats.pendingApprovals}
-                  </div>
-                </CardContent>
-              </Card>
 
               <Card className="card-elegant">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
