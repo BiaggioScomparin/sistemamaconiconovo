@@ -7,6 +7,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Onboarding from "./pages/onboarding/Onboarding";
 import Proposal from "./pages/Proposal";
 import Dashboard from "./pages/Dashboard";
 import AdminLodges from "./pages/admin/Lodges";
@@ -39,6 +41,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/proposta" element={<Proposal />} />
             <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
             {/* Admin routes - Protected */}
