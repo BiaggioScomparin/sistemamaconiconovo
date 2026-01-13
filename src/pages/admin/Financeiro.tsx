@@ -20,8 +20,19 @@ import {
   Users,
   TrendingUp,
   QrCode,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { Label } from '@/components/ui/label';
@@ -74,6 +85,7 @@ export default function Financeiro() {
   const [generateAmount, setGenerateAmount] = useState('200');
   const [selectedPaymentForQR, setSelectedPaymentForQR] = useState<PaymentWithProfile | null>(null);
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<PaymentWithProfile | null>(null);
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ['admin-payments', statusFilter, monthFilter, yearFilter],
@@ -197,6 +209,25 @@ export default function Financeiro() {
       console.error('Error generating PIX:', error);
       toast.error(error?.message || 'Erro ao gerar QR Code PIX');
       setGeneratingPixId(null);
+    },
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase
+        .from('monthly_payments')
+        .delete()
+        .eq('id', paymentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+      toast.success('Mensalidade excluída com sucesso!');
+      setPaymentToDelete(null);
+    },
+    onError: () => {
+      toast.error('Erro ao excluir mensalidade');
     },
   });
 
@@ -420,6 +451,13 @@ export default function Financeiro() {
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Confirmar
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setPaymentToDelete(payment)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </>
                         )}
                       </TableCell>
@@ -526,6 +564,31 @@ export default function Financeiro() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!paymentToDelete} onOpenChange={() => setPaymentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a mensalidade de{' '}
+              <strong>{paymentToDelete?.profiles.full_name}</strong> referente a{' '}
+              <strong>{paymentToDelete && monthNames[paymentToDelete.reference_month - 1]}/{paymentToDelete?.reference_year}</strong>?
+              <br /><br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => paymentToDelete && deletePaymentMutation.mutate(paymentToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
