@@ -48,8 +48,7 @@ export default function Payments() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
   const [creditCardFee, setCreditCardFee] = useState(4.99);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedPaymentForCard, setSelectedPaymentForCard] = useState<Payment | null>(null);
+  const [generatingCardCheckoutId, setGeneratingCardCheckoutId] = useState<string | null>(null);
 
   // Fetch credit card fee from settings
   const { data: settings } = useQuery({
@@ -127,6 +126,40 @@ export default function Payments() {
     },
   });
 
+  const createCardCheckoutMutation = useMutation({
+    mutationFn: async (payment: Payment) => {
+      const cardAmount = getCardAmount(payment);
+
+      const response = await supabase.functions.invoke('create-card-checkout', {
+        body: {
+          payment_id: payment.id,
+          amount: parseFloat(cardAmount.toFixed(2)),
+          description: `Mensalidade ${monthNames[payment.reference_month - 1]}/${payment.reference_year}`,
+          payer_name: profile?.full_name,
+          payer_email: profile?.email,
+          back_url: window.location.origin + '/member/payments',
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setGeneratingCardCheckoutId(null);
+      if (data.checkout_url) {
+        // Redireciona para o checkout do Mercado Pago
+        window.location.href = data.checkout_url;
+      } else {
+        toast.error('Erro ao obter URL de checkout');
+      }
+    },
+    onError: (error: any) => {
+      console.error('Error creating checkout:', error);
+      toast.error(error?.message || 'Erro ao criar checkout');
+      setGeneratingCardCheckoutId(null);
+    },
+  });
+
   const getAmount = (payment: Payment) => {
     const now = new Date();
     const due = parseISO(payment.due_date);
@@ -148,9 +181,9 @@ export default function Payments() {
     generatePixMutation.mutate(payment);
   };
 
-  const handleOpenCardPayment = (payment: Payment) => {
-    setSelectedPaymentForCard(payment);
-    setPaymentDialogOpen(true);
+  const handleCardPayment = (payment: Payment) => {
+    setGeneratingCardCheckoutId(payment.id);
+    createCardCheckoutMutation.mutate(payment);
   };
 
   if (isLoading) {
@@ -251,9 +284,14 @@ export default function Payments() {
                       <Button 
                         variant="default" 
                         className="flex-1"
-                        onClick={() => handleOpenCardPayment(payment)}
+                        onClick={() => handleCardPayment(payment)}
+                        disabled={generatingCardCheckoutId === payment.id}
                       >
-                        <CreditCard className="h-4 w-4 mr-2" />
+                        {generatingCardCheckoutId === payment.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CreditCard className="h-4 w-4 mr-2" />
+                        )}
                         Cartão - R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}
                       </Button>
                     </div>
@@ -306,44 +344,6 @@ export default function Payments() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Pagamento com Cartão */}
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Pagamento com Cartão de Crédito</DialogTitle>
-            <DialogDescription>
-              {selectedPaymentForCard && (
-                <>
-                  Mensalidade de {monthNames[selectedPaymentForCard.reference_month - 1]}/{selectedPaymentForCard.reference_year}
-                  <br />
-                  <span className="text-lg font-bold text-foreground">
-                    R$ {getCardAmount(selectedPaymentForCard).toFixed(2).replace('.', ',')}
-                  </span>
-                  <span className="text-xs block mt-1">
-                    (inclui taxa de {creditCardFee.toFixed(2).replace('.', ',')}%)
-                  </span>
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center space-y-4 py-4">
-            <CreditCard className="h-16 w-16 text-muted-foreground" />
-            <p className="text-center text-sm text-muted-foreground">
-              Para pagamento com cartão de crédito, você será redirecionado para o checkout seguro do Mercado Pago.
-            </p>
-            <p className="text-center text-xs text-muted-foreground">
-              Em breve, será possível finalizar o pagamento diretamente por aqui.
-            </p>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => setPaymentDialogOpen(false)}
-            >
-              Fechar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 }
