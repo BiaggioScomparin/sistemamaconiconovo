@@ -510,6 +510,7 @@ export type Database = {
     Functions: {
       generate_cim_number: { Args: never; Returns: string }
       generate_monthly_payments_for_all: { Args: never; Returns: undefined }
+      get_user_lodge_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
