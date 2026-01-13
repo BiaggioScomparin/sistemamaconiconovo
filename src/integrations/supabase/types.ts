@@ -134,6 +134,65 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          paid_at: string | null
+          payment_method: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          pix_transaction_id: string | null
+          profile_id: string
+          reference_month: number
+          reference_year: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          pix_transaction_id?: string | null
+          profile_id: string
+          reference_month: number
+          reference_year: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          pix_transaction_id?: string | null
+          profile_id?: string
+          reference_month?: number
+          reference_year?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_payments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           agrees_investigation_fee: boolean | null
