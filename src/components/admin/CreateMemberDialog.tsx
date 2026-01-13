@@ -21,6 +21,28 @@ const formatCPF = (value: string): string => {
   return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
 };
 
+// Lista de cargos de Loja maçônica
+const LODGE_POSITIONS = [
+  'Venerável Mestre',
+  'Primeiro Vigilante',
+  'Segundo Vigilante',
+  'Orador',
+  'Secretário',
+  'Tesoureiro',
+  'Mestre de Cerimônias',
+  '1º Diácono',
+  '2º Diácono',
+  '1º Experto',
+  '2º Experto',
+  'Cobridor Interno',
+  'Cobridor Externo',
+  'Porta Bandeira',
+  'Porta Estandarte',
+  'Porta Espada',
+  'Mestre de Banquetes',
+  'Mestre de Harmonia',
+] as const;
+
 const memberSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
   email: z.string().email('E-mail inválido'),
@@ -29,6 +51,7 @@ const memberSchema = z.object({
   initiation_date: z.string().optional(),
   degree: z.string().optional(),
   lodge_id: z.string().optional(),
+  lodge_position: z.string().optional(),
   phone: z.string().optional(),
   cell_phone: z.string().optional(),
 });
@@ -50,6 +73,7 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
   const [lodges, setLodges] = useState<Lodge[]>([]);
   const [selectedLodgeId, setSelectedLodgeId] = useState<string>('');
   const [selectedDegree, setSelectedDegree] = useState<string>('Aprendiz');
+  const [selectedLodgePosition, setSelectedLodgePosition] = useState<string>('');
   const [createAccess, setCreateAccess] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -95,6 +119,7 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
         initiation_date: data.initiation_date || null,
         degree: selectedDegree || 'Aprendiz',
         lodge_id: selectedLodgeId || null,
+        lodge_position: selectedLodgePosition || null,
         phone: data.phone || null,
         cell_phone: data.cell_phone || null,
         status: 'approved',
@@ -148,6 +173,7 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
       reset();
       setSelectedLodgeId('');
       setSelectedDegree('Aprendiz');
+      setSelectedLodgePosition('');
       setCreateAccess(true);
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
@@ -242,6 +268,23 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
                   {lodges.map((lodge) => (
                     <SelectItem key={lodge.id} value={lodge.id}>
                       {lodge.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label>Cargo de Loja</Label>
+              <Select value={selectedLodgePosition} onValueChange={setSelectedLodgePosition}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione o cargo de loja" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-border z-50">
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {LODGE_POSITIONS.map((position) => (
+                    <SelectItem key={position} value={position}>
+                      {position}
                     </SelectItem>
                   ))}
                 </SelectContent>

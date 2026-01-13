@@ -27,6 +27,7 @@ export interface Profile {
   cim_number: string | null;
   photo_url: string | null;
   lodge_id: string | null;
+  lodge_position: string | null;
   cep: string | null;
   street: string | null;
   number: string | null;

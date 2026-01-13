@@ -20,6 +20,28 @@ const formatCPF = (value: string): string => {
   return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
 };
 
+// Lista de cargos de Loja maçônica
+export const LODGE_POSITIONS = [
+  'Venerável Mestre',
+  'Primeiro Vigilante',
+  'Segundo Vigilante',
+  'Orador',
+  'Secretário',
+  'Tesoureiro',
+  'Mestre de Cerimônias',
+  '1º Diácono',
+  '2º Diácono',
+  '1º Experto',
+  '2º Experto',
+  'Cobridor Interno',
+  'Cobridor Externo',
+  'Porta Bandeira',
+  'Porta Estandarte',
+  'Porta Espada',
+  'Mestre de Banquetes',
+  'Mestre de Harmonia',
+] as const;
+
 const profileSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
   email: z.string().email('E-mail inválido'),
@@ -33,6 +55,7 @@ const profileSchema = z.object({
   degree: z.string().optional(),
   cargo: z.string().max(100).optional(),
   lodge_id: z.string().optional(),
+  lodge_position: z.string().optional(),
   // Address fields
   cep: z.string().max(9).optional(),
   street: z.string().max(200).optional(),
@@ -302,12 +325,32 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
                     <SelectItem value="Companheiro">Companheiro</SelectItem>
                     <SelectItem value="Mestre">Mestre</SelectItem>
                   </SelectContent>
-                </Select>
+              </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="cargo">Cargo</Label>
-                <Input {...register('cargo')} id="cargo" placeholder="Ex: Venerável Mestre, Secretário..." />
+                <Input {...register('cargo')} id="cargo" placeholder="Ex: Engenheiro, Advogado..." />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lodge_position">Cargo de Loja</Label>
+                <Select
+                  onValueChange={(value) => setValue('lodge_position', value === 'none' ? '' : value)}
+                  defaultValue={initialData?.lodge_position || 'none'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cargo de loja" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {LODGE_POSITIONS.map((position) => (
+                      <SelectItem key={position} value={position}>
+                        {position}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}
