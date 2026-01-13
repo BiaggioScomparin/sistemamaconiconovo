@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Proposal from "./pages/Proposal";
@@ -37,16 +38,16 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/proposta" element={<Proposal />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            {/* Admin routes */}
-            <Route path="/admin/lodges" element={<AdminLodges />} />
-            <Route path="/admin/members" element={<AdminMembers />} />
-            <Route path="/admin/approvals" element={<AdminApprovals />} />
-            <Route path="/admin/proposals" element={<AdminProposals />} />
-            <Route path="/admin/attendances" element={<AdminAttendances />} />
-            <Route path="/admin/permissions" element={<AdminPermissions />} />
-            <Route path="/admin/financeiro" element={<AdminFinanceiro />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
+            {/* Admin routes - Protected */}
+            <Route path="/admin/lodges" element={<ProtectedAdminRoute><AdminLodges /></ProtectedAdminRoute>} />
+            <Route path="/admin/members" element={<ProtectedAdminRoute><AdminMembers /></ProtectedAdminRoute>} />
+            <Route path="/admin/approvals" element={<ProtectedAdminRoute><AdminApprovals /></ProtectedAdminRoute>} />
+            <Route path="/admin/proposals" element={<ProtectedAdminRoute><AdminProposals /></ProtectedAdminRoute>} />
+            <Route path="/admin/attendances" element={<ProtectedAdminRoute><AdminAttendances /></ProtectedAdminRoute>} />
+            <Route path="/admin/permissions" element={<ProtectedAdminRoute><AdminPermissions /></ProtectedAdminRoute>} />
+            <Route path="/admin/financeiro" element={<ProtectedAdminRoute><AdminFinanceiro /></ProtectedAdminRoute>} />
+            <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             {/* Member routes */}
             <Route path="/member/inicial" element={<MemberInicial />} />
             <Route path="/member/card" element={<MemberCard />} />
