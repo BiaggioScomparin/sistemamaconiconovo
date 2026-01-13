@@ -36,6 +36,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { Label } from '@/components/ui/label';
+import { LodgeFinancialReport } from '@/components/admin/LodgeFinancialReport';
 
 interface PaymentWithProfile {
   id: string;
@@ -378,6 +379,9 @@ export default function Financeiro() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Lodge Financial Report */}
+        <LodgeFinancialReport monthFilter={monthFilter} yearFilter={yearFilter} />
 
         {/* Payments Table */}
         <Card>

@@ -138,6 +138,7 @@ export type Database = {
         Row: {
           city: string | null
           created_at: string
+          default_payment_amount: number | null
           id: string
           name: string
           state: string | null
@@ -146,6 +147,7 @@ export type Database = {
         Insert: {
           city?: string | null
           created_at?: string
+          default_payment_amount?: number | null
           id?: string
           name: string
           state?: string | null
@@ -154,6 +156,7 @@ export type Database = {
         Update: {
           city?: string | null
           created_at?: string
+          default_payment_amount?: number | null
           id?: string
           name?: string
           state?: string | null
