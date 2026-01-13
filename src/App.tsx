@@ -17,11 +17,13 @@ import AdminAttendances from "./pages/admin/Attendances";
 import AdminPermissions from "./pages/admin/Permissions";
 import AdminFinanceiro from "./pages/admin/Financeiro";
 import AdminSettings from "./pages/admin/Settings";
+import AdminCalendar from "./pages/admin/Calendar";
 import MemberInicial from "./pages/member/Inicial";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
 import MemberAttendance from "./pages/member/Attendance";
 import MemberPayments from "./pages/member/Payments";
+import MemberCalendar from "./pages/member/Calendar";
 import ValidateMember from "./pages/ValidateMember";
 import NotFound from "./pages/NotFound";
 
@@ -47,6 +49,7 @@ const App = () => (
             <Route path="/admin/attendances" element={<ProtectedAdminRoute><AdminAttendances /></ProtectedAdminRoute>} />
             <Route path="/admin/permissions" element={<ProtectedAdminRoute><AdminPermissions /></ProtectedAdminRoute>} />
             <Route path="/admin/financeiro" element={<ProtectedAdminRoute><AdminFinanceiro /></ProtectedAdminRoute>} />
+            <Route path="/admin/calendar" element={<ProtectedAdminRoute><AdminCalendar /></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             {/* Member routes */}
             <Route path="/member/inicial" element={<MemberInicial />} />
@@ -54,6 +57,7 @@ const App = () => (
             <Route path="/member/profile" element={<MemberProfile />} />
             <Route path="/member/attendance" element={<MemberAttendance />} />
             <Route path="/member/payments" element={<MemberPayments />} />
+            <Route path="/member/calendar" element={<MemberCalendar />} />
             {/* Public validation route */}
             <Route path="/validar/:profileId" element={<ValidateMember />} />
             {/* Catch-all */}

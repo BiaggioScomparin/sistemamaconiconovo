@@ -48,6 +48,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/members', label: 'Membros', icon: Users },
     { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
     { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
+    { href: '/admin/calendar', label: 'Calendário', icon: Calendar },
     { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
     { href: '/admin/settings', label: 'Configurações', icon: Settings },
@@ -73,6 +74,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     
     // Payments always visible for members
     links.push({ href: '/member/payments', label: 'Mensalidades', icon: DollarSign });
+    
+    // Calendar always visible for members
+    links.push({ href: '/member/calendar', label: 'Calendário', icon: Calendar });
     
     return links;
   };
