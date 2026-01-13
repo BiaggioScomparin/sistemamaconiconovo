@@ -53,6 +53,7 @@ export function MemberCard({ profile }: MemberCardProps) {
       case 'Aprendiz': return 'Apr∴';
       case 'Companheiro': return 'Comp∴';
       case 'Mestre': return 'M∴M∴';
+      case 'Mestre Instalado': return 'M∴I∴';
       default: return 'Apr∴';
     }
   };
