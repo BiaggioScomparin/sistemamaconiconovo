@@ -123,10 +123,13 @@ serve(async (req) => {
       );
     }
 
-    // Update profile with user_id
+    // Update profile with user_id and set status to 'membro'
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({ user_id: userData.user.id })
+      .update({ 
+        user_id: userData.user.id,
+        status: 'membro'
+      })
       .eq('id', profileId);
 
     if (updateError) {
