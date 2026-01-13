@@ -56,6 +56,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const getMemberLinks = () => {
     const links = [];
     
+    // Dashboard (Início) always visible for members
+    links.push({ href: '/dashboard', label: 'Início', icon: LayoutDashboard });
+    
     // Profile is always visible but editing depends on permission
     links.push({ href: '/member/profile', label: 'Meu Perfil', icon: User });
     
