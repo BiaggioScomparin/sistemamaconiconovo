@@ -78,14 +78,14 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
         description: event.description || '',
         event_date: new Date(event.event_date + 'T00:00:00'),
         event_time: event.event_time?.slice(0, 5) || '',
-        lodge_id: event.lodge_id || '',
+        lodge_id: event.lodge_id || '__all__',
       });
     } else {
       form.reset({
         title: '',
         description: '',
         event_time: '',
-        lodge_id: '',
+        lodge_id: '__all__',
       });
     }
   }, [event, form, open]);
@@ -98,7 +98,7 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
         description: data.description || null,
         event_date: format(data.event_date, 'yyyy-MM-dd'),
         event_time: data.event_time || null,
-        lodge_id: data.lodge_id || null,
+        lodge_id: data.lodge_id === '__all__' ? null : data.lodge_id || null,
       };
 
       if (event) {
@@ -212,14 +212,14 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Loja (opcional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || '__all__'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Todas as lojas" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Todas as lojas</SelectItem>
+                      <SelectItem value="__all__">Todas as lojas</SelectItem>
                       {lodges?.map((lodge) => (
                         <SelectItem key={lodge.id} value={lodge.id}>
                           {lodge.name}
