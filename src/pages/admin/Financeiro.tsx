@@ -18,9 +18,12 @@ import {
   Search,
   Plus,
   Users,
-  TrendingUp
+  TrendingUp,
+  QrCode,
+  Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { QRCodeSVG } from 'qrcode.react';
 import { Label } from '@/components/ui/label';
 
 interface PaymentWithProfile {
@@ -32,6 +35,8 @@ interface PaymentWithProfile {
   due_date: string;
   status: string;
   paid_at: string | null;
+  pix_qr_code: string | null;
+  pix_qr_code_base64: string | null;
   profiles: {
     full_name: string;
     cim_number: string | null;
@@ -66,6 +71,8 @@ export default function Financeiro() {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [generateMonth, setGenerateMonth] = useState((new Date().getMonth() + 1).toString());
   const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
+  const [selectedPaymentForQR, setSelectedPaymentForQR] = useState<PaymentWithProfile | null>(null);
+  const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ['admin-payments', statusFilter, monthFilter, yearFilter],
@@ -158,6 +165,36 @@ export default function Financeiro() {
     },
     onError: () => {
       toast.error('Erro ao confirmar pagamento');
+    },
+  });
+
+  const generatePixMutation = useMutation({
+    mutationFn: async (payment: PaymentWithProfile) => {
+      const now = new Date();
+      const due = parseISO(payment.due_date);
+      const amount = now > due ? 250 : 200;
+
+      const response = await supabase.functions.invoke('generate-pix', {
+        body: {
+          payment_id: payment.id,
+          amount,
+          description: `Mensalidade ${monthNames[payment.reference_month - 1]}/${payment.reference_year}`,
+          payer_name: payment.profiles.full_name,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+      toast.success('QR Code PIX gerado com sucesso!');
+      setGeneratingPixId(null);
+    },
+    onError: (error: any) => {
+      console.error('Error generating PIX:', error);
+      toast.error(error?.message || 'Erro ao gerar QR Code PIX');
+      setGeneratingPixId(null);
     },
   });
 
@@ -342,17 +379,46 @@ export default function Financeiro() {
                       <TableCell>R$ {Number(payment.amount).toFixed(2).replace('.', ',')}</TableCell>
                       <TableCell>{format(parseISO(payment.due_date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell>{getStatusBadge(payment.status, payment.due_date)}</TableCell>
-                      <TableCell>
+                      <TableCell className="space-x-2">
                         {payment.status !== 'paid' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => markAsPaidMutation.mutate(payment.id)}
-                            disabled={markAsPaidMutation.isPending}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Confirmar
-                          </Button>
+                          <>
+                            {payment.pix_qr_code ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSelectedPaymentForQR(payment)}
+                              >
+                                <QrCode className="h-4 w-4 mr-1" />
+                                Ver QR
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setGeneratingPixId(payment.id);
+                                  generatePixMutation.mutate(payment);
+                                }}
+                                disabled={generatingPixId === payment.id}
+                              >
+                                {generatingPixId === payment.id ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <QrCode className="h-4 w-4 mr-1" />
+                                )}
+                                Gerar PIX
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => markAsPaidMutation.mutate(payment.id)}
+                              disabled={markAsPaidMutation.isPending}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Confirmar
+                            </Button>
+                          </>
                         )}
                       </TableCell>
                     </TableRow>
@@ -421,6 +487,29 @@ export default function Financeiro() {
               Gerar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={!!selectedPaymentForQR} onOpenChange={() => setSelectedPaymentForQR(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>QR Code PIX</DialogTitle>
+          </DialogHeader>
+          {selectedPaymentForQR?.pix_qr_code && (
+            <div className="flex flex-col items-center space-y-4">
+              <QRCodeSVG value={selectedPaymentForQR.pix_qr_code} size={256} />
+              <p className="text-sm text-muted-foreground text-center">
+                {selectedPaymentForQR.profiles.full_name} - {monthNames[selectedPaymentForQR.reference_month - 1]}/{selectedPaymentForQR.reference_year}
+              </p>
+              <div className="w-full">
+                <p className="text-xs text-muted-foreground mb-1">Código PIX:</p>
+                <div className="bg-muted p-2 rounded text-xs break-all">
+                  {selectedPaymentForQR.pix_qr_code}
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>

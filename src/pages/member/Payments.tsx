@@ -173,6 +173,17 @@ export default function Payments() {
                 <div className="bg-muted p-2 rounded text-xs break-all">
                   {selectedPayment.pix_qr_code}
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedPayment.pix_qr_code!);
+                    import('sonner').then(({ toast }) => toast.success('Código PIX copiado!'));
+                  }}
+                >
+                  Copiar Código
+                </Button>
               </div>
             </div>
           )}
