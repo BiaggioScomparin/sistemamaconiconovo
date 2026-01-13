@@ -71,6 +71,7 @@ export default function Financeiro() {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [generateMonth, setGenerateMonth] = useState((new Date().getMonth() + 1).toString());
   const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
+  const [generateAmount, setGenerateAmount] = useState('200');
   const [selectedPaymentForQR, setSelectedPaymentForQR] = useState<PaymentWithProfile | null>(null);
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
 
@@ -114,7 +115,7 @@ export default function Financeiro() {
   });
 
   const generatePaymentsMutation = useMutation({
-    mutationFn: async ({ month, year }: { month: number; year: number }) => {
+    mutationFn: async ({ month, year, amount }: { month: number; year: number; amount: number }) => {
       if (!approvedProfiles) throw new Error('Nenhum membro aprovado encontrado');
 
       const dueDate = new Date(year, month - 1, 10);
@@ -122,7 +123,7 @@ export default function Financeiro() {
         profile_id: profile.id,
         reference_month: month,
         reference_year: year,
-        amount: 200,
+        amount: amount,
         due_date: format(dueDate, 'yyyy-MM-dd'),
         status: 'pending',
       }));
@@ -469,8 +470,19 @@ export default function Financeiro() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Valor (R$)</Label>
+              <Input
+                type="number"
+                value={generateAmount}
+                onChange={(e) => setGenerateAmount(e.target.value)}
+                placeholder="200"
+                min="0"
+                step="0.01"
+              />
+            </div>
             <p className="text-sm text-muted-foreground">
-              Isso irá criar uma mensalidade de R$ 200,00 para cada membro aprovado, com vencimento no dia 10.
+              Isso irá criar uma mensalidade de R$ {parseFloat(generateAmount || '0').toFixed(2).replace('.', ',')} para cada membro aprovado, com vencimento no dia 10.
             </p>
           </div>
           <DialogFooter>
@@ -481,6 +493,7 @@ export default function Financeiro() {
               onClick={() => generatePaymentsMutation.mutate({
                 month: parseInt(generateMonth),
                 year: parseInt(generateYear),
+                amount: parseFloat(generateAmount) || 200,
               })}
               disabled={generatePaymentsMutation.isPending}
             >
