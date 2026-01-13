@@ -241,6 +241,8 @@ export default function AdminMembers() {
     spouse_name: profile.spouse_name || undefined,
     cim_number: profile.cim_number || undefined,
     degree: (profile as any).degree || 'Aprendiz',
+    cargo: (profile as any).cargo || undefined,
+    lodge_position: (profile as any).lodge_position || undefined,
     lodge_id: profile.lodge_id || undefined,
     cep: profile.cep || undefined,
     street: profile.street || undefined,

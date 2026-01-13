@@ -22,25 +22,25 @@ const formatCPF = (value: string): string => {
 
 // Lista de cargos de Loja maçônica
 export const LODGE_POSITIONS = [
-  'Venerável Mestre',
-  'Primeiro Vigilante',
-  'Segundo Vigilante',
-  'Orador',
-  'Secretário',
-  'Tesoureiro',
-  'Mestre de Cerimônias',
-  '1º Diácono',
-  '2º Diácono',
-  '1º Experto',
-  '2º Experto',
-  'Cobridor Interno',
-  'Cobridor Externo',
-  'Porta Bandeira',
-  'Porta Estandarte',
-  'Porta Espada',
-  'Mestre de Banquetes',
-  'Mestre de Harmonia',
-] as const;
+  { value: 'veneravel_mestre', label: 'Venerável Mestre' },
+  { value: 'primeiro_vigilante', label: 'Primeiro Vigilante' },
+  { value: 'segundo_vigilante', label: 'Segundo Vigilante' },
+  { value: 'orador', label: 'Orador' },
+  { value: 'secretario', label: 'Secretário' },
+  { value: 'tesoureiro', label: 'Tesoureiro' },
+  { value: 'mestre_cerimonias', label: 'Mestre de Cerimônias' },
+  { value: 'primeiro_diacono', label: '1º Diácono' },
+  { value: 'segundo_diacono', label: '2º Diácono' },
+  { value: 'primeiro_experto', label: '1º Experto' },
+  { value: 'segundo_experto', label: '2º Experto' },
+  { value: 'cobridor_interno', label: 'Cobridor Interno' },
+  { value: 'cobridor_externo', label: 'Cobridor Externo' },
+  { value: 'porta_bandeira', label: 'Porta Bandeira' },
+  { value: 'porta_estandarte', label: 'Porta Estandarte' },
+  { value: 'porta_espada', label: 'Porta Espada' },
+  { value: 'mestre_banquetes', label: 'Mestre de Banquetes' },
+  { value: 'mestre_harmonia', label: 'Mestre de Harmonia' },
+];
 
 const profileSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
@@ -345,8 +345,8 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
                     {LODGE_POSITIONS.map((position) => (
-                      <SelectItem key={position} value={position}>
-                        {position}
+                      <SelectItem key={position.value} value={position.value}>
+                        {position.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
