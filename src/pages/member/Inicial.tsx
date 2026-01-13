@@ -5,7 +5,9 @@ import { useProfile } from '@/hooks/useProfile';
 import { useLodgeMembers } from '@/hooks/useLodgeMembers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Building2, Users, Crown, User } from 'lucide-react';
+import { Building2, Users, Crown, User, Cake } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const LODGE_POSITIONS = [
   { value: 'veneravel_mestre', label: 'Venerável Mestre' },
@@ -29,7 +31,7 @@ const LODGE_POSITIONS = [
 ];
 
 export default function Inicial() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: lodgeMembers = [], isLoading: membersLoading } = useLodgeMembers(profile?.lodge_id || undefined);
 
@@ -47,6 +49,20 @@ export default function Inicial() {
 
   const lodge = (profile as any)?.lodges;
   const activeMembers = lodgeMembers.filter(m => m.member_status === 'active');
+
+  // Get current month birthdays
+  const currentMonth = new Date().getMonth() + 1;
+  const birthdaysThisMonth = lodgeMembers
+    .filter(m => {
+      if (!m.birth_date) return false;
+      const birthMonth = new Date(m.birth_date).getMonth() + 1;
+      return birthMonth === currentMonth;
+    })
+    .sort((a, b) => {
+      const dayA = new Date(a.birth_date).getDate();
+      const dayB = new Date(b.birth_date).getDate();
+      return dayA - dayB;
+    });
 
   // Group members by their lodge position
   const membersByPosition = LODGE_POSITIONS.map(position => {
@@ -67,6 +83,11 @@ export default function Inicial() {
       .join('')
       .substring(0, 2)
       .toUpperCase();
+  };
+
+  const formatBirthday = (birthDate: string) => {
+    const date = new Date(birthDate);
+    return format(date, "dd 'de' MMMM", { locale: ptBR });
   };
 
   return (
@@ -132,6 +153,51 @@ export default function Inicial() {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Birthdays this month */}
+        <div>
+          <h2 className="text-xl font-display text-foreground mb-4 flex items-center gap-2">
+            <Cake className="h-5 w-5 text-secondary" />
+            Aniversariantes do Mês
+          </h2>
+
+          {membersLoading ? (
+            <div className="animate-pulse text-muted-foreground">Carregando aniversariantes...</div>
+          ) : birthdaysThisMonth.length === 0 ? (
+            <Card className="card-elegant">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground">
+                  Nenhum aniversariante neste mês.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="card-elegant">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {birthdaysThisMonth.map(member => (
+                    <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/5">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={member.photo_url || undefined} />
+                        <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
+                          {getInitials(member.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <span className="text-foreground text-sm font-body block">
+                          {member.full_name}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {formatBirthday(member.birth_date)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Lodge Positions */}

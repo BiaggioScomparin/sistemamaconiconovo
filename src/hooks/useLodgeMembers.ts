@@ -7,6 +7,7 @@ export interface LodgeMember {
   lodge_position: string | null;
   member_status: string;
   photo_url: string | null;
+  birth_date: string;
 }
 
 export function useLodgeMembers(lodgeId: string | undefined) {
@@ -17,7 +18,7 @@ export function useLodgeMembers(lodgeId: string | undefined) {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, lodge_position, member_status, photo_url')
+        .select('id, full_name, lodge_position, member_status, photo_url, birth_date')
         .eq('lodge_id', lodgeId)
         .eq('status', 'approved')
         .eq('member_status', 'active')
