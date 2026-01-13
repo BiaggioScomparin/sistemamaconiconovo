@@ -33,8 +33,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Check if current route is an admin route (only /admin/* routes, not /dashboard)
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  // Check if current route is an admin route
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
 
   const handleSignOut = async () => {
     await signOut();
@@ -55,9 +55,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Filter member links based on permissions
   const getMemberLinks = () => {
     const links = [];
-    
-    // Dashboard (Início) always visible for members
-    links.push({ href: '/dashboard', label: 'Início', icon: LayoutDashboard });
     
     // Profile is always visible but editing depends on permission
     links.push({ href: '/member/profile', label: 'Meu Perfil', icon: User });
