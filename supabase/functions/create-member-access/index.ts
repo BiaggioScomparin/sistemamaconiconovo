@@ -32,26 +32,19 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user's auth
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { authorization: authHeader } } }
-    );
-
-    // Verify the token using getClaims
+    // Use admin client to verify the token
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    if (claimsError || !claimsData?.claims) {
-      console.error('Claims verification error:', claimsError);
+    if (userError || !user) {
+      console.error('User verification error:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     // Check if caller is admin using service role
     const { data: roleData, error: roleError } = await supabaseAdmin
