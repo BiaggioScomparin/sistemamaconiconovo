@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { CreditCard, CheckCircle, Clock, AlertCircle, QrCode } from 'lucide-react';
+import { CreditCard, CheckCircle, Clock, AlertCircle, QrCode, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 
 interface Payment {
   id: string;
@@ -43,8 +43,10 @@ const getStatusBadge = (status: string, dueDate: string) => {
 };
 
 export default function Payments() {
+  const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ['member-payments', profile?.id],
@@ -64,14 +66,49 @@ export default function Payments() {
     enabled: !!profile?.id,
   });
 
+  const generatePixMutation = useMutation({
+    mutationFn: async (payment: Payment) => {
+      const now = new Date();
+      const due = parseISO(payment.due_date);
+      const amount = now > due ? 250 : 200;
+
+      const response = await supabase.functions.invoke('generate-pix', {
+        body: {
+          payment_id: payment.id,
+          amount,
+          description: `Mensalidade ${monthNames[payment.reference_month - 1]}/${payment.reference_year}`,
+          payer_name: profile?.full_name,
+          payer_email: profile?.email,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member-payments'] });
+      toast.success('QR Code PIX gerado com sucesso!');
+      setGeneratingPixId(null);
+    },
+    onError: (error: any) => {
+      console.error('Error generating PIX:', error);
+      toast.error(error?.message || 'Erro ao gerar QR Code PIX');
+      setGeneratingPixId(null);
+    },
+  });
+
   const getAmount = (payment: Payment) => {
     const now = new Date();
     const due = parseISO(payment.due_date);
-    // After day 10, value is 250
     if (now > due && payment.status !== 'paid') {
       return 250;
     }
     return payment.amount;
+  };
+
+  const handleGeneratePix = (payment: Payment) => {
+    setGeneratingPixId(payment.id);
+    generatePixMutation.mutate(payment);
   };
 
   if (isLoading) {
@@ -133,15 +170,33 @@ export default function Payments() {
                       <span>{format(parseISO(payment.paid_at), "dd/MM/yyyy 'às' HH:mm")}</span>
                     </div>
                   )}
-                  {payment.status !== 'paid' && payment.pix_qr_code && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-2"
-                      onClick={() => setSelectedPayment(payment)}
-                    >
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Ver QR Code PIX
-                    </Button>
+                  {payment.status !== 'paid' && (
+                    <>
+                      {payment.pix_qr_code ? (
+                        <Button 
+                          variant="outline" 
+                          className="w-full mt-2"
+                          onClick={() => setSelectedPayment(payment)}
+                        >
+                          <QrCode className="h-4 w-4 mr-2" />
+                          Ver QR Code PIX
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="default" 
+                          className="w-full mt-2"
+                          onClick={() => handleGeneratePix(payment)}
+                          disabled={generatingPixId === payment.id}
+                        >
+                          {generatingPixId === payment.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <QrCode className="h-4 w-4 mr-2" />
+                          )}
+                          Gerar QR Code PIX
+                        </Button>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -179,7 +234,7 @@ export default function Payments() {
                   className="w-full mt-2"
                   onClick={() => {
                     navigator.clipboard.writeText(selectedPayment.pix_qr_code!);
-                    import('sonner').then(({ toast }) => toast.success('Código PIX copiado!'));
+                    toast.success('Código PIX copiado!');
                   }}
                 >
                   Copiar Código
