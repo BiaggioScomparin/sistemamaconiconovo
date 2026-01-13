@@ -84,6 +84,7 @@ export default function Financeiro() {
   const [generateMonth, setGenerateMonth] = useState((new Date().getMonth() + 1).toString());
   const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
   const [generateAmount, setGenerateAmount] = useState('200');
+  const [generateLodgeId, setGenerateLodgeId] = useState<string>('all');
   const [selectedPaymentForQR, setSelectedPaymentForQR] = useState<PaymentWithProfile | null>(null);
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<PaymentWithProfile | null>(null);
@@ -119,7 +120,7 @@ export default function Financeiro() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, lodge_id')
         .in('status', ['approved', 'membro']);
 
       if (error) throw error;
@@ -127,12 +128,47 @@ export default function Financeiro() {
     },
   });
 
+  const { data: lodges } = useQuery({
+    queryKey: ['lodges-for-payments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lodges')
+        .select('id, name, default_payment_amount')
+        .order('name');
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Update amount when lodge changes
+  const handleLodgeChange = (lodgeId: string) => {
+    setGenerateLodgeId(lodgeId);
+    if (lodgeId !== 'all') {
+      const lodge = lodges?.find(l => l.id === lodgeId);
+      if (lodge) {
+        setGenerateAmount(String(lodge.default_payment_amount || 200));
+      }
+    } else {
+      setGenerateAmount('200');
+    }
+  };
+
   const generatePaymentsMutation = useMutation({
-    mutationFn: async ({ month, year, amount }: { month: number; year: number; amount: number }) => {
+    mutationFn: async ({ month, year, amount, lodgeId }: { month: number; year: number; amount: number; lodgeId: string }) => {
       if (!approvedProfiles) throw new Error('Nenhum membro aprovado encontrado');
 
+      // Filter profiles by lodge if selected
+      const filteredProfiles = lodgeId === 'all' 
+        ? approvedProfiles 
+        : approvedProfiles.filter(p => p.lodge_id === lodgeId);
+
+      if (filteredProfiles.length === 0) {
+        throw new Error('Nenhum membro encontrado para a loja selecionada');
+      }
+
       const dueDate = new Date(year, month - 1, 10);
-      const payments = approvedProfiles.map(profile => ({
+      const payments = filteredProfiles.map(profile => ({
         profile_id: profile.id,
         reference_month: month,
         reference_year: year,
@@ -143,21 +179,19 @@ export default function Financeiro() {
 
       const { error } = await supabase
         .from('monthly_payments')
-        .upsert(payments, { 
-          onConflict: 'profile_id,reference_month,reference_year',
-          ignoreDuplicates: true 
-        });
+        .insert(payments);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['lodge-financial-report'] });
       toast.success('Mensalidades geradas com sucesso!');
       setShowGenerateDialog(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error generating payments:', error);
-      toast.error('Erro ao gerar mensalidades');
+      toast.error(error?.message || 'Erro ao gerar mensalidades');
     },
   });
 
@@ -484,6 +518,22 @@ export default function Financeiro() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
+              <Label>Loja Maçônica</Label>
+              <Select value={generateLodgeId} onValueChange={handleLodgeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma loja" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Lojas</SelectItem>
+                  {lodges?.map((lodge) => (
+                    <SelectItem key={lodge.id} value={lodge.id}>
+                      {lodge.name} (R$ {Number(lodge.default_payment_amount || 200).toFixed(2).replace('.', ',')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Mês</Label>
               <Select value={generateMonth} onValueChange={setGenerateMonth}>
                 <SelectTrigger>
@@ -523,9 +573,12 @@ export default function Financeiro() {
                 min="0"
                 step="0.01"
               />
+              <p className="text-xs text-muted-foreground">
+                {generateLodgeId !== 'all' ? 'Valor padrão da loja selecionada. Você pode alterar se necessário.' : 'Valor padrão para todas as lojas.'}
+              </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Isso irá criar uma mensalidade de R$ {parseFloat(generateAmount || '0').toFixed(2).replace('.', ',')} para cada membro aprovado, com vencimento no dia 10.
+              Isso irá criar uma mensalidade de R$ {parseFloat(generateAmount || '0').toFixed(2).replace('.', ',')} para cada membro {generateLodgeId === 'all' ? 'aprovado' : 'da loja selecionada'}, com vencimento no dia 10.
             </p>
           </div>
           <DialogFooter>
@@ -537,6 +590,7 @@ export default function Financeiro() {
                 month: parseInt(generateMonth),
                 year: parseInt(generateYear),
                 amount: parseFloat(generateAmount) || 200,
+                lodgeId: generateLodgeId,
               })}
               disabled={generatePaymentsMutation.isPending}
             >
