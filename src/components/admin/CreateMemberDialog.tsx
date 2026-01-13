@@ -254,6 +254,7 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
                   <SelectItem value="Aprendiz">Aprendiz</SelectItem>
                   <SelectItem value="Companheiro">Companheiro</SelectItem>
                   <SelectItem value="Mestre">Mestre</SelectItem>
+                  <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
                 </SelectContent>
               </Select>
             </div>

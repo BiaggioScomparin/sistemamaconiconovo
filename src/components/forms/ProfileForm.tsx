@@ -338,6 +338,7 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
                     <SelectItem value="Aprendiz">Aprendiz</SelectItem>
                     <SelectItem value="Companheiro">Companheiro</SelectItem>
                     <SelectItem value="Mestre">Mestre</SelectItem>
+                    <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
                   </SelectContent>
               </Select>
               </div>

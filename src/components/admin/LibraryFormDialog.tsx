@@ -22,7 +22,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
   const [content, setContent] = useState('');
   const [fileUrl, setFileUrl] = useState('');
   const [fileType, setFileType] = useState('');
-  const [degree, setDegree] = useState<'Aprendiz' | 'Companheiro' | 'Mestre'>('Aprendiz');
+  const [degree, setDegree] = useState<'Aprendiz' | 'Companheiro' | 'Mestre' | 'Mestre Instalado'>('Aprendiz');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,6 +178,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
                 <SelectItem value="Aprendiz">Aprendiz</SelectItem>
                 <SelectItem value="Companheiro">Companheiro</SelectItem>
                 <SelectItem value="Mestre">Mestre</SelectItem>
+                <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

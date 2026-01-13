@@ -128,7 +128,7 @@ export function downloadMembersTemplate(): void {
     { 'Instruções': 'Formato de datas: AAAA-MM-DD (ex: 1980-01-15)' },
     { 'Instruções': 'Formato de CPF: 000.000.000-00' },
     { 'Instruções': '' },
-    { 'Instruções': 'Graus válidos: Aprendiz, Companheiro, Mestre' },
+    { 'Instruções': 'Graus válidos: Aprendiz, Companheiro, Mestre, Mestre Instalado' },
     { 'Instruções': '' },
     { 'Instruções': 'O Nome da Loja deve corresponder exatamente ao nome cadastrado no sistema.' },
     { 'Instruções': 'Se a loja não existir, o membro será importado sem loja associada.' },
@@ -224,8 +224,8 @@ export function validateMemberData(member: MemberImportRow): { valid: boolean; e
     errors.push('Data de iniciação inválida (use formato AAAA-MM-DD)');
   }
   
-  if (member.degree && !['Aprendiz', 'Companheiro', 'Mestre'].includes(member.degree)) {
-    errors.push('Grau inválido (use: Aprendiz, Companheiro ou Mestre)');
+  if (member.degree && !['Aprendiz', 'Companheiro', 'Mestre', 'Mestre Instalado'].includes(member.degree)) {
+    errors.push('Grau inválido (use: Aprendiz, Companheiro, Mestre ou Mestre Instalado)');
   }
   
   return { valid: errors.length === 0, errors };
