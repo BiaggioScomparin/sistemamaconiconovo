@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateLibraryItem, useUpdateLibraryItem, LibraryItem } from '@/hooks/useLibrary';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Upload, X, FileText, Loader2 } from 'lucide-react';
 
 interface LibraryFormDialogProps {
   open: boolean;
@@ -19,7 +21,11 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
   const [description, setDescription] = useState('');
   const [content, setContent] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [fileType, setFileType] = useState('');
   const [degree, setDegree] = useState<'Aprendiz' | 'Companheiro' | 'Mestre'>('Aprendiz');
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createMutation = useCreateLibraryItem();
   const updateMutation = useUpdateLibraryItem();
@@ -30,27 +36,84 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
       setDescription(item.description || '');
       setContent(item.content || '');
       setFileUrl(item.file_url || '');
+      setFileType(item.file_type || '');
       setDegree(item.degree);
     } else {
       setTitle('');
       setDescription('');
       setContent('');
       setFileUrl('');
+      setFileType('');
       setDegree('Aprendiz');
     }
+    setSelectedFile(null);
   }, [item, open]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Arquivo muito grande. Máximo 50MB.');
+        return;
+      }
+      setSelectedFile(file);
+      setFileType(file.type);
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${degree.toLowerCase()}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from('library')
+      .upload(filePath, file);
+
+    if (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('library')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    setFileUrl('');
+    setFileType('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
     
     try {
+      let finalFileUrl = fileUrl;
+      let finalFileType = fileType;
+
+      // Upload new file if selected
+      if (selectedFile) {
+        finalFileUrl = await uploadFile(selectedFile) || '';
+        finalFileType = selectedFile.type;
+      }
+
       if (item) {
         await updateMutation.mutateAsync({
           id: item.id,
           title,
           description: description || null,
           content: content || null,
-          file_url: fileUrl || null,
+          file_url: finalFileUrl || null,
+          file_type: finalFileType || null,
           degree,
         });
         toast.success('Item atualizado com sucesso!');
@@ -59,8 +122,8 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
           title,
           description: description || null,
           content: content || null,
-          file_url: fileUrl || null,
-          file_type: null,
+          file_url: finalFileUrl || null,
+          file_type: finalFileType || null,
           degree,
         });
         toast.success('Item criado com sucesso!');
@@ -69,10 +132,23 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
     } catch (error) {
       toast.error('Erro ao salvar item');
       console.error(error);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isLoading = createMutation.isPending || updateMutation.isPending || uploading;
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type === 'application/pdf') return '📄';
+    if (type.includes('word') || type.includes('document')) return '📝';
+    if (type.includes('spreadsheet') || type.includes('excel')) return '📊';
+    if (type.includes('presentation') || type.includes('powerpoint')) return '📽️';
+    if (type.startsWith('video/')) return '🎬';
+    if (type.startsWith('audio/')) return '🎵';
+    return '📁';
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,14 +207,77 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fileUrl">URL do Arquivo (opcional)</Label>
-            <Input
-              id="fileUrl"
-              type="url"
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              placeholder="https://..."
+            <Label>Arquivo</Label>
+            
+            {/* Current or Selected File Display */}
+            {(selectedFile || fileUrl) && (
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <span className="text-2xl">
+                  {getFileIcon(selectedFile?.type || fileType)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {selectedFile?.name || fileUrl.split('/').pop()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedFile 
+                      ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
+                      : 'Arquivo atual'
+                    }
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={removeFile}
+                  className="shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* File Upload Area */}
+            {!selectedFile && !fileUrl && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+              >
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Clique para selecionar ou arraste um arquivo
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  PDF, DOC, XLS, PPT, imagens, vídeos (máx. 50MB)
+                </p>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.wav"
             />
+
+            {/* Or manual URL */}
+            {!selectedFile && (
+              <div className="pt-2">
+                <Label htmlFor="fileUrl" className="text-xs text-muted-foreground">
+                  Ou insira uma URL externa:
+                </Label>
+                <Input
+                  id="fileUrl"
+                  type="url"
+                  value={fileUrl}
+                  onChange={(e) => setFileUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="mt-1"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
@@ -146,7 +285,14 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Salvando...' : item ? 'Atualizar' : 'Criar'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {uploading ? 'Enviando...' : 'Salvando...'}
+                </>
+              ) : (
+                item ? 'Atualizar' : 'Criar'
+              )}
             </Button>
           </div>
         </form>
