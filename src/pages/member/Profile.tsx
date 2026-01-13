@@ -107,6 +107,7 @@ export default function MemberProfile() {
     mother_name: profile.mother_name || undefined,
     spouse_name: profile.spouse_name || undefined,
     cim_number: profile.cim_number || undefined,
+    degree: profile.degree || undefined,
     lodge_id: profile.lodge_id || undefined,
     cep: profile.cep || undefined,
     street: profile.street || undefined,
