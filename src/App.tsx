@@ -16,6 +16,7 @@ import AdminAttendances from "./pages/admin/Attendances";
 import AdminPermissions from "./pages/admin/Permissions";
 import AdminFinanceiro from "./pages/admin/Financeiro";
 import AdminSettings from "./pages/admin/Settings";
+import MemberInicial from "./pages/member/Inicial";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
 import MemberAttendance from "./pages/member/Attendance";
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/admin/financeiro" element={<AdminFinanceiro />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             {/* Member routes */}
+            <Route path="/member/inicial" element={<MemberInicial />} />
             <Route path="/member/card" element={<MemberCard />} />
             <Route path="/member/profile" element={<MemberProfile />} />
             <Route path="/member/attendance" element={<MemberAttendance />} />

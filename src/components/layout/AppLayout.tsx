@@ -17,7 +17,8 @@ import {
   Shield,
   Crown,
   DollarSign,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Filter member links based on permissions
   const getMemberLinks = () => {
     const links = [];
+    
+    // Inicial is always visible
+    links.push({ href: '/member/inicial', label: 'Inicial', icon: Home });
     
     // Profile is always visible but editing depends on permission
     links.push({ href: '/member/profile', label: 'Meu Perfil', icon: User });
