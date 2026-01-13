@@ -276,12 +276,12 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
 
             <div className="space-y-2 md:col-span-2">
               <Label>Cargo de Loja</Label>
-              <Select value={selectedLodgePosition} onValueChange={setSelectedLodgePosition}>
+              <Select value={selectedLodgePosition || '__none__'} onValueChange={(val) => setSelectedLodgePosition(val === '__none__' ? '' : val)}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione o cargo de loja" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border z-50">
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
                   {LODGE_POSITIONS.map((position) => (
                     <SelectItem key={position.value} value={position.value}>
                       {position.label}
