@@ -15,7 +15,9 @@ import {
   FileText,
   Calendar,
   Shield,
-  Crown
+  Crown,
+  DollarSign,
+  Settings
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -45,7 +47,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/members', label: 'Membros', icon: Users },
     { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
     { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
+    { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
+    { href: '/admin/settings', label: 'Configurações', icon: Settings },
   ];
 
   // Filter member links based on permissions
@@ -62,6 +66,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (permissions?.can_view_attendance || permissions?.can_register_attendance) {
       links.push({ href: '/member/attendance', label: 'Frequência', icon: Calendar });
     }
+    
+    // Payments always visible for members
+    links.push({ href: '/member/payments', label: 'Mensalidades', icon: DollarSign });
     
     return links;
   };
