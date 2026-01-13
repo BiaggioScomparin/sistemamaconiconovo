@@ -3,7 +3,7 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -14,7 +14,9 @@ export default function Login() {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    // Admins go to dashboard, members go to inicial
+    const redirectPath = isAdmin ? '/dashboard' : '/member/inicial';
+    return <Navigate to={redirectPath} replace />;
   }
 
   return (
