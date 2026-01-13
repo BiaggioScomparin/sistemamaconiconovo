@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
 import { CreditCard, CheckCircle, Clock, AlertCircle, QrCode, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 
@@ -47,6 +47,35 @@ export default function Payments() {
   const { data: profile } = useProfile();
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
+  const [creditCardFee, setCreditCardFee] = useState(4.99);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPaymentForCard, setSelectedPaymentForCard] = useState<Payment | null>(null);
+
+  // Fetch credit card fee from settings
+  const { data: settings } = useQuery({
+    queryKey: ['app-settings-public'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['credit_card_fee_percent']);
+
+      if (error) {
+        console.error('Error fetching settings:', error);
+        return [];
+      }
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      const feeSetting = settings.find(s => s.key === 'credit_card_fee_percent');
+      if (feeSetting?.value) {
+        setCreditCardFee(parseFloat(feeSetting.value));
+      }
+    }
+  }, [settings]);
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ['member-payments', profile?.id],
@@ -108,9 +137,20 @@ export default function Payments() {
     return payment.amount;
   };
 
+  const getCardAmount = (payment: Payment) => {
+    const baseAmount = getAmount(payment);
+    // Calcula o valor com taxa repassada: valor / (1 - taxa/100)
+    return baseAmount / (1 - creditCardFee / 100);
+  };
+
   const handleGeneratePix = (payment: Payment) => {
     setGeneratingPixId(payment.id);
     generatePixMutation.mutate(payment);
+  };
+
+  const handleOpenCardPayment = (payment: Payment) => {
+    setSelectedPaymentForCard(payment);
+    setPaymentDialogOpen(true);
   };
 
   if (isLoading) {
@@ -139,6 +179,10 @@ export default function Payments() {
             <CardTitle>Informações de Pagamento</CardTitle>
             <CardDescription>
               Valor: R$ 200,00 até dia 10 | R$ 250,00 após dia 10
+              <br />
+              <span className="text-xs text-muted-foreground">
+                Pagamento com cartão inclui taxa de {creditCardFee.toFixed(2).replace('.', ',')}%
+              </span>
             </CardDescription>
           </CardHeader>
         </Card>
@@ -157,9 +201,15 @@ export default function Payments() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Valor:</span>
+                    <span className="text-muted-foreground">Valor PIX:</span>
                     <span className="font-medium">
                       R$ {getAmount(payment).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Valor Cartão:</span>
+                    <span className="font-medium">
+                      R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -173,20 +223,20 @@ export default function Payments() {
                     </div>
                   )}
                   {payment.status !== 'paid' && (
-                    <>
+                    <div className="flex gap-2 mt-3">
                       {payment.pix_qr_code ? (
                         <Button 
                           variant="outline" 
-                          className="w-full mt-2"
+                          className="flex-1"
                           onClick={() => setSelectedPayment(payment)}
                         >
                           <QrCode className="h-4 w-4 mr-2" />
-                          Ver QR Code PIX
+                          PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}
                         </Button>
                       ) : (
                         <Button 
-                          variant="default" 
-                          className="w-full mt-2"
+                          variant="outline" 
+                          className="flex-1"
                           onClick={() => handleGeneratePix(payment)}
                           disabled={generatingPixId === payment.id}
                         >
@@ -195,10 +245,18 @@ export default function Payments() {
                           ) : (
                             <QrCode className="h-4 w-4 mr-2" />
                           )}
-                          Gerar QR Code PIX
+                          PIX - R$ {getAmount(payment).toFixed(2).replace('.', ',')}
                         </Button>
                       )}
-                    </>
+                      <Button 
+                        variant="default" 
+                        className="flex-1"
+                        onClick={() => handleOpenCardPayment(payment)}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Cartão - R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -214,6 +272,7 @@ export default function Payments() {
         )}
       </div>
 
+      {/* Dialog PIX QR Code */}
       <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -244,6 +303,45 @@ export default function Payments() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Pagamento com Cartão */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento com Cartão de Crédito</DialogTitle>
+            <DialogDescription>
+              {selectedPaymentForCard && (
+                <>
+                  Mensalidade de {monthNames[selectedPaymentForCard.reference_month - 1]}/{selectedPaymentForCard.reference_year}
+                  <br />
+                  <span className="text-lg font-bold text-foreground">
+                    R$ {getCardAmount(selectedPaymentForCard).toFixed(2).replace('.', ',')}
+                  </span>
+                  <span className="text-xs block mt-1">
+                    (inclui taxa de {creditCardFee.toFixed(2).replace('.', ',')}%)
+                  </span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4 py-4">
+            <CreditCard className="h-16 w-16 text-muted-foreground" />
+            <p className="text-center text-sm text-muted-foreground">
+              Para pagamento com cartão de crédito, você será redirecionado para o checkout seguro do Mercado Pago.
+            </p>
+            <p className="text-center text-xs text-muted-foreground">
+              Em breve, será possível finalizar o pagamento diretamente por aqui.
+            </p>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => setPaymentDialogOpen(false)}
+            >
+              Fechar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>
