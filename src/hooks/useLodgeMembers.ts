@@ -20,7 +20,7 @@ export function useLodgeMembers(lodgeId: string | undefined) {
         .from('profiles')
         .select('id, full_name, lodge_position, member_status, photo_url, birth_date')
         .eq('lodge_id', lodgeId)
-        .eq('status', 'approved')
+        .in('status', ['approved', 'membro'])
         .eq('member_status', 'active')
         .order('full_name');
 
