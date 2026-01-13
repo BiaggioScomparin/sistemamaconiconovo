@@ -309,6 +309,20 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             )}
           </div>
 
+          {/* Grau - readonly for members */}
+          {!showAdminFields && initialData?.degree && (
+            <div className="space-y-2">
+              <Label htmlFor="degree_display">Grau</Label>
+              <Input 
+                id="degree_display" 
+                value={initialData.degree} 
+                disabled 
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">Definido pela administração</p>
+            </div>
+          )}
+
           {showAdminFields && (
             <>
               <div className="space-y-2">
