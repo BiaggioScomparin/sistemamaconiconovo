@@ -45,11 +45,6 @@ export default function Inicial() {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect admin to dashboard
-  if (isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const lodge = (profile as any)?.lodges;
   const activeMembers = lodgeMembers.filter(m => m.member_status === 'active');
 
