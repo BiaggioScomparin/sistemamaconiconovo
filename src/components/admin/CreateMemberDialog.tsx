@@ -260,12 +260,12 @@ export function CreateMemberDialog({ open, onOpenChange }: CreateMemberDialogPro
 
             <div className="space-y-2">
               <Label>Loja Maçônica</Label>
-              <Select value={selectedLodgeId} onValueChange={setSelectedLodgeId}>
+              <Select value={selectedLodgeId || undefined} onValueChange={setSelectedLodgeId}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione uma loja" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border z-50">
-                  {lodges.map((lodge) => (
+                  {lodges.filter(lodge => lodge.id).map((lodge) => (
                     <SelectItem key={lodge.id} value={lodge.id}>
                       {lodge.name}
                     </SelectItem>
