@@ -160,8 +160,8 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
   const handleLoadAttendances = () => {
     if (attendances.length > 0) {
       const presentMembers = attendances
-        .filter(a => a.profiles?.full_name)
-        .map(a => a.profiles!.full_name)
+        .filter(a => a.full_name)
+        .map(a => a.full_name)
         .join(', ');
       
       setFormData(prev => ({ 
