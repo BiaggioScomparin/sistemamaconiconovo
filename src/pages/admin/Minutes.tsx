@@ -46,7 +46,7 @@ import {
 const statusConfig = {
   draft: { label: 'Rascunho', color: 'bg-gray-500/10 text-gray-500 border-gray-500/20', icon: Clock },
   completed: { label: 'Aguardando Assinaturas', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20', icon: PenLine },
-  signed: { label: 'Assinada', color: 'bg-green-500/10 text-green-600 border-green-500/20', icon: Shield },
+  signed: { label: 'Concluída', color: 'bg-green-500/10 text-green-600 border-green-500/20', icon: CheckCircle2 },
 };
 
 type SessionType = 'ordinaria' | 'magna';
