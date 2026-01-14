@@ -204,22 +204,24 @@ export function AppLayout({ children }: AppLayoutProps) {
           </nav>
 
           {/* User info & logout */}
-          <div className="p-4 border-t border-sidebar-border">
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-sm text-sidebar-foreground/70 truncate font-body flex-1">
-                {user?.email}
-              </p>
+          <div className="p-4 border-t border-sidebar-border space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-sidebar-foreground truncate font-body">
+                  {user?.email}
+                </p>
+              </div>
               {isAdmin && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-semibold shrink-0">
                   <Crown size={12} />
                   Admin
                 </span>
               )}
             </div>
             <Button
-              variant="outline"
+              variant="destructive"
               onClick={handleSignOut}
-              className="w-full border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+              className="w-full"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sair
