@@ -55,12 +55,17 @@ export default function ProposalStatus() {
     return <Navigate to="/login" replace />;
   }
 
+  // Se não tem perfil, redireciona para preencher proposta
+  if (!profile) {
+    return <Navigate to="/proposta" replace />;
+  }
+
   // Se for membro, redireciona para área de membro
-  if ((profile?.status as string) === 'membro') {
+  if ((profile.status as string) === 'membro') {
     return <Navigate to="/member/inicial" replace />;
   }
 
-  const status = profile?.status || 'proposta';
+  const status = profile.status || 'proposta';
   const statusInfo = STATUS_CONFIG[status] || STATUS_CONFIG.proposta;
 
   const handleLogout = async () => {

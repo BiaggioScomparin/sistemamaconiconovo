@@ -27,8 +27,8 @@ export function ProtectedMemberRoute({ children }: ProtectedMemberRouteProps) {
     return <>{children}</>;
   }
 
-  // Se o status não for 'membro', redireciona para a página de status
-  if ((profile?.status as string) !== 'membro') {
+  // Se não tem perfil ou o status não for 'membro', redireciona para a página de status
+  if (!profile || (profile.status as string) !== 'membro') {
     return <Navigate to="/status" replace />;
   }
 
