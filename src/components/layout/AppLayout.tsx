@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
@@ -32,9 +33,14 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, isAdmin, signOut } = useAuth();
   const { data: permissions } = useUserPermissions();
+  const { data: profile } = useProfile();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Check if user can access minutes (Venerável Mestre, Orador, Secretário)
+  const canAccessMinutes = profile?.lodge_position && 
+    ['veneravel_mestre', 'orador', 'secretario'].includes(profile.lodge_position);
 
   // Check if current route is an admin route
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
@@ -84,6 +90,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     
     // Calendar always visible for members
     links.push({ href: '/member/calendar', label: 'Calendário', icon: Calendar });
+    
+    // Minutes visible for members with specific positions (Venerável Mestre, Orador, Secretário)
+    if (canAccessMinutes) {
+      links.push({ href: '/admin/minutes', label: 'Atas', icon: ClipboardList });
+    }
     
     return links;
   };
