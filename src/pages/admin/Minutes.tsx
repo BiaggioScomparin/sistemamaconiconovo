@@ -8,10 +8,14 @@ import {
   useSessionMinutes, 
   useDeleteSessionMinute, 
   useCompleteSessionMinute,
+  useMinuteSignatures,
   SessionMinute 
 } from '@/hooks/useSessionMinutes';
+import { useLodges } from '@/hooks/useLodges';
+import { useProfile } from '@/hooks/useProfile';
 import { MinuteFormDialog } from '@/components/admin/MinuteFormDialog';
 import { MinuteSignatureDialog } from '@/components/admin/MinuteSignatureDialog';
+import { MinutePrintView } from '@/components/admin/MinutePrintView';
 import { 
   Plus, 
   Pencil, 
@@ -21,7 +25,9 @@ import {
   PenLine,
   Clock,
   Shield,
-  Calendar
+  Calendar,
+  Printer,
+  Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -45,9 +51,17 @@ const statusConfig = {
 
 type SessionType = 'ordinaria' | 'magna';
 
+// Print button component that fetches signatures
+function PrintMinuteButton({ minute, lodgeName }: { minute: SessionMinute; lodgeName: string }) {
+  const { data: signatures } = useMinuteSignatures(minute.id);
+  return <MinutePrintView minute={minute} signatures={signatures || []} lodgeName={lodgeName} />;
+}
+
 export default function AdminMinutes() {
   const [activeTab, setActiveTab] = useState<SessionType>('ordinaria');
   const { data: minutes, isLoading } = useSessionMinutes(activeTab);
+  const { data: lodges } = useLodges();
+  const { data: profile } = useProfile();
   const deleteMutation = useDeleteSessionMinute();
   const completeMutation = useCompleteSessionMinute();
   
@@ -55,8 +69,13 @@ export default function AdminMinutes() {
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [editingMinute, setEditingMinute] = useState<SessionMinute | null>(null);
   const [selectedMinute, setSelectedMinute] = useState<SessionMinute | null>(null);
+  const [printMinute, setPrintMinute] = useState<SessionMinute | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [completeId, setCompleteId] = useState<string | null>(null);
+
+  const getLodgeName = (lodgeId: string) => {
+    return lodges?.find(l => l.id === lodgeId)?.name || '';
+  };
 
   const handleEdit = (minute: SessionMinute) => {
     setEditingMinute(minute);
@@ -190,17 +209,17 @@ export default function AdminMinutes() {
                           )}
                           
                           {(minute.status === 'completed' || minute.status === 'signed') && (
-                            <Button variant="outline" size="sm" onClick={() => handleSign(minute)}>
-                              <PenLine className="h-4 w-4 mr-1" />
-                              {minute.status === 'signed' ? 'Ver Assinaturas' : 'Assinar'}
-                            </Button>
-                          )}
-
-                          {minute.status === 'completed' && (
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(minute)}>
-                              <Pencil className="h-4 w-4 mr-1" />
-                              Visualizar
-                            </Button>
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleSign(minute)}>
+                                <PenLine className="h-4 w-4 mr-1" />
+                                {minute.status === 'signed' ? 'Ver Assinaturas' : 'Assinar'}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleEdit(minute)}>
+                                <Eye className="h-4 w-4 mr-1" />
+                                Visualizar
+                              </Button>
+                              <PrintMinuteButton minute={minute} lodgeName={getLodgeName(minute.lodge_id)} />
+                            </>
                           )}
 
                           {minute.status === 'draft' && (
