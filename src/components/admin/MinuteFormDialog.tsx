@@ -157,9 +157,21 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleLoadAttendances = () => {
-    if (attendances.length > 0) {
-      const presentMembers = attendances
+  const handleLoadAttendances = async () => {
+    console.log('handleLoadAttendances called', { 
+      selectedLodgeId, 
+      sessionDate: formData.session_date,
+      currentAttendances: attendances 
+    });
+    
+    // Refetch to get latest data
+    const result = await refetchAttendances();
+    console.log('Refetch result:', result);
+    
+    const currentAttendances = result.data || attendances;
+    
+    if (currentAttendances.length > 0) {
+      const presentMembers = currentAttendances
         .filter(a => a.full_name)
         .map(a => a.full_name)
         .join(', ');
@@ -168,9 +180,9 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
         ...prev, 
         members_present: presentMembers 
       }));
-      toast.success(`${attendances.length} presenças carregadas!`);
+      toast.success(`${currentAttendances.length} presenças carregadas!`);
     } else {
-      toast.info('Nenhuma presença confirmada encontrada para esta data.');
+      toast.info(`Nenhuma presença confirmada encontrada para ${formData.session_date} nesta loja.`);
     }
   };
 
