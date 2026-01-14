@@ -18,9 +18,9 @@ interface MinuteSignatureDialogProps {
 }
 
 const requiredPositions = [
-  { position: 'Venerável Mestre', label: 'Venerável Mestre' },
-  { position: 'Orador', label: 'Orador' },
-  { position: 'Secretário', label: 'Secretário' },
+  { position: 'veneravel_mestre', label: 'Venerável Mestre' },
+  { position: 'orador', label: 'Orador' },
+  { position: 'secretario', label: 'Secretário' },
 ];
 
 export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSignatureDialogProps) {
