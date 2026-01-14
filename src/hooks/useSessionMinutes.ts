@@ -8,20 +8,50 @@ export interface SessionMinute {
   session_type: 'ordinaria' | 'magna';
   session_date: string;
   session_number: number | null;
+  masonic_year: string | null;
   opening_time: string | null;
   closing_time: string | null;
+  
+  // Constituição da Loja - Oficiais
   presiding_master: string | null;
+  first_vigilant: string | null;
+  second_vigilant: string | null;
   orator: string | null;
   secretary: string | null;
+  first_deacon: string | null;
+  second_deacon: string | null;
+  chancellor: string | null;
+  inner_guard: string | null;
+  master_of_ceremonies: string | null;
+  hospitaller: string | null;
+  treasurer: string | null;
+  master_of_harmony: string | null;
+  
+  // Presença
   members_present: string | null;
   visitors: string | null;
+  
+  // Conteúdo da Sessão
+  previous_minutes_reading: string | null;
+  expedient: string | null;
+  proposal_bag: string | null;
+  order_of_the_day: string | null;
+  study_time: string | null;
+  beneficence_trunk: string | null;
+  word_for_order: string | null;
+  closing_ritual: string | null;
+  observations: string | null;
+  
+  // Campos antigos (mantidos para compatibilidade)
   correspondence_read: string | null;
   treasury_report: string | null;
   proposals: string | null;
   deliberations: string | null;
   word_of_order: string | null;
   general_matters: string | null;
-  observations: string | null;
+  content: string | null;
+  
+  // Status
   status: 'draft' | 'completed' | 'signed';
   completed_at: string | null;
   completed_by: string | null;
@@ -108,19 +138,32 @@ export function useCreateSessionMinute() {
           session_type: minute.session_type || 'ordinaria',
           session_date: minute.session_date!,
           session_number: minute.session_number,
+          masonic_year: minute.masonic_year,
           opening_time: minute.opening_time,
           closing_time: minute.closing_time,
           presiding_master: minute.presiding_master,
+          first_vigilant: minute.first_vigilant,
+          second_vigilant: minute.second_vigilant,
           orator: minute.orator,
           secretary: minute.secretary,
+          first_deacon: minute.first_deacon,
+          second_deacon: minute.second_deacon,
+          chancellor: minute.chancellor,
+          inner_guard: minute.inner_guard,
+          master_of_ceremonies: minute.master_of_ceremonies,
+          hospitaller: minute.hospitaller,
+          treasurer: minute.treasurer,
+          master_of_harmony: minute.master_of_harmony,
           members_present: minute.members_present,
           visitors: minute.visitors,
-          correspondence_read: minute.correspondence_read,
-          treasury_report: minute.treasury_report,
-          proposals: minute.proposals,
-          deliberations: minute.deliberations,
-          word_of_order: minute.word_of_order,
-          general_matters: minute.general_matters,
+          previous_minutes_reading: minute.previous_minutes_reading,
+          expedient: minute.expedient,
+          proposal_bag: minute.proposal_bag,
+          order_of_the_day: minute.order_of_the_day,
+          study_time: minute.study_time,
+          beneficence_trunk: minute.beneficence_trunk,
+          word_for_order: minute.word_for_order,
+          closing_ritual: minute.closing_ritual,
           observations: minute.observations,
           created_by: user?.id,
         })
@@ -143,7 +186,37 @@ export function useUpdateSessionMinute() {
     mutationFn: async ({ id, ...minute }: Partial<SessionMinute> & { id: string }) => {
       const { data, error } = await supabase
         .from('session_minutes')
-        .update(minute)
+        .update({
+          session_date: minute.session_date,
+          session_number: minute.session_number,
+          masonic_year: minute.masonic_year,
+          opening_time: minute.opening_time,
+          closing_time: minute.closing_time,
+          presiding_master: minute.presiding_master,
+          first_vigilant: minute.first_vigilant,
+          second_vigilant: minute.second_vigilant,
+          orator: minute.orator,
+          secretary: minute.secretary,
+          first_deacon: minute.first_deacon,
+          second_deacon: minute.second_deacon,
+          chancellor: minute.chancellor,
+          inner_guard: minute.inner_guard,
+          master_of_ceremonies: minute.master_of_ceremonies,
+          hospitaller: minute.hospitaller,
+          treasurer: minute.treasurer,
+          master_of_harmony: minute.master_of_harmony,
+          members_present: minute.members_present,
+          visitors: minute.visitors,
+          previous_minutes_reading: minute.previous_minutes_reading,
+          expedient: minute.expedient,
+          proposal_bag: minute.proposal_bag,
+          order_of_the_day: minute.order_of_the_day,
+          study_time: minute.study_time,
+          beneficence_trunk: minute.beneficence_trunk,
+          word_for_order: minute.word_for_order,
+          closing_ritual: minute.closing_ritual,
+          observations: minute.observations,
+        })
         .eq('id', id)
         .select()
         .single();

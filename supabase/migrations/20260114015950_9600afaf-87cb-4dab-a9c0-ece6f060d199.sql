@@ -1,0 +1,21 @@
+-- Add missing columns for complete GOIB session minutes
+ALTER TABLE public.session_minutes 
+ADD COLUMN IF NOT EXISTS first_vigilant text,
+ADD COLUMN IF NOT EXISTS second_vigilant text,
+ADD COLUMN IF NOT EXISTS first_deacon text,
+ADD COLUMN IF NOT EXISTS second_deacon text,
+ADD COLUMN IF NOT EXISTS chancellor text,
+ADD COLUMN IF NOT EXISTS inner_guard text,
+ADD COLUMN IF NOT EXISTS master_of_ceremonies text,
+ADD COLUMN IF NOT EXISTS hospitaller text,
+ADD COLUMN IF NOT EXISTS treasurer text,
+ADD COLUMN IF NOT EXISTS master_of_harmony text,
+ADD COLUMN IF NOT EXISTS previous_minutes_reading text,
+ADD COLUMN IF NOT EXISTS expedient text,
+ADD COLUMN IF NOT EXISTS proposal_bag text,
+ADD COLUMN IF NOT EXISTS order_of_the_day text,
+ADD COLUMN IF NOT EXISTS study_time text,
+ADD COLUMN IF NOT EXISTS beneficence_trunk text,
+ADD COLUMN IF NOT EXISTS word_for_order text,
+ADD COLUMN IF NOT EXISTS closing_ritual text,
+ADD COLUMN IF NOT EXISTS masonic_year text;
