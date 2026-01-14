@@ -13,6 +13,7 @@ export interface LibraryItem {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  creator_name?: string | null;
 }
 
 export function useLibraryItems() {
@@ -21,11 +22,19 @@ export function useLibraryItems() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('library_items')
-        .select('*')
+        .select(`
+          *,
+          profiles:created_by (full_name)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as LibraryItem[];
+      
+      return data.map((item: any) => ({
+        ...item,
+        creator_name: item.profiles?.full_name || null,
+        profiles: undefined,
+      })) as LibraryItem[];
     },
   });
 }
