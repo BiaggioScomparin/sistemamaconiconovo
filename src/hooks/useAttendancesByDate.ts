@@ -13,7 +13,12 @@ export function useAttendancesByDate(lodgeId: string | undefined, sessionDate: s
   return useQuery({
     queryKey: ['attendances-by-date', lodgeId, sessionDate],
     queryFn: async () => {
-      if (!lodgeId || !sessionDate) return [];
+      if (!lodgeId || !sessionDate) {
+        console.log('useAttendancesByDate: Missing lodgeId or sessionDate', { lodgeId, sessionDate });
+        return [];
+      }
+
+      console.log('useAttendancesByDate: Fetching attendances', { lodgeId, sessionDate });
 
       // First get the attendances
       const { data: attendances, error: attendancesError } = await supabase
@@ -23,10 +28,7 @@ export function useAttendancesByDate(lodgeId: string | undefined, sessionDate: s
         .eq('session_date', sessionDate)
         .eq('confirmed', true);
 
-      if (attendancesError) {
-        console.error('Error fetching attendances:', attendancesError);
-        throw attendancesError;
-      }
+      console.log('useAttendancesByDate: Attendances result', { attendances, error: attendancesError });
 
       if (!attendances || attendances.length === 0) {
         return [];
