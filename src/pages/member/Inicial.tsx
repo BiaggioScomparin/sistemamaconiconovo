@@ -6,7 +6,7 @@ import { useLodgeMembers } from '@/hooks/useLodgeMembers';
 import { useEvents } from '@/hooks/useEvents';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Building2, Users, Crown, User, Cake, Calendar, Clock } from 'lucide-react';
+import { Building2, Users, Crown, User, Cake, Calendar, Clock, Award } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -66,6 +66,19 @@ export default function Inicial() {
       return dayA - dayB;
     });
 
+  // Get current month order anniversaries (initiation date)
+  const orderAnniversariesThisMonth = lodgeMembers
+    .filter(m => {
+      if (!m.initiation_date) return false;
+      const initiationMonth = new Date(m.initiation_date).getMonth() + 1;
+      return initiationMonth === currentMonth;
+    })
+    .sort((a, b) => {
+      const dayA = new Date(a.initiation_date!).getDate();
+      const dayB = new Date(b.initiation_date!).getDate();
+      return dayA - dayB;
+    });
+
   // Group members by their lodge position - show only filled positions
   const membersByPosition = LODGE_POSITIONS.map(position => {
     const members = lodgeMembers.filter(m => m.lodge_position === position.value);
@@ -94,9 +107,19 @@ export default function Inicial() {
       .toUpperCase();
   };
 
-  const formatBirthday = (birthDate: string) => {
-    const date = new Date(birthDate);
+  const formatBirthday = (dateStr: string) => {
+    const date = new Date(dateStr);
     return format(date, "dd 'de' MMMM", { locale: ptBR });
+  };
+
+  const formatOrderAnniversary = (initiationDate: string) => {
+    const initDate = new Date(initiationDate);
+    const today = new Date();
+    const years = today.getFullYear() - initDate.getFullYear();
+    return {
+      day: format(initDate, "dd 'de' MMMM", { locale: ptBR }),
+      years,
+    };
   };
 
   return (
@@ -264,6 +287,54 @@ export default function Inicial() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Order Anniversaries this month */}
+        <div>
+          <h2 className="text-xl font-display text-foreground mb-4 flex items-center gap-2">
+            <Award className="h-5 w-5 text-secondary" />
+            Aniversário de Ordem
+          </h2>
+
+          {membersLoading ? (
+            <div className="animate-pulse text-muted-foreground">Carregando aniversários de ordem...</div>
+          ) : orderAnniversariesThisMonth.length === 0 ? (
+            <Card className="card-elegant">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground">
+                  Nenhum aniversário de ordem neste mês.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="card-elegant">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {orderAnniversariesThisMonth.map(member => {
+                    const anniversary = formatOrderAnniversary(member.initiation_date!);
+                    return (
+                      <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg bg-primary/5">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={member.photo_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(member.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <span className="text-foreground text-sm font-body block">
+                            {member.full_name}
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {anniversary.day} • {anniversary.years} {anniversary.years === 1 ? 'ano' : 'anos'} de ordem
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

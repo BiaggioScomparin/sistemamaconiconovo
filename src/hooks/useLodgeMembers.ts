@@ -8,6 +8,7 @@ export interface LodgeMember {
   member_status: string;
   photo_url: string | null;
   birth_date: string;
+  initiation_date: string | null;
 }
 
 export function useLodgeMembers(lodgeId: string | undefined) {
@@ -19,7 +20,7 @@ export function useLodgeMembers(lodgeId: string | undefined) {
       // Using the secure view that only exposes public member data
       const { data, error } = await supabase
         .from('lodge_members_public' as any)
-        .select('id, full_name, lodge_position, member_status, photo_url, birth_date')
+        .select('id, full_name, lodge_position, member_status, photo_url, birth_date, initiation_date')
         .eq('lodge_id', lodgeId)
         .in('status', ['approved', 'membro'])
         .eq('member_status', 'active')
