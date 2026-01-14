@@ -7,10 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateSessionMinute, useUpdateSessionMinute, SessionMinute } from '@/hooks/useSessionMinutes';
 import { useProfile } from '@/hooks/useProfile';
+import { useLodges } from '@/hooks/useLodges';
+import { useLodgeMembers } from '@/hooks/useLodgeMembers';
+import { useAttendancesByDate } from '@/hooks/useAttendancesByDate';
+import { MemberSelectField } from './MemberSelectField';
 import { toast } from 'sonner';
-import { Loader2, Users, FileText, BookOpen, Gavel, MessageSquare } from 'lucide-react';
+import { Loader2, Users, FileText, BookOpen, Gavel, MessageSquare, RefreshCw } from 'lucide-react';
 
 interface MinuteFormDialogProps {
   open: boolean;
@@ -26,9 +31,14 @@ const currentMasonicYear = () => {
 
 export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: MinuteFormDialogProps) {
   const { data: profile } = useProfile();
+  const { data: lodges = [] } = useLodges();
   const createMutation = useCreateSessionMinute();
   const updateMutation = useUpdateSessionMinute();
 
+  const [selectedLodgeId, setSelectedLodgeId] = useState<string>('');
+  
+  const { data: lodgeMembers = [] } = useLodgeMembers(selectedLodgeId);
+  
   const [formData, setFormData] = useState({
     // Cabeçalho
     session_date: '',
@@ -68,8 +78,14 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
     observations: '',
   });
 
+  const { data: attendances = [], refetch: refetchAttendances } = useAttendancesByDate(
+    selectedLodgeId, 
+    formData.session_date
+  );
+
   useEffect(() => {
     if (minute) {
+      setSelectedLodgeId(minute.lodge_id || profile?.lodge_id || '');
       setFormData({
         session_date: minute.session_date || '',
         session_number: minute.session_number?.toString() || '',
@@ -102,6 +118,7 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
         observations: minute.observations || '',
       });
     } else {
+      setSelectedLodgeId(profile?.lodge_id || '');
       setFormData({
         session_date: new Date().toISOString().split('T')[0],
         session_number: '',
@@ -134,20 +151,42 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
         observations: '',
       });
     }
-  }, [minute, open]);
+  }, [minute, open, profile?.lodge_id]);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleLoadAttendances = () => {
+    if (attendances.length > 0) {
+      const presentMembers = attendances
+        .filter(a => a.profiles?.full_name)
+        .map(a => a.profiles!.full_name)
+        .join(', ');
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        members_present: presentMembers 
+      }));
+      toast.success(`${attendances.length} presenças carregadas!`);
+    } else {
+      toast.info('Nenhuma presença confirmada encontrada para esta data.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedLodgeId) {
+      toast.error('Selecione uma Loja');
+      return;
+    }
 
     const payload = {
       ...formData,
       session_number: formData.session_number ? parseInt(formData.session_number) : null,
       session_type: sessionType,
-      lodge_id: profile?.lodge_id,
+      lodge_id: selectedLodgeId,
     };
 
     try {
@@ -167,6 +206,7 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
   const isEditable = !minute || minute.status === 'draft';
+  const selectedLodge = lodges.find(l => l.id === selectedLodgeId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,6 +222,44 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
 
         <ScrollArea className="max-h-[calc(95vh-140px)]">
           <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
+            {/* Seleção de Loja */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Loja
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="lodge">Selecione a Loja *</Label>
+                  <Select
+                    value={selectedLodgeId}
+                    onValueChange={setSelectedLodgeId}
+                    disabled={!isEditable || !!minute}
+                  >
+                    <SelectTrigger id="lodge">
+                      <SelectValue placeholder="Selecione uma loja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lodges.map((lodge) => (
+                        <SelectItem key={lodge.id} value={lodge.id}>
+                          {lodge.name}
+                          {lodge.city && ` - ${lodge.city}`}
+                          {lodge.state && `/${lodge.state}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedLodge && (
+                    <p className="text-xs text-muted-foreground">
+                      {lodgeMembers.length} membros ativos nesta loja
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Cabeçalho */}
             <Card>
               <CardHeader className="pb-3">
@@ -255,146 +333,140 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
                   <Users className="h-4 w-4" />
                   A Loja Estava Assim Constituída
                 </CardTitle>
+                {!selectedLodgeId && (
+                  <p className="text-xs text-amber-600">
+                    Selecione uma loja para ver a lista de membros
+                  </p>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="presiding_master">Venerável Mestre</Label>
-                    <Input
-                      id="presiding_master"
-                      value={formData.presiding_master}
-                      onChange={(e) => handleChange('presiding_master', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="first_vigilant">1º Vigilante</Label>
-                    <Input
-                      id="first_vigilant"
-                      value={formData.first_vigilant}
-                      onChange={(e) => handleChange('first_vigilant', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="second_vigilant">2º Vigilante</Label>
-                    <Input
-                      id="second_vigilant"
-                      value={formData.second_vigilant}
-                      onChange={(e) => handleChange('second_vigilant', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="orator">Orador</Label>
-                    <Input
-                      id="orator"
-                      value={formData.orator}
-                      onChange={(e) => handleChange('orator', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="secretary">Secretário</Label>
-                    <Input
-                      id="secretary"
-                      value={formData.secretary}
-                      onChange={(e) => handleChange('secretary', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="treasurer">Tesoureiro</Label>
-                    <Input
-                      id="treasurer"
-                      value={formData.treasurer}
-                      onChange={(e) => handleChange('treasurer', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="first_deacon">1º Diácono</Label>
-                    <Input
-                      id="first_deacon"
-                      value={formData.first_deacon}
-                      onChange={(e) => handleChange('first_deacon', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="second_deacon">2º Diácono</Label>
-                    <Input
-                      id="second_deacon"
-                      value={formData.second_deacon}
-                      onChange={(e) => handleChange('second_deacon', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="chancellor">Chanceler</Label>
-                    <Input
-                      id="chancellor"
-                      value={formData.chancellor}
-                      onChange={(e) => handleChange('chancellor', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="master_of_ceremonies">Mestre de Cerimônias</Label>
-                    <Input
-                      id="master_of_ceremonies"
-                      value={formData.master_of_ceremonies}
-                      onChange={(e) => handleChange('master_of_ceremonies', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inner_guard">Cobridor Interno</Label>
-                    <Input
-                      id="inner_guard"
-                      value={formData.inner_guard}
-                      onChange={(e) => handleChange('inner_guard', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hospitaller">Hospitaleiro</Label>
-                    <Input
-                      id="hospitaller"
-                      value={formData.hospitaller}
-                      onChange={(e) => handleChange('hospitaller', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="master_of_harmony">Mestre de Harmonia</Label>
-                    <Input
-                      id="master_of_harmony"
-                      value={formData.master_of_harmony}
-                      onChange={(e) => handleChange('master_of_harmony', e.target.value)}
-                      placeholder="Ir.·."
-                      disabled={!isEditable}
-                    />
-                  </div>
+                  <MemberSelectField
+                    id="presiding_master"
+                    label="Venerável Mestre"
+                    value={formData.presiding_master}
+                    onChange={(value) => handleChange('presiding_master', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                    placeholder="Selecione o V.·.M.·."
+                  />
+                  <MemberSelectField
+                    id="first_vigilant"
+                    label="1º Vigilante"
+                    value={formData.first_vigilant}
+                    onChange={(value) => handleChange('first_vigilant', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="second_vigilant"
+                    label="2º Vigilante"
+                    value={formData.second_vigilant}
+                    onChange={(value) => handleChange('second_vigilant', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="orator"
+                    label="Orador"
+                    value={formData.orator}
+                    onChange={(value) => handleChange('orator', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="secretary"
+                    label="Secretário"
+                    value={formData.secretary}
+                    onChange={(value) => handleChange('secretary', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="treasurer"
+                    label="Tesoureiro"
+                    value={formData.treasurer}
+                    onChange={(value) => handleChange('treasurer', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="first_deacon"
+                    label="1º Diácono"
+                    value={formData.first_deacon}
+                    onChange={(value) => handleChange('first_deacon', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="second_deacon"
+                    label="2º Diácono"
+                    value={formData.second_deacon}
+                    onChange={(value) => handleChange('second_deacon', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="chancellor"
+                    label="Chanceler"
+                    value={formData.chancellor}
+                    onChange={(value) => handleChange('chancellor', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="master_of_ceremonies"
+                    label="Mestre de Cerimônias"
+                    value={formData.master_of_ceremonies}
+                    onChange={(value) => handleChange('master_of_ceremonies', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="inner_guard"
+                    label="Cobridor Interno"
+                    value={formData.inner_guard}
+                    onChange={(value) => handleChange('inner_guard', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="hospitaller"
+                    label="Hospitaleiro"
+                    value={formData.hospitaller}
+                    onChange={(value) => handleChange('hospitaller', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
+                  <MemberSelectField
+                    id="master_of_harmony"
+                    label="Mestre de Harmonia"
+                    value={formData.master_of_harmony}
+                    onChange={(value) => handleChange('master_of_harmony', value)}
+                    members={lodgeMembers}
+                    disabled={!isEditable}
+                  />
                 </div>
 
                 <Separator />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="members_present">Membros Presentes</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="members_present">Membros Presentes</Label>
+                      {isEditable && selectedLodgeId && formData.session_date && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleLoadAttendances}
+                          className="h-7 text-xs"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Carregar Presenças
+                        </Button>
+                      )}
+                    </div>
                     <Textarea
                       id="members_present"
                       value={formData.members_present}
@@ -403,6 +475,11 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
                       placeholder="Liste os IIr.·. presentes..."
                       disabled={!isEditable}
                     />
+                    {attendances.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {attendances.length} presenças confirmadas nesta data
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="visitors">Visitantes</Label>
@@ -565,7 +642,7 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
                 {isEditable ? 'Cancelar' : 'Fechar'}
               </Button>
               {isEditable && (
-                <Button type="submit" disabled={isLoading}>
+                <Button type="submit" disabled={isLoading || !selectedLodgeId}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
