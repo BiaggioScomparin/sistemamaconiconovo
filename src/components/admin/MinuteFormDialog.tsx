@@ -153,6 +153,43 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
     }
   }, [minute, open, profile?.lodge_id]);
 
+  // Map lodge_position to form field names
+  const positionToFieldMap: Record<string, keyof typeof formData> = {
+    'veneravel_mestre': 'presiding_master',
+    'primeiro_vigilante': 'first_vigilant',
+    'segundo_vigilante': 'second_vigilant',
+    'orador': 'orator',
+    'secretario': 'secretary',
+    'tesoureiro': 'treasurer',
+    'primeiro_diacono': 'first_deacon',
+    'segundo_diacono': 'second_deacon',
+    'chanceler': 'chancellor',
+    'mestre_cerimonias': 'master_of_ceremonies',
+    'cobridor_interno': 'inner_guard',
+    'hospitaleiro': 'hospitaller',
+    'mestre_harmonia': 'master_of_harmony',
+  };
+
+  // Auto-fill officers when lodge members are loaded (only for new minutes)
+  useEffect(() => {
+    if (!minute && lodgeMembers.length > 0 && selectedLodgeId) {
+      const updates: Partial<typeof formData> = {};
+      
+      lodgeMembers.forEach(member => {
+        if (member.lodge_position) {
+          const fieldName = positionToFieldMap[member.lodge_position];
+          if (fieldName && !formData[fieldName]) {
+            updates[fieldName] = member.full_name;
+          }
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+    }
+  }, [lodgeMembers, selectedLodgeId, minute]);
+
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
