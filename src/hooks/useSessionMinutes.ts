@@ -329,6 +329,52 @@ export function useSignMinute() {
   });
 }
 
+export function useReprocessMinutesStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      // Get all completed minutes (not yet signed)
+      const { data: minutes, error: minutesError } = await supabase
+        .from('session_minutes')
+        .select('id')
+        .eq('status', 'completed');
+
+      if (minutesError) throw minutesError;
+
+      const requiredPositions = ['veneravel_mestre', 'orador', 'secretario'];
+      let updatedCount = 0;
+
+      for (const minute of minutes || []) {
+        // Get signatures for this minute
+        const { data: signatures } = await supabase
+          .from('minute_signatures')
+          .select('signer_position')
+          .eq('minute_id', minute.id);
+
+        const positions = signatures?.map(s => s.signer_position.toLowerCase()) || [];
+        const allSigned = requiredPositions.every(pos => positions.includes(pos));
+
+        if (allSigned) {
+          await supabase
+            .from('session_minutes')
+            .update({ 
+              status: 'signed',
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', minute.id);
+          updatedCount++;
+        }
+      }
+
+      return updatedCount;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session-minutes'] });
+    },
+  });
+}
+
 export function useDeleteSessionMinute() {
   const queryClient = useQueryClient();
 
