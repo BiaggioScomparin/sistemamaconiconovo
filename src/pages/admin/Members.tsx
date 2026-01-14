@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download } from 'lucide-react';
+import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download, Filter, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -48,6 +48,15 @@ import { CreateMemberDialog } from '@/components/admin/CreateMemberDialog';
 import { ImportMembersDialog } from '@/components/admin/ImportMembersDialog';
 import logoGoib from '@/assets/logo-goib.png';
 
+interface ColumnFilters {
+  name: string;
+  cpf: string;
+  cim: string;
+  degree: string;
+  lodge: string;
+  status: string;
+}
+
 export default function AdminMembers() {
   const { user, loading, isAdmin } = useAuth();
   const { data: profiles, isLoading } = useApprovedProfiles();
@@ -57,6 +66,17 @@ export default function AdminMembers() {
   const [saving, setSaving] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  
+  // Column filters state
+  const [filters, setFilters] = useState<ColumnFilters>({
+    name: '',
+    cpf: '',
+    cim: '',
+    degree: '',
+    lodge: '',
+    status: '',
+  });
+  const [showFilters, setShowFilters] = useState(false);
   
   // Batch card generation state
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
@@ -70,6 +90,31 @@ export default function AdminMembers() {
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Filter profiles based on column filters
+  const filteredProfiles = profiles?.filter(profile => {
+    const nameMatch = profile.full_name.toLowerCase().includes(filters.name.toLowerCase());
+    const cpfMatch = !filters.cpf || ((profile as any).cpf || '').toLowerCase().includes(filters.cpf.toLowerCase());
+    const cimMatch = !filters.cim || (profile.cim_number || '').toLowerCase().includes(filters.cim.toLowerCase());
+    const degreeMatch = !filters.degree || ((profile as any).degree || 'Aprendiz').toLowerCase().includes(filters.degree.toLowerCase());
+    const lodgeMatch = !filters.lodge || ((profile as any).lodges?.name || '').toLowerCase().includes(filters.lodge.toLowerCase());
+    const statusMatch = !filters.status || ((profile as any).member_status || 'active') === filters.status;
+    
+    return nameMatch && cpfMatch && cimMatch && degreeMatch && lodgeMatch && statusMatch;
+  });
+
+  const clearFilters = () => {
+    setFilters({
+      name: '',
+      cpf: '',
+      cim: '',
+      degree: '',
+      lodge: '',
+      status: '',
+    });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '');
 
   // Fetch children for the editing profile
   const { data: editingChildren } = useProfileChildren(editingProfile?.id);
@@ -265,11 +310,11 @@ export default function AdminMembers() {
   };
 
   const toggleAllMembers = () => {
-    if (!profiles) return;
-    if (selectedMembers.size === profiles.length) {
+    if (!filteredProfiles) return;
+    if (selectedMembers.size === filteredProfiles.length) {
       setSelectedMembers(new Set());
     } else {
-      setSelectedMembers(new Set(profiles.map(p => p.id)));
+      setSelectedMembers(new Set(filteredProfiles.map(p => p.id)));
     }
   };
 
@@ -341,9 +386,33 @@ export default function AdminMembers() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2 font-display">
                 <Users className="h-5 w-5 text-secondary" />
-                Membros Ativos ({profiles?.length || 0})
+                Membros Ativos ({filteredProfiles?.length || 0} de {profiles?.length || 0})
               </CardTitle>
               <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={showFilters ? "secondary" : "outline"}
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {hasActiveFilters && (
+                    <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                      !
+                    </span>
+                  )}
+                </Button>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="text-muted-foreground"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="default" className="flex items-center gap-2">
@@ -394,7 +463,7 @@ export default function AdminMembers() {
                     <TableRow>
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={profiles && profiles.length > 0 && selectedMembers.size === profiles.length}
+                          checked={filteredProfiles && filteredProfiles.length > 0 && selectedMembers.size === filteredProfiles.length}
                           onCheckedChange={toggleAllMembers}
                           aria-label="Selecionar todos"
                         />
@@ -408,9 +477,87 @@ export default function AdminMembers() {
                       <TableHead>Status</TableHead>
                       <TableHead className="w-32">Ações</TableHead>
                     </TableRow>
+                    {showFilters && (
+                      <TableRow className="bg-muted/50">
+                        <TableHead></TableHead>
+                        <TableHead>
+                          <Input
+                            placeholder="Filtrar nome..."
+                            value={filters.name}
+                            onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </TableHead>
+                        <TableHead>
+                          <Input
+                            placeholder="Filtrar CPF..."
+                            value={filters.cpf}
+                            onChange={(e) => setFilters(f => ({ ...f, cpf: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </TableHead>
+                        <TableHead>
+                          <Input
+                            placeholder="Filtrar CIM..."
+                            value={filters.cim}
+                            onChange={(e) => setFilters(f => ({ ...f, cim: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </TableHead>
+                        <TableHead>
+                          <Select
+                            value={filters.degree}
+                            onValueChange={(value) => setFilters(f => ({ ...f, degree: value === 'all' ? '' : value }))}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos</SelectItem>
+                              <SelectItem value="Aprendiz">Aprendiz</SelectItem>
+                              <SelectItem value="Companheiro">Companheiro</SelectItem>
+                              <SelectItem value="Mestre">Mestre</SelectItem>
+                              <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableHead>
+                        <TableHead>
+                          <Input
+                            placeholder="Filtrar loja..."
+                            value={filters.lodge}
+                            onChange={(e) => setFilters(f => ({ ...f, lodge: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </TableHead>
+                        <TableHead></TableHead>
+                        <TableHead>
+                          <Select
+                            value={filters.status}
+                            onValueChange={(value) => setFilters(f => ({ ...f, status: value === 'all' ? '' : value }))}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos</SelectItem>
+                              <SelectItem value="active">Ativo</SelectItem>
+                              <SelectItem value="inactive">Inativo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    )}
                   </TableHeader>
                   <TableBody>
-                    {profiles?.map((profile) => (
+                    {filteredProfiles?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          Nenhum membro encontrado com os filtros aplicados.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {filteredProfiles?.map((profile) => (
                       <TableRow key={profile.id}>
                         <TableCell>
                           <Checkbox
