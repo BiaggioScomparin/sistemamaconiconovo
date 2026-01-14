@@ -282,6 +282,61 @@ export type Database = {
           },
         ]
       }
+      minute_signatures: {
+        Row: {
+          id: string
+          ip_address: string | null
+          minute_id: string
+          signature_hash: string
+          signed_at: string
+          signer_id: string
+          signer_name: string
+          signer_position: string
+        }
+        Insert: {
+          id?: string
+          ip_address?: string | null
+          minute_id: string
+          signature_hash: string
+          signed_at?: string
+          signer_id: string
+          signer_name: string
+          signer_position: string
+        }
+        Update: {
+          id?: string
+          ip_address?: string | null
+          minute_id?: string
+          signature_hash?: string
+          signed_at?: string
+          signer_id?: string
+          signer_name?: string
+          signer_position?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "minute_signatures_minute_id_fkey"
+            columns: ["minute_id"]
+            isOneToOne: false
+            referencedRelation: "session_minutes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "minute_signatures_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "lodge_members_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "minute_signatures_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_payments: {
         Row: {
           amount: number
@@ -673,6 +728,98 @@ export type Database = {
           },
         ]
       }
+      session_minutes: {
+        Row: {
+          closing_time: string | null
+          completed_at: string | null
+          completed_by: string | null
+          correspondence_read: string | null
+          created_at: string
+          created_by: string | null
+          deliberations: string | null
+          general_matters: string | null
+          id: string
+          lodge_id: string
+          members_present: string | null
+          observations: string | null
+          opening_time: string | null
+          orator: string | null
+          presiding_master: string | null
+          proposals: string | null
+          secretary: string | null
+          session_date: string
+          session_number: number | null
+          session_type: string
+          status: string
+          treasury_report: string | null
+          updated_at: string
+          visitors: string | null
+          word_of_order: string | null
+        }
+        Insert: {
+          closing_time?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          correspondence_read?: string | null
+          created_at?: string
+          created_by?: string | null
+          deliberations?: string | null
+          general_matters?: string | null
+          id?: string
+          lodge_id: string
+          members_present?: string | null
+          observations?: string | null
+          opening_time?: string | null
+          orator?: string | null
+          presiding_master?: string | null
+          proposals?: string | null
+          secretary?: string | null
+          session_date: string
+          session_number?: number | null
+          session_type?: string
+          status?: string
+          treasury_report?: string | null
+          updated_at?: string
+          visitors?: string | null
+          word_of_order?: string | null
+        }
+        Update: {
+          closing_time?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          correspondence_read?: string | null
+          created_at?: string
+          created_by?: string | null
+          deliberations?: string | null
+          general_matters?: string | null
+          id?: string
+          lodge_id?: string
+          members_present?: string | null
+          observations?: string | null
+          opening_time?: string | null
+          orator?: string | null
+          presiding_master?: string | null
+          proposals?: string | null
+          secretary?: string | null
+          session_date?: string
+          session_number?: number | null
+          session_type?: string
+          status?: string
+          treasury_report?: string | null
+          updated_at?: string
+          visitors?: string | null
+          word_of_order?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_minutes_lodge_id_fkey"
+            columns: ["lodge_id"]
+            isOneToOne: false
+            referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -835,6 +982,7 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_minutes: { Args: { _user_id: string }; Returns: boolean }
       generate_cim_number: { Args: never; Returns: string }
       generate_monthly_payments_for_all: { Args: never; Returns: undefined }
       get_user_lodge_id: { Args: { _user_id: string }; Returns: string }

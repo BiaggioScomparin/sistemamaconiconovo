@@ -19,7 +19,8 @@ import {
   DollarSign,
   Settings,
   Home,
-  BookOpen
+  BookOpen,
+  ClipboardList
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/calendar', label: 'Calendário', icon: Calendar },
     { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
     { href: '/admin/library', label: 'Biblioteca', icon: BookOpen },
+    { href: '/admin/minutes', label: 'Atas', icon: ClipboardList },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
     { href: '/admin/settings', label: 'Configurações', icon: Settings },
   ];

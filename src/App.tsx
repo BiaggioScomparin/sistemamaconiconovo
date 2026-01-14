@@ -21,6 +21,7 @@ import AdminFinanceiro from "./pages/admin/Financeiro";
 import AdminSettings from "./pages/admin/Settings";
 import AdminCalendar from "./pages/admin/Calendar";
 import AdminLibrary from "./pages/admin/Library";
+import AdminMinutes from "./pages/admin/Minutes";
 import MemberInicial from "./pages/member/Inicial";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/admin/calendar" element={<ProtectedAdminRoute><AdminCalendar /></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             <Route path="/admin/library" element={<ProtectedAdminRoute><AdminLibrary /></ProtectedAdminRoute>} />
+            <Route path="/admin/minutes" element={<ProtectedAdminRoute><AdminMinutes /></ProtectedAdminRoute>} />
             {/* Member routes */}
             <Route path="/member/inicial" element={<MemberInicial />} />
             <Route path="/member/card" element={<MemberCard />} />
