@@ -201,6 +201,7 @@ export type Database = {
       }
       library_items: {
         Row: {
+          category: string
           content: string | null
           created_at: string
           created_by: string | null
@@ -213,6 +214,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string
           content?: string | null
           created_at?: string
           created_by?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string
           content?: string | null
           created_at?: string
           created_by?: string | null

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateLibraryItem, useUpdateLibraryItem, LibraryItem } from '@/hooks/useLibrary';
+import { useCreateLibraryItem, useUpdateLibraryItem, LibraryItem, LibraryCategory } from '@/hooks/useLibrary';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload, X, FileText, Loader2 } from 'lucide-react';
@@ -23,6 +23,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
   const [fileUrl, setFileUrl] = useState('');
   const [fileType, setFileType] = useState('');
   const [degree, setDegree] = useState<'Aprendiz' | 'Companheiro' | 'Mestre' | 'Mestre Instalado'>('Aprendiz');
+  const [category, setCategory] = useState<LibraryCategory>('Documentos');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +39,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
       setFileUrl(item.file_url || '');
       setFileType(item.file_type || '');
       setDegree(item.degree);
+      setCategory(item.category || 'Documentos');
     } else {
       setTitle('');
       setDescription('');
@@ -45,6 +47,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
       setFileUrl('');
       setFileType('');
       setDegree('Aprendiz');
+      setCategory('Documentos');
     }
     setSelectedFile(null);
   }, [item, open]);
@@ -115,6 +118,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
           file_url: finalFileUrl || null,
           file_type: finalFileType || null,
           degree,
+          category,
         });
         toast.success('Item atualizado com sucesso!');
       } else {
@@ -125,6 +129,7 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
           file_url: finalFileUrl || null,
           file_type: finalFileType || null,
           degree,
+          category,
         });
         toast.success('Item criado com sucesso!');
       }
@@ -168,23 +173,40 @@ export function LibraryFormDialog({ open, onOpenChange, item }: LibraryFormDialo
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="degree">Grau de Acesso *</Label>
-            <Select value={degree} onValueChange={(v) => setDegree(v as typeof degree)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o grau" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Aprendiz">Aprendiz</SelectItem>
-                <SelectItem value="Companheiro">Companheiro</SelectItem>
-                <SelectItem value="Mestre">Mestre</SelectItem>
-                <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Mestres veem todos os itens. Companheiros veem Aprendiz e Companheiro. Aprendizes veem apenas Aprendiz.
-            </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria *</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as LibraryCategory)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Documentos">Documentos</SelectItem>
+                  <SelectItem value="Livros">Livros</SelectItem>
+                  <SelectItem value="Cursos">Cursos</SelectItem>
+                  <SelectItem value="Trabalhos">Trabalhos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="degree">Grau de Acesso *</Label>
+              <Select value={degree} onValueChange={(v) => setDegree(v as typeof degree)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o grau" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aprendiz">Aprendiz</SelectItem>
+                  <SelectItem value="Companheiro">Companheiro</SelectItem>
+                  <SelectItem value="Mestre">Mestre</SelectItem>
+                  <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Mestres veem todos os itens. Companheiros veem Aprendiz e Companheiro. Aprendizes veem apenas Aprendiz.
+          </p>
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>

@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type LibraryCategory = 'Documentos' | 'Livros' | 'Cursos' | 'Trabalhos';
+
 export interface LibraryItem {
   id: string;
   title: string;
@@ -10,6 +12,7 @@ export interface LibraryItem {
   file_url: string | null;
   file_type: string | null;
   degree: 'Aprendiz' | 'Companheiro' | 'Mestre' | 'Mestre Instalado';
+  category: LibraryCategory;
   created_by: string | null;
   created_at: string;
   updated_at: string;
