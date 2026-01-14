@@ -190,10 +190,15 @@ export default function AdminProposals() {
         });
       } else {
         // Just update the status
-        const { error } = await supabase
+        console.log('Updating status to:', newStatus, 'for profile:', selectedProfile.id);
+        
+        const { data: updateData, error } = await supabase
           .from('profiles')
           .update({ status: newStatus })
-          .eq('id', selectedProfile.id);
+          .eq('id', selectedProfile.id)
+          .select();
+
+        console.log('Update result:', { updateData, error });
 
         if (error) throw error;
 
@@ -203,10 +208,13 @@ export default function AdminProposals() {
         });
       }
 
+      // Invalidar e aguardar refresh antes de fechar o dialog
+      await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
+      console.log('Query invalidated, refetching...');
+      
       setSelectedProfile(null);
       setNewStatus('');
       setSelectedLodge('');
-      await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
