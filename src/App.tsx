@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import { ProtectedMinutesRoute } from "@/components/auth/ProtectedMinutesRoute";
+import { ProtectedMemberRoute } from "@/components/auth/ProtectedMemberRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -30,6 +31,7 @@ import MemberAttendance from "./pages/member/Attendance";
 import MemberPayments from "./pages/member/Payments";
 import MemberCalendar from "./pages/member/Calendar";
 import MemberLibrary from "./pages/member/Library";
+import ProposalStatus from "./pages/member/ProposalStatus";
 import ValidateMember from "./pages/ValidateMember";
 import NotFound from "./pages/NotFound";
 
@@ -48,6 +50,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/proposta" element={<Proposal />} />
+            <Route path="/status" element={<ProposalStatus />} />
             <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
             {/* Admin routes - Protected */}
             <Route path="/admin/lodges" element={<ProtectedAdminRoute><AdminLodges /></ProtectedAdminRoute>} />
@@ -61,14 +64,14 @@ const App = () => (
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             <Route path="/admin/library" element={<ProtectedAdminRoute><AdminLibrary /></ProtectedAdminRoute>} />
             <Route path="/admin/minutes" element={<ProtectedMinutesRoute><AdminMinutes /></ProtectedMinutesRoute>} />
-            {/* Member routes */}
-            <Route path="/member/inicial" element={<MemberInicial />} />
-            <Route path="/member/card" element={<MemberCard />} />
-            <Route path="/member/profile" element={<MemberProfile />} />
-            <Route path="/member/attendance" element={<MemberAttendance />} />
-            <Route path="/member/payments" element={<MemberPayments />} />
-            <Route path="/member/calendar" element={<MemberCalendar />} />
-            <Route path="/member/library" element={<MemberLibrary />} />
+            {/* Member routes - Protected by status */}
+            <Route path="/member/inicial" element={<ProtectedMemberRoute><MemberInicial /></ProtectedMemberRoute>} />
+            <Route path="/member/card" element={<ProtectedMemberRoute><MemberCard /></ProtectedMemberRoute>} />
+            <Route path="/member/profile" element={<ProtectedMemberRoute><MemberProfile /></ProtectedMemberRoute>} />
+            <Route path="/member/attendance" element={<ProtectedMemberRoute><MemberAttendance /></ProtectedMemberRoute>} />
+            <Route path="/member/payments" element={<ProtectedMemberRoute><MemberPayments /></ProtectedMemberRoute>} />
+            <Route path="/member/calendar" element={<ProtectedMemberRoute><MemberCalendar /></ProtectedMemberRoute>} />
+            <Route path="/member/library" element={<ProtectedMemberRoute><MemberLibrary /></ProtectedMemberRoute>} />
             {/* Public validation route */}
             <Route path="/validar/:profileId" element={<ValidateMember />} />
             {/* Catch-all */}
