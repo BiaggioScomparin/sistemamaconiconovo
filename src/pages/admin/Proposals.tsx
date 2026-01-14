@@ -206,7 +206,7 @@ export default function AdminProposals() {
       setSelectedProfile(null);
       setNewStatus('');
       setSelectedLodge('');
-      queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
+      await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
