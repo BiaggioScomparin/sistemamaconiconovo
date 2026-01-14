@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { fetchAddressByCEP, formatCEP } from '@/lib/viacep';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Search, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { validateImageFile, getValidatedFileName, ALLOWED_IMAGE_TYPES } from '@/lib/fileValidation';
+import ProposalAuthGate from '@/components/proposal/ProposalAuthGate';
 
 // Utility functions
 const formatCPF = (value: string): string => {
@@ -88,7 +90,16 @@ interface Child {
 }
 
 export default function Proposal() {
+  return (
+    <ProposalAuthGate>
+      <ProposalForm />
+    </ProposalAuthGate>
+  );
+}
+
+function ProposalForm() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [fetchingCEP, setFetchingCEP] = useState(false);
@@ -281,6 +292,7 @@ export default function Proposal() {
         status: 'proposta',
         member_status: 'active',
         proposal_date: new Date().toISOString().split('T')[0],
+        user_id: user?.id || null,
       };
 
       console.log('Submitting profile data:', profileData);
