@@ -487,11 +487,18 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
                       placeholder="Liste os IIr.·. presentes..."
                       disabled={!isEditable}
                     />
-                    {attendances.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {attendances.length} presenças confirmadas nesta data
-                      </p>
-                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      {formData.members_present ? (
+                        <span className="font-medium text-primary">
+                          Total: {formData.members_present.split(',').filter(n => n.trim()).length} membros presentes
+                        </span>
+                      ) : (
+                        <span>Nenhum membro adicionado</span>
+                      )}
+                      {attendances.length > 0 && (
+                        <span>{attendances.length} presenças confirmadas nesta data</span>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="visitors">Visitantes</Label>
