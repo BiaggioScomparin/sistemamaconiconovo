@@ -730,6 +730,9 @@ export type Database = {
       }
       session_minutes: {
         Row: {
+          beneficence_trunk: string | null
+          chancellor: string | null
+          closing_ritual: string | null
           closing_time: string | null
           completed_at: string | null
           completed_by: string | null
@@ -737,26 +740,45 @@ export type Database = {
           created_at: string
           created_by: string | null
           deliberations: string | null
+          expedient: string | null
+          first_deacon: string | null
+          first_vigilant: string | null
           general_matters: string | null
+          hospitaller: string | null
           id: string
+          inner_guard: string | null
           lodge_id: string
+          masonic_year: string | null
+          master_of_ceremonies: string | null
+          master_of_harmony: string | null
           members_present: string | null
           observations: string | null
           opening_time: string | null
           orator: string | null
+          order_of_the_day: string | null
           presiding_master: string | null
+          previous_minutes_reading: string | null
+          proposal_bag: string | null
           proposals: string | null
+          second_deacon: string | null
+          second_vigilant: string | null
           secretary: string | null
           session_date: string
           session_number: number | null
           session_type: string
           status: string
+          study_time: string | null
+          treasurer: string | null
           treasury_report: string | null
           updated_at: string
           visitors: string | null
+          word_for_order: string | null
           word_of_order: string | null
         }
         Insert: {
+          beneficence_trunk?: string | null
+          chancellor?: string | null
+          closing_ritual?: string | null
           closing_time?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -764,26 +786,45 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deliberations?: string | null
+          expedient?: string | null
+          first_deacon?: string | null
+          first_vigilant?: string | null
           general_matters?: string | null
+          hospitaller?: string | null
           id?: string
+          inner_guard?: string | null
           lodge_id: string
+          masonic_year?: string | null
+          master_of_ceremonies?: string | null
+          master_of_harmony?: string | null
           members_present?: string | null
           observations?: string | null
           opening_time?: string | null
           orator?: string | null
+          order_of_the_day?: string | null
           presiding_master?: string | null
+          previous_minutes_reading?: string | null
+          proposal_bag?: string | null
           proposals?: string | null
+          second_deacon?: string | null
+          second_vigilant?: string | null
           secretary?: string | null
           session_date: string
           session_number?: number | null
           session_type?: string
           status?: string
+          study_time?: string | null
+          treasurer?: string | null
           treasury_report?: string | null
           updated_at?: string
           visitors?: string | null
+          word_for_order?: string | null
           word_of_order?: string | null
         }
         Update: {
+          beneficence_trunk?: string | null
+          chancellor?: string | null
+          closing_ritual?: string | null
           closing_time?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -791,23 +832,39 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deliberations?: string | null
+          expedient?: string | null
+          first_deacon?: string | null
+          first_vigilant?: string | null
           general_matters?: string | null
+          hospitaller?: string | null
           id?: string
+          inner_guard?: string | null
           lodge_id?: string
+          masonic_year?: string | null
+          master_of_ceremonies?: string | null
+          master_of_harmony?: string | null
           members_present?: string | null
           observations?: string | null
           opening_time?: string | null
           orator?: string | null
+          order_of_the_day?: string | null
           presiding_master?: string | null
+          previous_minutes_reading?: string | null
+          proposal_bag?: string | null
           proposals?: string | null
+          second_deacon?: string | null
+          second_vigilant?: string | null
           secretary?: string | null
           session_date?: string
           session_number?: number | null
           session_type?: string
           status?: string
+          study_time?: string | null
+          treasurer?: string | null
           treasury_report?: string | null
           updated_at?: string
           visitors?: string | null
+          word_for_order?: string | null
           word_of_order?: string | null
         }
         Relationships: [
