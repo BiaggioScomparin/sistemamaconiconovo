@@ -119,6 +119,7 @@ function ProposalForm() {
     defaultValues: {
       nationality: 'Brasileiro',
       believes_supreme_being: true,
+      email: user?.email || '',
     },
   });
 
