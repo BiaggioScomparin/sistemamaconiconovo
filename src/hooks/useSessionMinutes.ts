@@ -308,7 +308,10 @@ export function useSignMinute() {
       if (allSigned) {
         await supabase
           .from('session_minutes')
-          .update({ status: 'signed' })
+          .update({ 
+            status: 'signed',
+            completed_at: new Date().toISOString(),
+          })
           .eq('id', minuteId);
       }
 
