@@ -25,11 +25,17 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
     icon: <CheckCircle2 className="h-16 w-16 text-green-500" />,
     description: 'Parabéns! Sua proposta foi aprovada. Em breve você terá acesso completo ao sistema.',
   },
-  rejeitado: {
-    label: 'Não Aprovado',
+  reprovado: {
+    label: 'Proposta Não Aprovada',
     color: 'text-red-500',
     icon: <XCircle className="h-16 w-16 text-red-500" />,
-    description: 'Infelizmente sua proposta não foi aprovada neste momento.',
+    description: 'Infelizmente sua proposta não foi aprovada neste momento. Para mais informações, entre em contato com a secretaria da loja.',
+  },
+  rejected: {
+    label: 'Proposta Não Aprovada',
+    color: 'text-red-500',
+    icon: <XCircle className="h-16 w-16 text-red-500" />,
+    description: 'Infelizmente sua proposta não foi aprovada neste momento. Para mais informações, entre em contato com a secretaria da loja.',
   },
   membro: {
     label: 'Membro Ativo',
