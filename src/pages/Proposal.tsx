@@ -284,6 +284,11 @@ export default function Proposal() {
       };
 
       console.log('Submitting profile data:', profileData);
+      
+      // Debug: Check current auth session
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('Current session:', sessionData?.session ? 'Authenticated' : 'Anonymous');
+      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -293,6 +298,7 @@ export default function Proposal() {
 
       if (profileError) {
         console.error('Profile insert error:', profileError);
+        console.error('Profile insert error details:', JSON.stringify(profileError, null, 2));
         throw new Error(profileError.message);
       }
 
