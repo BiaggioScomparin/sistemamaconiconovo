@@ -301,9 +301,13 @@ export function useSignMinute() {
         .select('signer_position')
         .eq('minute_id', minuteId);
 
-      const positions = signatures?.map(s => s.signer_position) || [];
-      const requiredPositions = ['Venerável Mestre', 'Orador', 'Secretário'];
-      const allSigned = requiredPositions.every(pos => positions.includes(pos));
+      const positions = signatures?.map(s => s.signer_position.toLowerCase()) || [];
+      // Support both snake_case and formatted names
+      const requiredPositions = ['veneravel_mestre', 'orador', 'secretario'];
+      const allSigned = requiredPositions.every(pos => 
+        positions.includes(pos) || 
+        positions.includes(pos.replace(/_/g, ' '))
+      );
 
       if (allSigned) {
         await supabase
