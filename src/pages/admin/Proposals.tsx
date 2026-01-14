@@ -210,7 +210,9 @@ export default function AdminProposals() {
 
       // Invalidar e aguardar refresh antes de fechar o dialog
       await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
-      console.log('Query invalidated, refetching...');
+      
+      // Mudar para a aba do novo status
+      setActiveTab(newStatus);
       
       setSelectedProfile(null);
       setNewStatus('');
