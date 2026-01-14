@@ -9,6 +9,7 @@ import {
   useDeleteSessionMinute, 
   useCompleteSessionMinute,
   useMinuteSignatures,
+  useReprocessMinutesStatus,
   SessionMinute 
 } from '@/hooks/useSessionMinutes';
 import { useLodges } from '@/hooks/useLodges';
@@ -24,10 +25,10 @@ import {
   CheckCircle2, 
   PenLine,
   Clock,
-  Shield,
   Calendar,
   Printer,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -64,6 +65,7 @@ export default function AdminMinutes() {
   const { data: profile } = useProfile();
   const deleteMutation = useDeleteSessionMinute();
   const completeMutation = useCompleteSessionMinute();
+  const reprocessMutation = useReprocessMinutesStatus();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
@@ -114,6 +116,19 @@ export default function AdminMinutes() {
     setCompleteId(null);
   };
 
+  const handleReprocess = async () => {
+    try {
+      const count = await reprocessMutation.mutateAsync();
+      if (count > 0) {
+        toast.success(`${count} ata(s) atualizada(s) para Concluída!`);
+      } else {
+        toast.info('Nenhuma ata pendente de atualização');
+      }
+    } catch (error) {
+      toast.error('Erro ao reprocessar atas');
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -124,11 +139,21 @@ export default function AdminMinutes() {
               Gerencie as atas das sessões maçônicas
             </p>
           </div>
-          <Button onClick={handleNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Nova Ata</span>
-            <span className="sm:hidden">Nova</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleReprocess}
+              disabled={reprocessMutation.isPending}
+            >
+              <RefreshCw className={`h-4 w-4 ${reprocessMutation.isPending ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline ml-2">Reprocessar</span>
+            </Button>
+            <Button onClick={handleNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Nova Ata</span>
+              <span className="sm:hidden">Nova</span>
+            </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SessionType)}>
