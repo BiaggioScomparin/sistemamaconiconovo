@@ -5,9 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useLibraryItems, useDeleteLibraryItem, LibraryItem } from '@/hooks/useLibrary';
 import { LibraryFormDialog } from '@/components/admin/LibraryFormDialog';
-import { Plus, Pencil, Trash2, BookOpen, ExternalLink, User } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Plus, Pencil, Trash2, BookOpen, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -105,16 +103,10 @@ export default function AdminLibrary() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col justify-end">
                   {item.content && (
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                    <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                       {item.content}
                     </p>
                   )}
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-                    <User className="h-3 w-3" />
-                    <span>
-                      {item.creator_name || 'Desconhecido'} • {format(new Date(item.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
                   <div className="flex items-center gap-2 pt-2 border-t">
                     {item.file_url && (
                       <Button variant="outline" size="sm" asChild>
