@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { MinuteFormDialog } from '@/components/admin/MinuteFormDialog';
 import { MinuteSignatureDialog } from '@/components/admin/MinuteSignatureDialog';
 import { MinutePrintView } from '@/components/admin/MinutePrintView';
+import { GoogleDriveBackupButton } from '@/components/admin/GoogleDriveBackupButton';
+import { generateMinutePdf } from '@/lib/generateMinutePdf';
 import { 
   Plus, 
   Pencil, 
@@ -56,6 +58,27 @@ type SessionType = 'ordinaria' | 'magna';
 function PrintMinuteButton({ minute, lodgeName }: { minute: SessionMinute; lodgeName: string }) {
   const { data: signatures } = useMinuteSignatures(minute.id);
   return <MinutePrintView minute={minute} signatures={signatures || []} lodgeName={lodgeName} />;
+}
+
+// Google Drive backup button with signatures
+function MinuteBackupButton({ minute, lodgeName }: { minute: SessionMinute; lodgeName: string }) {
+  const { data: signatures } = useMinuteSignatures(minute.id);
+  
+  const handleGeneratePdf = useCallback(async () => {
+    return await generateMinutePdf({
+      minute,
+      signatures: signatures || [],
+      lodgeName,
+      returnBase64: true
+    });
+  }, [minute, signatures, lodgeName]);
+  
+  return (
+    <GoogleDriveBackupButton
+      minute={minute}
+      onGeneratePdf={handleGeneratePdf}
+    />
+  );
 }
 
 export default function AdminMinutes() {
@@ -244,6 +267,7 @@ export default function AdminMinutes() {
                                 Visualizar
                               </Button>
                               <PrintMinuteButton minute={minute} lodgeName={getLodgeName(minute.lodge_id)} />
+                              <MinuteBackupButton minute={minute} lodgeName={getLodgeName(minute.lodge_id)} />
                             </>
                           )}
 
