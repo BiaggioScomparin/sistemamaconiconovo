@@ -26,7 +26,7 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
           <style>
             @page {
               size: A4;
-              margin: 2cm;
+              margin: 1.5cm 2cm;
             }
             * {
               margin: 0;
@@ -36,36 +36,51 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
             body {
               font-family: 'Times New Roman', Times, serif;
               font-size: 12pt;
-              line-height: 1.5;
+              line-height: 1.6;
               color: #000;
               background: #fff;
+              position: relative;
+            }
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              opacity: 0.08;
+              z-index: -1;
+              width: 500px;
+              height: 500px;
+              pointer-events: none;
             }
             .header {
               text-align: center;
-              margin-bottom: 20px;
-              border-bottom: 2px solid #000;
-              padding-bottom: 15px;
+              margin-bottom: 25px;
+              padding-bottom: 10px;
             }
-            .header h1 {
-              font-size: 14pt;
-              font-weight: bold;
-              margin-bottom: 5px;
+            .header-line {
+              font-size: 13pt;
+              font-weight: normal;
+              letter-spacing: 1px;
+              margin-bottom: 20px;
             }
             .header h2 {
               font-size: 16pt;
               font-weight: bold;
-              margin: 10px 0;
+              margin: 15px 0;
+              text-decoration: underline;
             }
-            .header p {
-              font-size: 11pt;
+            .header h3 {
+              font-size: 14pt;
+              font-weight: bold;
+              margin: 10px 0;
+              text-decoration: underline;
             }
             .intro {
               text-align: justify;
-              margin-bottom: 20px;
-              text-indent: 2em;
+              margin-bottom: 15px;
             }
             .section {
-              margin-bottom: 15px;
+              margin-bottom: 20px;
             }
             .section-title {
               font-weight: bold;
@@ -73,71 +88,111 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
               margin-bottom: 8px;
               text-decoration: underline;
             }
-            .officers-table {
-              width: 100%;
-              border-collapse: collapse;
+            .officers-list {
               margin-bottom: 15px;
             }
-            .officers-table td {
-              padding: 4px 8px;
-              border: 1px solid #ccc;
-              font-size: 11pt;
+            .officer-item {
+              display: flex;
+              margin-bottom: 3px;
             }
-            .officers-table td:first-child {
+            .officer-label {
               font-weight: bold;
-              width: 40%;
-              background: #f5f5f5;
+              min-width: 220px;
             }
-            .content-box {
-              border: 1px solid #ccc;
-              padding: 10px;
-              margin-bottom: 10px;
-              min-height: 50px;
+            .officer-value {
+            }
+            .content-text {
               text-align: justify;
+              margin-bottom: 10px;
             }
-            .content-box.empty {
-              color: #999;
-              font-style: italic;
-            }
-            .signatures {
-              margin-top: 40px;
+            .signatures-section {
+              margin-top: 50px;
               page-break-inside: avoid;
             }
-            .signature-line {
-              display: flex;
-              justify-content: space-between;
-              margin-top: 60px;
+            .signature-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
             }
-            .signature-box {
-              width: 30%;
-              text-align: center;
+            .signature-table td {
+              padding: 8px;
+              border: 1px solid #000;
+              vertical-align: middle;
             }
-            .signature-box .line {
-              border-top: 1px solid #000;
-              padding-top: 5px;
-              font-size: 11pt;
-            }
-            .signature-box .position {
+            .signature-table td:first-child {
               font-weight: bold;
-              font-size: 10pt;
+              width: 25%;
             }
-            .signature-box .signed {
-              font-size: 9pt;
-              color: #666;
-              margin-top: 3px;
-            }
-            .footer {
-              margin-top: 30px;
+            .signature-table td:nth-child(2) {
+              width: 50%;
               text-align: center;
-              font-size: 10pt;
-              color: #666;
+              position: relative;
+            }
+            .signature-table td:nth-child(3) {
+              width: 25%;
+              text-align: center;
+            }
+            .seal-container {
+              position: relative;
+              display: inline-block;
+            }
+            .signature-seal {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-15deg);
+              border: 3px solid #228B22;
+              border-radius: 50%;
+              width: 70px;
+              height: 70px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              background: rgba(34, 139, 34, 0.1);
+              font-size: 7pt;
+              font-weight: bold;
+              color: #228B22;
+              text-align: center;
+              line-height: 1.1;
+            }
+            .signature-seal-text {
+              font-size: 8pt;
+            }
+            .signature-seal-check {
+              font-size: 16pt;
+              margin-bottom: 2px;
+            }
+            .signature-name {
+              font-style: italic;
+            }
+            .closing-text {
+              text-align: justify;
+              margin-top: 20px;
+            }
+            .lavrei-text {
+              text-align: justify;
+              margin-top: 15px;
+              margin-bottom: 30px;
             }
             @media print {
-              body { -webkit-print-color-adjust: exact; }
+              body { 
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .watermark {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .signature-seal {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
             }
           </style>
         </head>
         <body>
+          <img src="/images/logo-goib-watermark.png" class="watermark" alt="" />
           ${printContent.innerHTML}
         </body>
       </html>
@@ -148,7 +203,7 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
-    }, 250);
+    }, 500);
   };
 
   const formatTime = (time: string | null) => {
@@ -157,12 +212,66 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
     return `${hours}:${minutes}`;
   };
 
-  const getSignatureForPosition = (position: string) => {
-    return signatures.find(s => s.signer_position === position);
+  const formatTimeExtended = (time: string | null) => {
+    if (!time) return '________ horas';
+    const [hours, minutes] = time.split(':');
+    const hoursNum = parseInt(hours);
+    const hoursText = hoursNum === 1 ? 'uma hora' : 
+      hoursNum === 2 ? 'duas horas' :
+      hoursNum === 3 ? 'três horas' :
+      hoursNum === 4 ? 'quatro horas' :
+      hoursNum === 5 ? 'cinco horas' :
+      hoursNum === 6 ? 'seis horas' :
+      hoursNum === 7 ? 'sete horas' :
+      hoursNum === 8 ? 'oito horas' :
+      hoursNum === 9 ? 'nove horas' :
+      hoursNum === 10 ? 'dez horas' :
+      hoursNum === 11 ? 'onze horas' :
+      hoursNum === 12 ? 'doze horas' :
+      hoursNum === 13 ? 'treze horas' :
+      hoursNum === 14 ? 'catorze horas' :
+      hoursNum === 15 ? 'quinze horas' :
+      hoursNum === 16 ? 'dezesseis horas' :
+      hoursNum === 17 ? 'dezessete horas' :
+      hoursNum === 18 ? 'dezoito horas' :
+      hoursNum === 19 ? 'dezenove horas' :
+      hoursNum === 20 ? 'vinte horas' :
+      hoursNum === 21 ? 'vinte e uma horas' :
+      hoursNum === 22 ? 'vinte e duas horas' :
+      hoursNum === 23 ? 'vinte e três horas' :
+      `${hoursNum} horas`;
+    
+    if (minutes && parseInt(minutes) > 0) {
+      return `${hours}:${minutes} (${hoursText} e ${minutes} minutos)`;
+    }
+    return `${hours}:${minutes} (${hoursText})`;
   };
 
-  const sessionDateFormatted = format(new Date(minute.session_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  const dayOfWeek = format(new Date(minute.session_date), 'EEEE', { locale: ptBR });
+  const getSignatureForPosition = (position: string) => {
+    // Check both display names and snake_case values
+    const positionMap: Record<string, string[]> = {
+      'veneravel_mestre': ['veneravel_mestre', 'Venerável Mestre'],
+      'orador': ['orador', 'Orador'],
+      'secretario': ['secretario', 'Secretário'],
+    };
+    
+    for (const sig of signatures) {
+      const matchPositions = positionMap[position] || [position];
+      if (matchPositions.includes(sig.signer_position)) {
+        return sig;
+      }
+    }
+    return undefined;
+  };
+
+  const sessionDate = new Date(minute.session_date);
+  const day = format(sessionDate, 'd', { locale: ptBR });
+  const month = format(sessionDate, 'MMMM', { locale: ptBR });
+  const year = format(sessionDate, 'yyyy', { locale: ptBR });
+
+  const vmSignature = getSignatureForPosition('veneravel_mestre');
+  const oradorSignature = getSignatureForPosition('orador');
+  const secretarioSignature = getSignatureForPosition('secretario');
 
   return (
     <>
@@ -174,167 +283,228 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
       {/* Hidden print content */}
       <div id="minute-print-content" className="hidden">
         <div className="header">
-          <h1>GRANDE ORIENTE INDEPENDENTE DO BRASIL</h1>
-          <p>G.·.O.·.I.·.B.·.</p>
+          <p className="header-line">GRANDE ORIENTE INDEPENDENTE DO BRASIL – G∴O∴ I∴ B∴</p>
           <h2>Ata de Sessão {minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'}</h2>
+          <h3>Ata N.º {minute.session_number || '____'} – Sessão {minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'}{minute.session_type === 'magna' ? ' de Iniciação' : ''}</h3>
         </div>
 
         <p className="intro">
-          Ata N.º <strong>{minute.session_number || '____'}</strong> da sessão {minute.session_type === 'ordinaria' ? 'ordinária' : 'magna'}, 
-          da A.·.R.·.L.·.S.·. <strong>{lodgeName || '________________________'}</strong>, 
-          realizada aos <strong>{sessionDateFormatted}</strong> ({dayOfWeek}) da E.·.V.·. 
-          e <strong>{minute.masonic_year || '____'}</strong> V.·.L.·.
+          da A∴ R∴ L∴ S∴ <strong>{lodgeName || '________________________'}</strong>, realizada aos <strong>{day}</strong> dias do mês de <strong>{month}</strong> de <strong>{year}</strong>, da E∴ V∴ e <strong>{minute.masonic_year || '____'}</strong> V∴ L∴.
         </p>
 
         <p className="intro">
-          Os Trabalhos foram abertos em sessão {minute.session_type === 'ordinaria' ? 'ordinária' : 'magna'} com as exatas <strong>{formatTime(minute.opening_time)}</strong> horas.
+          Os trabalhos foram abertos em Sessão {minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'}{minute.session_type === 'magna' ? ' de iniciação' : ''} com as exatas <strong>{formatTimeExtended(minute.opening_time)}</strong>.
         </p>
 
         <div className="section">
-          <p className="section-title">A Loja Estava Assim Constituída:</p>
-          <table className="officers-table">
-            <tbody>
-              <tr><td>Venerável Mestre:</td><td>{minute.presiding_master || '________________________'}</td></tr>
-              <tr><td>1º Vigilante Ir.·.:</td><td>{minute.first_vigilant || '________________________'}</td></tr>
-              <tr><td>2º Vigilante Ir.·.:</td><td>{minute.second_vigilant || '________________________'}</td></tr>
-              <tr><td>Orador Ir.·.:</td><td>{minute.orator || '________________________'}</td></tr>
-              <tr><td>Secretário Ir.·.:</td><td>{minute.secretary || '________________________'}</td></tr>
-              <tr><td>Tesoureiro Ir.·.:</td><td>{minute.treasurer || '________________________'}</td></tr>
-              <tr><td>1º Diácono Ir.·.:</td><td>{minute.first_deacon || '________________________'}</td></tr>
-              <tr><td>2º Diácono Ir.·.:</td><td>{minute.second_deacon || '________________________'}</td></tr>
-              <tr><td>Chanceler Ir.·.:</td><td>{minute.chancellor || '________________________'}</td></tr>
-              <tr><td>Mestre de Cerimônias Ir.·.:</td><td>{minute.master_of_ceremonies || '________________________'}</td></tr>
-              <tr><td>Cobridor Interno Ir.·.:</td><td>{minute.inner_guard || '________________________'}</td></tr>
-              <tr><td>Hospitaleiro Ir.·.:</td><td>{minute.hospitaller || '________________________'}</td></tr>
-              <tr><td>Mestre de Harmonia Ir.·.:</td><td>{minute.master_of_harmony || '________________________'}</td></tr>
-            </tbody>
-          </table>
+          <p className="section-title">A Loja estava assim constituída:</p>
+          <div className="officers-list">
+            <div className="officer-item">
+              <span className="officer-label">Venerável Mestre:</span>
+              <span className="officer-value">Ir∴ {minute.presiding_master || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">1º Vigilante:</span>
+              <span className="officer-value">Ir∴ {minute.first_vigilant || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">2º Vigilante:</span>
+              <span className="officer-value">Ir∴ {minute.second_vigilant || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">Orador:</span>
+              <span className="officer-value">Ir∴ {minute.orator || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">Secretário:</span>
+              <span className="officer-value">Ir∴ {minute.secretary || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">1º Diácono:</span>
+              <span className="officer-value">Ir∴ {minute.first_deacon || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">2º Diácono:</span>
+              <span className="officer-value">Ir∴ {minute.second_deacon || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">Chanceler:</span>
+              <span className="officer-value">Ir∴ {minute.chancellor || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">Tesoureiro:</span>
+              <span className="officer-value">Ir∴ {minute.treasurer || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">Cobridor Interno:</span>
+              <span className="officer-value">Ir∴ {minute.inner_guard || '________________________'}</span>
+            </div>
+            <div className="officer-item">
+              <span className="officer-label">Mestre de Cerimônias e Hospitaleiro:</span>
+              <span className="officer-value">Ir∴ {minute.master_of_ceremonies || minute.hospitaller || '________________________'}</span>
+            </div>
+          </div>
         </div>
 
-        {(minute.members_present || minute.visitors) && (
+        {minute.members_present && (
           <div className="section">
-            {minute.members_present && (
-              <>
-                <p className="section-title">Membros Presentes:</p>
-                <div className="content-box">{minute.members_present}</div>
-              </>
-            )}
-            {minute.visitors && (
-              <>
-                <p className="section-title">Visitantes:</p>
-                <div className="content-box">{minute.visitors}</div>
-              </>
-            )}
+            <div className="officer-item">
+              <span className="officer-label">VV∴ IIr∴ Presentes:</span>
+              <span className="officer-value">{minute.members_present}</span>
+            </div>
           </div>
         )}
 
-        <div className="section">
-          <p className="section-title">Leitura da Ata:</p>
-          <div className={`content-box ${!minute.previous_minutes_reading ? 'empty' : ''}`}>
-            {minute.previous_minutes_reading || 'Sem registro'}
+        {minute.visitors && (
+          <div className="section">
+            <div className="officer-item">
+              <span className="officer-label">Visitantes:</span>
+              <span className="officer-value">{minute.visitors}</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">Expediente:</p>
-          <div className={`content-box ${!minute.expedient ? 'empty' : ''}`}>
-            {minute.expedient || 'Sem registro'}
+        {minute.beneficence_trunk && (
+          <div className="section">
+            <p className="section-title">Tronco de Beneficência:</p>
+            <p className="content-text">{minute.beneficence_trunk}</p>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">Saco de Proposta e Informações:</p>
-          <div className={`content-box ${!minute.proposal_bag ? 'empty' : ''}`}>
-            {minute.proposal_bag || 'Sem registro'}
+        {minute.previous_minutes_reading && (
+          <div className="section">
+            <p className="section-title">Leitura da Ata Anterior:</p>
+            <p className="content-text">{minute.previous_minutes_reading}</p>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">Ordem do Dia:</p>
-          <div className={`content-box ${!minute.order_of_the_day ? 'empty' : ''}`}>
-            {minute.order_of_the_day || 'Sem registro'}
+        {minute.expedient && (
+          <div className="section">
+            <p className="section-title">Expediente:</p>
+            <p className="content-text">{minute.expedient}</p>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">Tempo de Estudos:</p>
-          <div className={`content-box ${!minute.study_time ? 'empty' : ''}`}>
-            {minute.study_time || 'Sem registro'}
+        {minute.correspondence_read && (
+          <div className="section">
+            <p className="section-title">Correspondências Lidas:</p>
+            <p className="content-text">{minute.correspondence_read}</p>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">Tronco de Beneficência:</p>
-          <div className={`content-box ${!minute.beneficence_trunk ? 'empty' : ''}`}>
-            {minute.beneficence_trunk || 'Sem registro'}
+        {minute.proposal_bag && (
+          <div className="section">
+            <p className="section-title">Saco de Propostas e Informações:</p>
+            <p className="content-text">{minute.proposal_bag}</p>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">A Palavra a Bem da Ordem em Geral e do Quadro em Particular:</p>
-          <div className={`content-box ${!minute.word_for_order ? 'empty' : ''}`}>
-            {minute.word_for_order || 'Sem registro'}
+        {minute.order_of_the_day && (
+          <div className="section">
+            <p className="section-title">Ordem do Dia:</p>
+            <p className="content-text">{minute.order_of_the_day}</p>
           </div>
-        </div>
+        )}
 
-        <div className="section">
-          <p className="section-title">Encerramento da Sessão:</p>
-          <p className="intro">
-            O V.·.M.·. encerrou a presente sessão {minute.closing_ritual ? `com ${minute.closing_ritual}` : 'com ritualística'} às <strong>{formatTime(minute.closing_time)}</strong> horas.
-          </p>
-          <p className="intro">
-            Eu, <strong>{minute.secretary || '________________________'}</strong>, lavrei a presente ATA, que será assinada por direito após sua aprovação em Loja.
-          </p>
-        </div>
+        {minute.study_time && (
+          <div className="section">
+            <p className="section-title">Tempo de Estudos:</p>
+            <p className="content-text">{minute.study_time}</p>
+          </div>
+        )}
+
+        {minute.word_for_order && (
+          <div className="section">
+            <p className="section-title">Palavra Relativa ao Ato Constituído:</p>
+            <p className="content-text">{minute.word_for_order}</p>
+          </div>
+        )}
+
+        {minute.general_matters && (
+          <div className="section">
+            <p className="section-title">Assuntos Gerais:</p>
+            <p className="content-text">{minute.general_matters}</p>
+          </div>
+        )}
+
+        {minute.deliberations && (
+          <div className="section">
+            <p className="section-title">Deliberações:</p>
+            <p className="content-text">{minute.deliberations}</p>
+          </div>
+        )}
 
         {minute.observations && (
           <div className="section">
             <p className="section-title">Observações:</p>
-            <div className="content-box">{minute.observations}</div>
+            <p className="content-text">{minute.observations}</p>
           </div>
         )}
 
-        <div className="signatures">
-          <div className="signature-line">
-            <div className="signature-box">
-              <div className="line">
-                {minute.presiding_master || '________________________'}
-              </div>
-              <div className="position">V.·.M.·.</div>
-              {getSignatureForPosition('Venerável Mestre') && (
-                <div className="signed">
-                  ✓ Assinado digitalmente em {format(new Date(getSignatureForPosition('Venerável Mestre')!.signed_at), 'dd/MM/yyyy HH:mm')}
-                </div>
-              )}
-            </div>
-            <div className="signature-box">
-              <div className="line">
-                {minute.orator || '________________________'}
-              </div>
-              <div className="position">Orador</div>
-              {getSignatureForPosition('Orador') && (
-                <div className="signed">
-                  ✓ Assinado digitalmente em {format(new Date(getSignatureForPosition('Orador')!.signed_at), 'dd/MM/yyyy HH:mm')}
-                </div>
-              )}
-            </div>
-            <div className="signature-box">
-              <div className="line">
-                {minute.secretary || '________________________'}
-              </div>
-              <div className="position">Secretário</div>
-              {getSignatureForPosition('Secretário') && (
-                <div className="signed">
-                  ✓ Assinado digitalmente em {format(new Date(getSignatureForPosition('Secretário')!.signed_at), 'dd/MM/yyyy HH:mm')}
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="section">
+          <p className="section-title">Encerramento da Sessão:</p>
+          <p className="closing-text">
+            O V∴M∴ encerrou a presente Sessão {minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'} com a devida ritualística às <strong>{formatTimeExtended(minute.closing_time)}</strong>.
+          </p>
         </div>
 
-        <div className="footer">
-          <p>Documento gerado pelo Sistema Maçônico - G.·.O.·.I.·.B.·.</p>
-          {minute.status === 'signed' && <p><strong>✓ ATA ASSINADA DIGITALMENTE</strong></p>}
+        <p className="lavrei-text">
+          Eu, <strong>{minute.secretary || '________________________'}</strong>, Secretário da A∴ R∴ L∴ S∴ {lodgeName || '________________________'}, lavrei a presente ATA, que será assinada por direito após sua aprovação em Loja.
+        </p>
+
+        <div className="signatures-section">
+          <table className="signature-table">
+            <tbody>
+              <tr>
+                <td>Secretário:</td>
+                <td>
+                  <div className="seal-container">
+                    <span className="signature-name">Ir∴ {minute.secretary || '________________________'}</span>
+                    {secretarioSignature && (
+                      <div className="signature-seal">
+                        <span className="signature-seal-check">✓</span>
+                        <span className="signature-seal-text">ASSINADO</span>
+                        <span style={{ fontSize: '6pt' }}>{format(new Date(secretarioSignature.signed_at), 'dd/MM/yy')}</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>V∴M∴:</td>
+                <td>
+                  <div className="seal-container">
+                    <span className="signature-name">Ir∴ {minute.presiding_master || '________________________'}</span>
+                    {vmSignature && (
+                      <div className="signature-seal">
+                        <span className="signature-seal-check">✓</span>
+                        <span className="signature-seal-text">ASSINADO</span>
+                        <span style={{ fontSize: '6pt' }}>{format(new Date(vmSignature.signed_at), 'dd/MM/yy')}</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Orador:</td>
+                <td>
+                  <div className="seal-container">
+                    <span className="signature-name">Ir∴ {minute.orator || '________________________'}</span>
+                    {oradorSignature && (
+                      <div className="signature-seal">
+                        <span className="signature-seal-check">✓</span>
+                        <span className="signature-seal-text">ASSINADO</span>
+                        <span style={{ fontSize: '6pt' }}>{format(new Date(oradorSignature.signed_at), 'dd/MM/yy')}</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </>
