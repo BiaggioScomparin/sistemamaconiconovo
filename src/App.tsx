@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
+import { ProtectedMinutesRoute } from "@/components/auth/ProtectedMinutesRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -59,7 +60,7 @@ const App = () => (
             <Route path="/admin/calendar" element={<ProtectedAdminRoute><AdminCalendar /></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             <Route path="/admin/library" element={<ProtectedAdminRoute><AdminLibrary /></ProtectedAdminRoute>} />
-            <Route path="/admin/minutes" element={<ProtectedAdminRoute><AdminMinutes /></ProtectedAdminRoute>} />
+            <Route path="/admin/minutes" element={<ProtectedMinutesRoute><AdminMinutes /></ProtectedMinutesRoute>} />
             {/* Member routes */}
             <Route path="/member/inicial" element={<MemberInicial />} />
             <Route path="/member/card" element={<MemberCard />} />
