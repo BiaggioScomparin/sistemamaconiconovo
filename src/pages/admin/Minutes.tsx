@@ -185,10 +185,9 @@ export default function AdminMinutes() {
               <FileText className="h-4 w-4" />
               Sessão Ordinária
             </TabsTrigger>
-            <TabsTrigger value="magna" className="flex items-center gap-2" disabled>
+            <TabsTrigger value="magna" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Sessão Magna
-              <Badge variant="outline" className="ml-1 text-xs">Em breve</Badge>
             </TabsTrigger>
           </TabsList>
 
@@ -292,12 +291,109 @@ export default function AdminMinutes() {
           </TabsContent>
 
           <TabsContent value="magna" className="mt-6">
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Atas de Sessão Magna em desenvolvimento</p>
-              </CardContent>
-            </Card>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-pulse text-muted-foreground">Carregando...</div>
+              </div>
+            ) : minutes?.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Nenhuma ata de sessão magna</p>
+                  <Button onClick={handleNew} className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar primeira ata
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {minutes?.map((minute) => {
+                  const StatusIcon = statusConfig[minute.status].icon;
+                  const ceremonyLabel = minute.magna_ceremony_type === 'elevacao' ? 'Elevação' :
+                                        minute.magna_ceremony_type === 'exaltacao' ? 'Exaltação' : 'Iniciação';
+                  return (
+                    <Card key={minute.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="space-y-1">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <Calendar className="h-5 w-5 text-amber-600" />
+                              Ata de Sessão Magna de {ceremonyLabel}
+                              {minute.session_number && (
+                                <span className="text-muted-foreground font-normal">
+                                  #{minute.session_number}
+                                </span>
+                              )}
+                            </CardTitle>
+                            <CardDescription className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              {format(new Date(minute.session_date), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                              {minute.initiates && (
+                                <Badge variant="secondary" className="ml-2">
+                                  {minute.initiates.split('\n').filter(n => n.trim()).length} candidato(s)
+                                </Badge>
+                              )}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className={statusConfig[minute.status].color}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {statusConfig[minute.status].label}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {minute.status === 'draft' && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleEdit(minute)}>
+                                <Pencil className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setCompleteId(minute.id)}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                Concluir
+                              </Button>
+                            </>
+                          )}
+                          
+                          {(minute.status === 'completed' || minute.status === 'signed') && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleSign(minute)}>
+                                <PenLine className="h-4 w-4 mr-1" />
+                                {minute.status === 'signed' ? 'Ver Assinaturas' : 'Assinar'}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleEdit(minute)}>
+                                <Eye className="h-4 w-4 mr-1" />
+                                Visualizar
+                              </Button>
+                              <PrintMinuteButton minute={minute} lodgeName={getLodgeName(minute.lodge_id)} />
+                              <MinuteBackupButton minute={minute} lodgeName={getLodgeName(minute.lodge_id)} />
+                            </>
+                          )}
+
+                          {minute.status === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => setDeleteId(minute.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Excluir
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
