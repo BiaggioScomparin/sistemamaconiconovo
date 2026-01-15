@@ -21,7 +21,8 @@ import {
   Settings,
   Home,
   BookOpen,
-  ClipboardList
+  ClipboardList,
+  Mail
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const canAccessMinutes = profile?.lodge_position && 
     ['veneravel_mestre', 'orador', 'secretario'].includes(profile.lodge_position);
 
+  // Check if user can access invites (only Venerável Mestre)
+  const canAccessInvites = profile?.lodge_position === 'veneravel_mestre';
+
   // Check if current route is an admin route
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
 
@@ -60,6 +64,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
     { href: '/admin/library', label: 'Biblioteca', icon: BookOpen },
     { href: '/admin/minutes', label: 'Atas', icon: ClipboardList },
+    { href: '/admin/invites', label: 'Convites', icon: Mail },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
     { href: '/admin/settings', label: 'Configurações', icon: Settings },
   ];
@@ -94,6 +99,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     // Minutes visible for members with specific positions (Venerável Mestre, Orador, Secretário)
     if (canAccessMinutes) {
       links.push({ href: '/admin/minutes', label: 'Atas', icon: ClipboardList });
+    }
+    
+    // Invites visible only for Venerável Mestre
+    if (canAccessInvites) {
+      links.push({ href: '/admin/invites', label: 'Convites', icon: Mail });
     }
     
     return links;
