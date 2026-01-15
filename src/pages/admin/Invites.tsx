@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useLodges } from '@/hooks/useLodges';
+import { useLodgeMembers } from '@/hooks/useLodgeMembers';
+import { MemberSelectField } from '@/components/admin/MemberSelectField';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Download, Mail, Eye } from 'lucide-react';
@@ -45,10 +47,12 @@ export default function Invites() {
   const [showPreview, setShowPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [template, setTemplate] = useState('moderno');
+  const [veneravelMestre, setVeneravelMestre] = useState('');
   const inviteRef = useRef<HTMLDivElement>(null);
 
   const selectedLodge = lodges?.find(l => l.id === lodgeId);
   const selectedSessionType = SESSION_TYPES.find(t => t.value === sessionType);
+  const { data: lodgeMembers = [] } = useLodgeMembers(lodgeId);
 
   const canGenerate = date && time && lodgeId && sessionType;
 
@@ -180,6 +184,12 @@ export default function Invites() {
 
       {/* Footer */}
       <div className="bg-[#0d1b2a] py-4 px-6 text-center border-t-2 border-[#c9a227]">
+        {veneravelMestre && (
+          <p className="text-white text-sm font-semibold mb-2">
+            {veneravelMestre}
+            <span className="text-[#c9a227] text-xs block">Venerável Mestre</span>
+          </p>
+        )}
         <p className="text-white/80 text-xs mb-2">
           {LODGE_ADDRESS}
         </p>
@@ -327,6 +337,21 @@ export default function Invites() {
             <p className="text-[#1a365d] text-xs mt-4 font-semibold">
               Certos da presença de todos, transmitimos nosso T∴F∴A∴
             </p>
+
+            {veneravelMestre && (
+              <div className="mt-4 pt-3 border-t border-[#DAA520]/30 text-center">
+                <p 
+                  className="text-base font-bold"
+                  style={{ 
+                    fontFamily: 'Georgia, serif',
+                    color: '#1a365d',
+                  }}
+                >
+                  {veneravelMestre}
+                </p>
+                <p className="text-[10px] text-[#8B4513] mt-1">Venerável Mestre</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -546,7 +571,7 @@ export default function Invites() {
               style={{ color: '#1a365d' }}
             >
               A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name}</strong>, 
-              na pessoa de seu Ven∴ M∴ Ir∴, tem a honra e a satisfação de convidar a 
+              na pessoa de seu Ven∴ M∴ Ir∴{veneravelMestre ? <strong> {veneravelMestre}</strong> : ''}, tem a honra e a satisfação de convidar a 
               todos os IIr∴ para iluminar e abrilhantar nossos trabalhos com vossa 
               ilustre presença na
             </p>
@@ -740,7 +765,10 @@ export default function Invites() {
 
               <div className="space-y-2">
                 <Label>Loja</Label>
-                <Select value={lodgeId} onValueChange={setLodgeId}>
+                <Select value={lodgeId} onValueChange={(value) => {
+                  setLodgeId(value);
+                  setVeneravelMestre(''); // Reset when lodge changes
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a Loja" />
                   </SelectTrigger>
@@ -753,6 +781,17 @@ export default function Invites() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {lodgeId && (
+                <MemberSelectField
+                  id="veneravel-mestre"
+                  label="Venerável Mestre"
+                  value={veneravelMestre}
+                  onChange={setVeneravelMestre}
+                  members={lodgeMembers}
+                  placeholder="Selecione o Venerável Mestre"
+                />
+              )}
 
               <div className="space-y-2">
                 <Label>Tipo de Sessão</Label>
