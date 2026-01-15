@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,8 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useSignMinute, useMinuteSignatures, SessionMinute } from '@/hooks/useSessionMinutes';
 import { useProfile } from '@/hooks/useProfile';
+import { useLodges } from '@/hooks/useLodges';
+import { useGoogleDrive } from '@/hooks/useGoogleDrive';
+import { generateMinutePdf } from '@/lib/generateMinutePdf';
 import { toast } from 'sonner';
-import { Loader2, Check, Clock, PenLine, Shield } from 'lucide-react';
+import { Loader2, Check, Clock, PenLine, Shield, Cloud } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -25,9 +28,14 @@ const requiredPositions = [
 
 export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSignatureDialogProps) {
   const { data: profile } = useProfile();
-  const { data: signatures, isLoading: loadingSignatures } = useMinuteSignatures(minute.id);
+  const { data: lodges } = useLodges();
+  const { data: signatures, isLoading: loadingSignatures, refetch: refetchSignatures } = useMinuteSignatures(minute.id);
   const signMutation = useSignMinute();
+  const { status: driveStatus, uploadBackup } = useGoogleDrive();
   const [agreed, setAgreed] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+
+  const lodgeName = lodges?.find(l => l.id === minute.lodge_id)?.name || '';
 
   const canSign = profile?.lodge_position && 
     requiredPositions.some(p => p.position === profile.lodge_position) &&
@@ -35,18 +43,67 @@ export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSign
 
   const hasAlreadySigned = signatures?.some(s => s.signer_id === profile?.id);
 
+  const performAutoBackup = useCallback(async () => {
+    if (!driveStatus.connected) return;
+    
+    setIsBackingUp(true);
+    try {
+      // Refetch signatures to get the latest
+      const { data: updatedSignatures } = await refetchSignatures();
+      
+      const pdfContent = await generateMinutePdf({
+        minute,
+        signatures: updatedSignatures || [],
+        lodgeName,
+        returnBase64: true
+      });
+      
+      const sessionDate = format(new Date(minute.session_date), 'dd-MM-yyyy', { locale: ptBR });
+      const sessionType = minute.session_type === 'ordinaria' ? 'Ordinaria' : 'Magna';
+      const fileName = `Ata_${sessionType}_${sessionDate}_N${minute.session_number || 'X'}_Assinada.pdf`;
+
+      const result = await uploadBackup(minute.id, fileName, pdfContent, 'application/pdf');
+      
+      if (result.success) {
+        toast.success('Backup automático salvo no Google Drive!', {
+          description: 'A ata assinada foi salva automaticamente.',
+          icon: <Cloud className="h-4 w-4" />,
+        });
+      }
+    } catch (error) {
+      console.error('Auto backup error:', error);
+    } finally {
+      setIsBackingUp(false);
+    }
+  }, [driveStatus.connected, minute, lodgeName, refetchSignatures, uploadBackup]);
+
   const handleSign = async () => {
     if (!profile || !canSign || !agreed) return;
 
     try {
-      await signMutation.mutateAsync({
+      const result = await signMutation.mutateAsync({
         minuteId: minute.id,
         signerId: profile.id,
         signerName: profile.full_name,
         signerPosition: profile.lodge_position || '',
       });
+      
       toast.success('Ata assinada com sucesso!');
       setAgreed(false);
+
+      // If all signatures are complete, trigger auto backup
+      if (result.allSigned) {
+        toast.info('Todas as assinaturas coletadas! Ata concluída.', {
+          description: driveStatus.connected 
+            ? 'Fazendo backup automático no Google Drive...' 
+            : 'Conecte o Google Drive para backup automático.',
+        });
+        
+        if (driveStatus.connected) {
+          // Small delay to ensure DB is updated
+          setTimeout(() => performAutoBackup(), 1000);
+        }
+      }
     } catch (error: any) {
       if (error?.code === '23505') {
         toast.error('Você já assinou esta ata');
@@ -179,6 +236,26 @@ export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSign
               <Clock className="h-5 w-5 text-amber-500" />
               <span className="text-sm text-amber-700 dark:text-amber-400">
                 A ata precisa ser concluída antes de poder ser assinada
+              </span>
+            </div>
+          )}
+
+          {/* Backup status */}
+          {isBackingUp && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+              <span className="text-sm text-blue-700 dark:text-blue-400">
+                Salvando backup automático no Google Drive...
+              </span>
+            </div>
+          )}
+
+          {/* Google Drive status info */}
+          {minute.status === 'completed' && driveStatus.connected && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+              <Cloud className="h-4 w-4 text-green-500" />
+              <span className="text-xs text-muted-foreground">
+                Backup automático ativado ({driveStatus.email})
               </span>
             </div>
           )}
