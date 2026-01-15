@@ -33,32 +33,24 @@ export function GoogleDriveBackupButton({ minute, onGeneratePdf }: GoogleDriveBa
   const [lastBackupLink, setLastBackupLink] = useState<string | null>(null);
 
   const handleBackup = async () => {
-    console.log('[BackupButton] handleBackup called, status:', status);
     if (!status.connected) {
-      console.log('[BackupButton] Not connected, showing dialog');
       setShowConnectDialog(true);
       return;
     }
 
     setIsUploading(true);
     try {
-      console.log('[BackupButton] Generating PDF...');
       const pdfContent = await onGeneratePdf();
-      console.log('[BackupButton] PDF generated, length:', pdfContent?.length);
       
       const sessionDate = format(new Date(minute.session_date), 'dd-MM-yyyy', { locale: ptBR });
       const sessionType = minute.session_type === 'ordinaria' ? 'Ordinaria' : 'Magna';
       const fileName = `Ata_${sessionType}_${sessionDate}_N${minute.session_number || 'X'}.pdf`;
 
-      console.log('[BackupButton] Uploading backup...', fileName);
       const result = await uploadBackup(minute.id, fileName, pdfContent, 'application/pdf');
-      console.log('[BackupButton] Upload result:', result);
       
       if (result.success && result.webViewLink) {
         setLastBackupLink(result.webViewLink);
       }
-    } catch (error) {
-      console.error('[BackupButton] Error in handleBackup:', error);
     } finally {
       setIsUploading(false);
     }
