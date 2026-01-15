@@ -23,18 +23,23 @@ export function useGoogleDrive() {
   const checkStatus = useCallback(async () => {
     try {
       setStatus(prev => ({ ...prev, loading: true }));
+      console.log('[GoogleDrive] Checking status...');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log('[GoogleDrive] No session found');
         setStatus({ connected: false, loading: false });
         return;
       }
 
+      console.log('[GoogleDrive] Calling google-drive-status function');
       const { data, error } = await supabase.functions.invoke('google-drive-status', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
+
+      console.log('[GoogleDrive] Status response:', data, error);
 
       if (error) throw error;
 
@@ -43,8 +48,9 @@ export function useGoogleDrive() {
         email: data.email,
         loading: false,
       });
+      console.log('[GoogleDrive] Status set:', { connected: data.connected, email: data.email });
     } catch (error) {
-      console.error('Error checking Google Drive status:', error);
+      console.error('[GoogleDrive] Error checking status:', error);
       setStatus({ connected: false, loading: false });
     }
   }, []);
@@ -148,11 +154,15 @@ export function useGoogleDrive() {
     mimeType: string = 'application/pdf'
   ): Promise<BackupResult> => {
     try {
+      console.log('[GoogleDrive] Starting upload backup...', { minuteId, fileName, contentLength: content?.length });
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log('[GoogleDrive] No session for upload');
         return { success: false, error: 'Not authenticated' };
       }
 
+      console.log('[GoogleDrive] Calling google-drive-upload function');
       const { data, error } = await supabase.functions.invoke('google-drive-upload', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -165,9 +175,11 @@ export function useGoogleDrive() {
         },
       });
 
+      console.log('[GoogleDrive] Upload response:', data, error);
+
       if (error) throw error;
 
-      if (data.error) {
+      if (data?.error) {
         if (data.code === 'NOT_CONNECTED') {
           return { success: false, error: 'Google Drive não conectado' };
         }
