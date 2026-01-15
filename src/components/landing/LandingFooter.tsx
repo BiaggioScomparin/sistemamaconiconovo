@@ -26,7 +26,7 @@ export function LandingFooter() {
 
           {/* Links */}
           <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Produto</h4>
+            <p className="font-display font-semibold text-foreground mb-4">Produto</p>
             <ul className="space-y-2">
               <li>
                 <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -53,7 +53,7 @@ export function LandingFooter() {
 
           {/* Legal */}
           <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Legal</h4>
+            <p className="font-display font-semibold text-foreground mb-4">Legal</p>
             <ul className="space-y-2">
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
