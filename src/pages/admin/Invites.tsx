@@ -27,6 +27,11 @@ const SESSION_TYPES = [
   { value: 'funebre', label: 'Sessão Fúnebre', hasNames: false },
 ];
 
+const INVITE_TEMPLATES = [
+  { value: 'moderno', label: 'Modelo Moderno', description: 'Design contemporâneo com gradiente azul' },
+  { value: 'classico', label: 'Modelo Clássico', description: 'Design tradicional com colunas e moldura' },
+];
+
 const LODGE_ADDRESS = 'Rua Paru, 175 - Vila Mazzei, São Paulo - SP, 02310-200';
 
 export default function Invites() {
@@ -38,6 +43,7 @@ export default function Invites() {
   const [names, setNames] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [template, setTemplate] = useState('moderno');
   const inviteRef = useRef<HTMLDivElement>(null);
 
   const selectedLodge = lodges?.find(l => l.id === lodgeId);
@@ -91,6 +97,275 @@ export default function Invites() {
     setShowPreview(true);
   };
 
+  const renderModernoTemplate = () => (
+    <div 
+      ref={inviteRef}
+      className="w-[400px] bg-gradient-to-br from-[#1a365d] via-[#2c5282] to-[#1a365d] rounded-lg overflow-hidden shadow-2xl"
+    >
+      {/* Header with logos */}
+      <div className="bg-[#0d1b2a] py-4 px-6 text-center border-b-2 border-[#c9a227]">
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <img 
+            src="/images/logo-goib-edital.png" 
+            alt="Logo GOIB" 
+            className="h-14"
+          />
+          {(selectedLodge as any)?.logo_url && (
+            <img 
+              src={(selectedLodge as any).logo_url} 
+              alt={`Logo ${selectedLodge?.name}`}
+              className="h-14 object-contain"
+            />
+          )}
+        </div>
+        <p className="text-[#c9a227] text-xs tracking-widest font-medium">
+          GRANDE ORIENTE INDEPENDENTE DO BRASIL
+        </p>
+      </div>
+
+      {/* Main content */}
+      <div className="px-8 py-6 text-center">
+        <div className="border-2 border-[#c9a227]/30 rounded-lg p-6 bg-[#0d1b2a]/40">
+          <p className="text-[#c9a227] text-sm tracking-wider mb-4">
+            A∴R∴L∴S∴
+          </p>
+          <h2 className="text-white text-2xl font-bold mb-4 leading-tight">
+            {selectedLodge?.name}
+          </h2>
+          <p className="text-white/80 text-sm mb-6">
+            Oriente de {selectedLodge?.city} - {selectedLodge?.state}
+          </p>
+
+          <div className="h-px bg-gradient-to-r from-transparent via-[#c9a227] to-transparent my-6" />
+
+          <p className="text-white text-sm uppercase tracking-widest mb-2">
+            Convida para a
+          </p>
+          <h3 className="text-[#c9a227] text-xl font-bold mb-6">
+            {getSessionTypeLabel()}
+          </h3>
+
+          <div className="bg-[#c9a227]/10 rounded-lg p-4 mb-4">
+            <p className="text-white text-lg font-semibold capitalize">
+              {formatDateFull()}
+            </p>
+            <p className="text-[#c9a227] text-2xl font-bold mt-1">
+              às {time} horas
+            </p>
+          </div>
+
+          {/* Names section */}
+          {selectedSessionType?.hasNames && getNamesArray().length > 0 && (
+            <div className="mt-4 pt-4 border-t border-[#c9a227]/30">
+              <p className="text-[#c9a227] text-xs uppercase tracking-widest mb-3">
+                {selectedSessionType.nameLabel}
+              </p>
+              <div className="space-y-1">
+                {getNamesArray().map((name, index) => (
+                  <p key={index} className="text-white text-sm font-medium">
+                    {name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-[#0d1b2a] py-4 px-6 text-center border-t-2 border-[#c9a227]">
+        <p className="text-white/80 text-xs mb-2">
+          {LODGE_ADDRESS}
+        </p>
+        <p className="text-white/80 text-xs">
+          Traje Maçônico • Aguardamos a presença de todos
+        </p>
+        <p className="text-[#c9a227] text-xs mt-2 tracking-wider">
+          ✧ LIBERDADE • IGUALDADE • FRATERNIDADE ✧
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderClassicoTemplate = () => (
+    <div 
+      ref={inviteRef}
+      className="w-[450px] relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, #87CEEB 0%, #B0E0E6 50%, #87CEEB 100%)',
+      }}
+    >
+      {/* Golden border frame */}
+      <div className="absolute inset-2 border-4 border-[#DAA520] rounded-lg pointer-events-none" 
+        style={{ 
+          boxShadow: 'inset 0 0 0 2px #B8860B, 0 0 0 2px #DAA520',
+        }} 
+      />
+      
+      {/* Inner decorative frame */}
+      <div className="absolute inset-6 border-2 border-[#DAA520]/50 rounded pointer-events-none" />
+
+      {/* Top banner - A.G.D.G.A.D.U */}
+      <div className="relative pt-4 px-8">
+        <div className="flex justify-center mb-2">
+          <div className="bg-gradient-to-r from-[#DAA520] via-[#FFD700] to-[#DAA520] px-6 py-1 rounded-full">
+            <p className="text-[#1a365d] text-xs font-bold tracking-widest">
+              A∴G∴D∴G∴A∴D∴U∴
+            </p>
+          </div>
+        </div>
+
+        {/* Logos row */}
+        <div className="flex items-center justify-center gap-3 py-2">
+          <div className="w-12 h-12 rounded-full bg-[#1a365d] flex items-center justify-center border-2 border-[#DAA520]">
+            <span className="text-[#DAA520] text-lg">☽</span>
+          </div>
+          <img 
+            src="/images/logo-goib-edital.png" 
+            alt="Logo GOIB" 
+            className="h-16"
+          />
+          {(selectedLodge as any)?.logo_url && (
+            <img 
+              src={(selectedLodge as any).logo_url} 
+              alt={`Logo ${selectedLodge?.name}`}
+              className="h-14 object-contain"
+            />
+          )}
+          <div className="w-12 h-12 rounded-full bg-[#FFD700] flex items-center justify-center border-2 border-[#DAA520]">
+            <span className="text-[#1a365d] text-lg">☀</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content area with columns */}
+      <div className="relative flex">
+        {/* Left Column */}
+        <div className="w-14 flex flex-col items-center justify-end pb-0">
+          <div 
+            className="w-8 flex-1 mx-auto rounded-t-lg"
+            style={{
+              background: 'linear-gradient(180deg, #DAA520 0%, #B8860B 50%, #8B6914 100%)',
+              boxShadow: '2px 0 4px rgba(0,0,0,0.3)',
+            }}
+          />
+          <div 
+            className="w-10 h-6"
+            style={{
+              background: 'linear-gradient(180deg, #DAA520, #B8860B)',
+            }}
+          />
+        </div>
+
+        {/* Center content */}
+        <div className="flex-1 px-4 py-4 text-center">
+          {/* Title */}
+          <h1 
+            className="text-3xl font-serif mb-4"
+            style={{ 
+              fontFamily: 'Georgia, serif',
+              color: '#1a365d',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.1)',
+            }}
+          >
+            Convite
+          </h1>
+
+          {/* Main invitation text */}
+          <div className="bg-[#FCF8E3]/80 rounded-lg p-4 border border-[#DAA520]/40">
+            <p className="text-[#1a365d] text-xs leading-relaxed mb-3">
+              A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name}</strong>, 
+              tem a honra e a satisfação de convidar a todos os IIr∴ para iluminar 
+              e abrilhantar nossos trabalhos com vossa ilustre presença na
+            </p>
+
+            <h2 
+              className="text-lg font-bold mb-2"
+              style={{ 
+                fontFamily: 'Georgia, serif',
+                color: '#1a365d',
+              }}
+            >
+              {getSessionTypeLabel()}
+            </h2>
+
+            {/* Names section */}
+            {selectedSessionType?.hasNames && getNamesArray().length > 0 && (
+              <div className="my-3">
+                <p className="text-[#8B4513] text-xs mb-1">{selectedSessionType.nameLabel}:</p>
+                {getNamesArray().map((name, index) => (
+                  <p 
+                    key={index} 
+                    className="text-base font-bold"
+                    style={{ 
+                      fontFamily: 'Georgia, serif',
+                      color: '#8B4513',
+                    }}
+                  >
+                    {name}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[#1a365d] text-xs mt-3">
+              a se realizar às <strong>{time}h</strong> do dia{' '}
+              <strong className="capitalize">{formatDateFull()}</strong>,
+              no Sagrado Templo da Loja.
+            </p>
+
+            <p className="text-[#1a365d] text-xs mt-3 italic">
+              {LODGE_ADDRESS}
+            </p>
+
+            <p className="text-[#1a365d] text-xs mt-4 font-semibold">
+              Certos da presença de todos, transmitimos nosso T∴F∴A∴
+            </p>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="w-14 flex flex-col items-center justify-end pb-0">
+          <div 
+            className="w-8 flex-1 mx-auto rounded-t-lg"
+            style={{
+              background: 'linear-gradient(180deg, #DAA520 0%, #B8860B 50%, #8B6914 100%)',
+              boxShadow: '-2px 0 4px rgba(0,0,0,0.3)',
+            }}
+          />
+          <div 
+            className="w-10 h-6"
+            style={{
+              background: 'linear-gradient(180deg, #DAA520, #B8860B)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Checkered floor */}
+      <div className="h-10 flex overflow-hidden">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div 
+            key={i}
+            className="flex-1 h-full"
+            style={{
+              background: i % 2 === 0 ? '#000' : '#fff',
+              transform: 'perspective(100px) rotateX(30deg)',
+              transformOrigin: 'top',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Bottom footer */}
+      <div className="bg-[#1a365d] py-2 text-center">
+        <p className="text-[#DAA520] text-xs tracking-wider">
+          ✧ LIBERDADE • IGUALDADE • FRATERNIDADE ✧
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -110,6 +385,26 @@ export default function Invites() {
               <CardDescription>Preencha as informações para gerar o convite</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Template selector */}
+              <div className="space-y-2">
+                <Label>Modelo do Convite</Label>
+                <Select value={template} onValueChange={setTemplate}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INVITE_TEMPLATES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        <div className="flex flex-col">
+                          <span>{t.label}</span>
+                          <span className="text-xs text-muted-foreground">{t.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>Loja</Label>
                 <Select value={lodgeId} onValueChange={setLodgeId}>
@@ -215,94 +510,8 @@ export default function Invites() {
             </CardHeader>
             <CardContent>
               {showPreview && canGenerate ? (
-                <div className="flex justify-center">
-                  <div 
-                    ref={inviteRef}
-                    className="w-[400px] bg-gradient-to-br from-[#1a365d] via-[#2c5282] to-[#1a365d] rounded-lg overflow-hidden shadow-2xl"
-                  >
-                    {/* Header with logos */}
-                    <div className="bg-[#0d1b2a] py-4 px-6 text-center border-b-2 border-[#c9a227]">
-                      <div className="flex items-center justify-center gap-4 mb-2">
-                        <img 
-                          src="/images/logo-goib-edital.png" 
-                          alt="Logo GOIB" 
-                          className="h-14"
-                        />
-                        {(selectedLodge as any)?.logo_url && (
-                          <img 
-                            src={(selectedLodge as any).logo_url} 
-                            alt={`Logo ${selectedLodge?.name}`}
-                            className="h-14 object-contain"
-                          />
-                        )}
-                      </div>
-                      <p className="text-[#c9a227] text-xs tracking-widest font-medium">
-                        GRANDE ORIENTE INDEPENDENTE DO BRASIL
-                      </p>
-                    </div>
-
-                    {/* Main content */}
-                    <div className="px-8 py-6 text-center">
-                      <div className="border-2 border-[#c9a227]/30 rounded-lg p-6 bg-[#0d1b2a]/40">
-                        <p className="text-[#c9a227] text-sm tracking-wider mb-4">
-                          A∴R∴L∴S∴
-                        </p>
-                        <h2 className="text-white text-2xl font-bold mb-4 leading-tight">
-                          {selectedLodge?.name}
-                        </h2>
-                        <p className="text-white/80 text-sm mb-6">
-                          Oriente de {selectedLodge?.city} - {selectedLodge?.state}
-                        </p>
-
-                        <div className="h-px bg-gradient-to-r from-transparent via-[#c9a227] to-transparent my-6" />
-
-                        <p className="text-white text-sm uppercase tracking-widest mb-2">
-                          Convida para a
-                        </p>
-                        <h3 className="text-[#c9a227] text-xl font-bold mb-6">
-                          {getSessionTypeLabel()}
-                        </h3>
-
-                        <div className="bg-[#c9a227]/10 rounded-lg p-4 mb-4">
-                          <p className="text-white text-lg font-semibold capitalize">
-                            {formatDateFull()}
-                          </p>
-                          <p className="text-[#c9a227] text-2xl font-bold mt-1">
-                            às {time} horas
-                          </p>
-                        </div>
-
-                        {/* Names section */}
-                        {selectedSessionType?.hasNames && getNamesArray().length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-[#c9a227]/30">
-                            <p className="text-[#c9a227] text-xs uppercase tracking-widest mb-3">
-                              {selectedSessionType.nameLabel}
-                            </p>
-                            <div className="space-y-1">
-                              {getNamesArray().map((name, index) => (
-                                <p key={index} className="text-white text-sm font-medium">
-                                  {name}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="bg-[#0d1b2a] py-4 px-6 text-center border-t-2 border-[#c9a227]">
-                      <p className="text-white/80 text-xs mb-2">
-                        {LODGE_ADDRESS}
-                      </p>
-                      <p className="text-white/80 text-xs">
-                        Traje Maçônico • Aguardamos a presença de todos
-                      </p>
-                      <p className="text-[#c9a227] text-xs mt-2 tracking-wider">
-                        ✧ LIBERDADE • IGUALDADE • FRATERNIDADE ✧
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex justify-center overflow-auto">
+                  {template === 'moderno' ? renderModernoTemplate() : renderClassicoTemplate()}
                 </div>
               ) : (
                 <div className="h-[500px] flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
