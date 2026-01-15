@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Save, Settings as SettingsIcon, Percent } from 'lucide-react';
+import { Eye, EyeOff, Save, Settings as SettingsIcon, Percent, Database } from 'lucide-react';
+import { DatabaseBackupButton } from '@/components/admin/DatabaseBackupButton';
 
 interface AppSetting {
   id: string;
@@ -189,6 +190,24 @@ export default function Settings() {
                 Exemplo: mensalidade de R$ 200,00 com taxa de {creditCardFee}% = R$ {(200 / (1 - parseFloat(creditCardFee || '0') / 100)).toFixed(2).replace('.', ',')}
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Backup do Sistema
+            </CardTitle>
+            <CardDescription>
+              Exporte todos os dados do sistema em formato JSON para backup
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DatabaseBackupButton />
+            <p className="text-sm text-muted-foreground mt-2">
+              O backup inclui: membros, lojas, eventos, presenças, atas, pagamentos e todas as outras tabelas do sistema.
+            </p>
           </CardContent>
         </Card>
       </div>
