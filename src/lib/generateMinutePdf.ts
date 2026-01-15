@@ -52,7 +52,20 @@ export async function generateMinutePdf({
   const day = format(sessionDate, 'd', { locale: ptBR });
   const month = format(sessionDate, 'MMMM', { locale: ptBR });
   const year = format(sessionDate, 'yyyy', { locale: ptBR });
-  const sessionTypeName = minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna';
+  
+  const isMagna = minute.session_type === 'magna';
+  const sessionTypeName = isMagna ? 'Magna' : 'Ordinária';
+  
+  const getCeremonyTypeName = (type: string | null) => {
+    switch (type) {
+      case 'iniciacao': return 'Iniciação';
+      case 'elevacao': return 'Elevação';
+      case 'exaltacao': return 'Exaltação';
+      default: return 'Iniciação';
+    }
+  };
+  
+  const ceremonyType = getCeremonyTypeName(minute.magna_ceremony_type);
 
   const getSignatureForPosition = (position: string) => {
     const positionMap: Record<string, string[]> = {
@@ -100,21 +113,30 @@ export async function generateMinutePdf({
   y += 8;
 
   doc.setFontSize(12);
-  doc.text(`Ata N.º ${minute.session_number || '____'} — Sessão ${sessionTypeName}`, pageWidth / 2, y, { align: 'center' });
+  if (isMagna) {
+    doc.text(`Ata N.º ${minute.session_number || '____'} — Sessão Magna de ${ceremonyType}`, pageWidth / 2, y, { align: 'center' });
+  } else {
+    doc.text(`Ata N.º ${minute.session_number || '____'} — Sessão ${sessionTypeName}`, pageWidth / 2, y, { align: 'center' });
+  }
   y += 15;
 
   // Main paragraph
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   
-  const introText = `Ata da sessão ${sessionTypeName.toLowerCase()} da A∴R∴L∴S∴ ${lodgeName || '________________________'}, realizada aos ${day} dias do mês de ${month} do ano de ${year} da Era Vulgar, correspondente ao ano de ${minute.masonic_year || '____'} da Verdadeira Luz.`;
+  let introText = '';
+  if (isMagna) {
+    introText = `Ata da Sessão Magna de ${ceremonyType} da A∴R∴L∴S∴ ${lodgeName || '________________________'}, realizada aos ${day} dias do mês de ${month} do ano de ${year} da Era Vulgar, correspondente ao ano de ${minute.masonic_year || '____'} da Verdadeira Luz.`;
+  } else {
+    introText = `Ata da sessão ${sessionTypeName.toLowerCase()} da A∴R∴L∴S∴ ${lodgeName || '________________________'}, realizada aos ${day} dias do mês de ${month} do ano de ${year} da Era Vulgar, correspondente ao ano de ${minute.masonic_year || '____'} da Verdadeira Luz.`;
+  }
   
   const introLines = doc.splitTextToSize(introText, contentWidth);
   checkPageBreak(introLines.length * 5 + 5);
   doc.text(introLines, margin, y);
   y += introLines.length * 5 + 5;
 
-  const openingText = `Os trabalhos foram abertos em Sessão ${sessionTypeName} com as exatas ${formatTimeExtended(minute.opening_time)}.`;
+  const openingText = `Os trabalhos foram abertos em Sessão ${sessionTypeName}${isMagna ? ` de ${ceremonyType}` : ''} com as exatas ${formatTimeExtended(minute.opening_time)}.`;
   const openingLines = doc.splitTextToSize(openingText, contentWidth);
   checkPageBreak(openingLines.length * 5 + 10);
   doc.text(openingLines, margin, y);
@@ -178,6 +200,65 @@ export async function generateMinutePdf({
     y += visitorsLines.length * 5 + 8;
   }
 
+  // Magna Ceremony Section - Initiates
+  if (isMagna && minute.initiates) {
+    checkPageBreak(60);
+    y += 5;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(`Seguiu a Cerimônia de: ${ceremonyType}`, margin, y);
+    y += 8;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Ritualisticamente conforme o Rito Escocês Antigo e Aceito os seguintes candidatos:', margin, y);
+    y += 10;
+    
+    // Parse initiates (one per line)
+    const initiatesList = minute.initiates.split('\n').filter(name => name.trim());
+    
+    // Create table for initiates
+    const tableStartX = margin;
+    const nameWidth = 80;
+    const signatureWidth = 70;
+    
+    // Table header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('Nome do Candidato', tableStartX + 5, y);
+    doc.text('Assinatura', tableStartX + nameWidth + 10, y);
+    y += 5;
+    doc.setLineWidth(0.3);
+    doc.line(tableStartX, y, tableStartX + nameWidth + signatureWidth, y);
+    y += 5;
+    
+    // Table rows
+    doc.setFont('helvetica', 'normal');
+    initiatesList.forEach((name, index) => {
+      checkPageBreak(12);
+      
+      // Draw row
+      const rowHeight = 10;
+      doc.rect(tableStartX, y, nameWidth, rowHeight);
+      doc.rect(tableStartX + nameWidth, y, signatureWidth, rowHeight);
+      
+      // Name
+      doc.setFontSize(9);
+      doc.text(`${index + 1}. ${name.trim()}`, tableStartX + 3, y + 7);
+      
+      // Signature line placeholder
+      doc.setFontSize(8);
+      doc.text('Ass.:', tableStartX + nameWidth + 5, y + 7);
+      doc.setLineWidth(0.2);
+      doc.line(tableStartX + nameWidth + 15, y + 7, tableStartX + nameWidth + signatureWidth - 5, y + 7);
+      
+      y += rowHeight;
+    });
+    
+    y += 10;
+  }
+
   // Content sections
   const sections = [
     ['Leitura da Ata Anterior', minute.previous_minutes_reading],
@@ -216,7 +297,7 @@ export async function generateMinutePdf({
   checkPageBreak(40);
   y += 5;
   
-  const closingText = `O Venerável Mestre encerrou a presente Sessão ${sessionTypeName} com a devida ritualística às ${formatTimeExtended(minute.closing_time)}.`;
+  const closingText = `O Venerável Mestre encerrou a presente Sessão ${sessionTypeName}${isMagna ? ` de ${ceremonyType}` : ''} com a devida ritualística às ${formatTimeExtended(minute.closing_time)}.`;
   const closingLines = doc.splitTextToSize(closingText, contentWidth);
   doc.text(closingLines, margin, y);
   y += closingLines.length * 5 + 10;

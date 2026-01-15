@@ -817,8 +817,10 @@ export type Database = {
           general_matters: string | null
           hospitaller: string | null
           id: string
+          initiates: string | null
           inner_guard: string | null
           lodge_id: string
+          magna_ceremony_type: string | null
           masonic_year: string | null
           master_of_ceremonies: string | null
           master_of_harmony: string | null
@@ -863,8 +865,10 @@ export type Database = {
           general_matters?: string | null
           hospitaller?: string | null
           id?: string
+          initiates?: string | null
           inner_guard?: string | null
           lodge_id: string
+          magna_ceremony_type?: string | null
           masonic_year?: string | null
           master_of_ceremonies?: string | null
           master_of_harmony?: string | null
@@ -909,8 +913,10 @@ export type Database = {
           general_matters?: string | null
           hospitaller?: string | null
           id?: string
+          initiates?: string | null
           inner_guard?: string | null
           lodge_id?: string
+          magna_ceremony_type?: string | null
           masonic_year?: string | null
           master_of_ceremonies?: string | null
           master_of_harmony?: string | null
