@@ -1,5 +1,24 @@
 /* Fonts loaded via index.html for better LCP performance */
 
+/* Size-adjusted fallback fonts to prevent layout shifts */
+@font-face {
+  font-family: 'Cinzel Fallback';
+  src: local('Times New Roman');
+  size-adjust: 108%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Lora Fallback';
+  src: local('Georgia');
+  size-adjust: 98%;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -116,11 +135,11 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Cinzel', serif;
+    font-family: 'Cinzel', 'Cinzel Fallback', serif;
   }
 
   .font-body {
-    font-family: 'Lora', serif;
+    font-family: 'Lora', 'Lora Fallback', serif;
   }
 
   .gold-gradient {
