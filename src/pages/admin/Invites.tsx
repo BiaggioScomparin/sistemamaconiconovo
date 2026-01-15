@@ -220,13 +220,22 @@ export default function Invites() {
                     ref={inviteRef}
                     className="w-[400px] bg-gradient-to-br from-[#1a365d] via-[#2c5282] to-[#1a365d] rounded-lg overflow-hidden shadow-2xl"
                   >
-                    {/* Header with logo */}
+                    {/* Header with logos */}
                     <div className="bg-[#0d1b2a] py-4 px-6 text-center border-b-2 border-[#c9a227]">
-                      <img 
-                        src="/images/logo-goib-edital.png" 
-                        alt="Logo GOIB" 
-                        className="h-16 mx-auto mb-2"
-                      />
+                      <div className="flex items-center justify-center gap-4 mb-2">
+                        <img 
+                          src="/images/logo-goib-edital.png" 
+                          alt="Logo GOIB" 
+                          className="h-14"
+                        />
+                        {(selectedLodge as any)?.logo_url && (
+                          <img 
+                            src={(selectedLodge as any).logo_url} 
+                            alt={`Logo ${selectedLodge?.name}`}
+                            className="h-14 object-contain"
+                          />
+                        )}
+                      </div>
                       <p className="text-[#c9a227] text-xs tracking-widest font-medium">
                         GRANDE ORIENTE INDEPENDENTE DO BRASIL
                       </p>
