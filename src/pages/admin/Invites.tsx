@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,14 +17,17 @@ import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 
 const SESSION_TYPES = [
-  { value: 'ordinaria', label: 'Sessão Ordinária' },
-  { value: 'magna_iniciacao', label: 'Sessão Magna de Iniciação' },
-  { value: 'magna_elevacao', label: 'Sessão Magna de Elevação' },
-  { value: 'magna_exaltacao', label: 'Sessão Magna de Exaltação' },
-  { value: 'publica', label: 'Sessão Pública' },
-  { value: 'branca', label: 'Sessão Branca' },
-  { value: 'funebre', label: 'Sessão Fúnebre' },
+  { value: 'ordinaria', label: 'Sessão Ordinária', hasNames: false },
+  { value: 'magna_iniciacao', label: 'Sessão Magna de Iniciação', hasNames: true, nameLabel: 'Iniciandos' },
+  { value: 'magna_elevacao', label: 'Sessão Magna de Elevação', hasNames: true, nameLabel: 'Companheiros a serem elevados' },
+  { value: 'magna_exaltacao', label: 'Sessão Magna de Exaltação', hasNames: true, nameLabel: 'Mestres a serem exaltados' },
+  { value: 'instalacao_posse', label: 'Sessão de Instalação e Posse', hasNames: true, nameLabel: 'Oficiais a serem empossados' },
+  { value: 'publica', label: 'Sessão Pública', hasNames: false },
+  { value: 'branca', label: 'Sessão Branca', hasNames: false },
+  { value: 'funebre', label: 'Sessão Fúnebre', hasNames: false },
 ];
+
+const LODGE_ADDRESS = 'Rua Paru, 175 - Vila Mazzei, São Paulo - SP, 02310-200';
 
 export default function Invites() {
   const { data: lodges } = useLodges();
@@ -31,16 +35,22 @@ export default function Invites() {
   const [time, setTime] = useState('20:00');
   const [lodgeId, setLodgeId] = useState('');
   const [sessionType, setSessionType] = useState('');
+  const [names, setNames] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const inviteRef = useRef<HTMLDivElement>(null);
 
   const selectedLodge = lodges?.find(l => l.id === lodgeId);
+  const selectedSessionType = SESSION_TYPES.find(t => t.value === sessionType);
 
   const canGenerate = date && time && lodgeId && sessionType;
 
   const getSessionTypeLabel = () => {
-    return SESSION_TYPES.find(t => t.value === sessionType)?.label || '';
+    return selectedSessionType?.label || '';
+  };
+
+  const getNamesArray = () => {
+    return names.split('\n').map(n => n.trim()).filter(n => n.length > 0);
   };
 
   const formatDateFull = () => {
@@ -167,6 +177,21 @@ export default function Invites() {
                 />
               </div>
 
+              {selectedSessionType?.hasNames && (
+                <div className="space-y-2">
+                  <Label>{selectedSessionType.nameLabel}</Label>
+                  <Textarea
+                    value={names}
+                    onChange={(e) => setNames(e.target.value)}
+                    placeholder="Digite um nome por linha"
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Digite um nome por linha
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-2 pt-4">
                 <Button onClick={handlePreview} disabled={!canGenerate} className="flex-1">
                   <Eye className="h-4 w-4 mr-2" />
@@ -237,11 +262,30 @@ export default function Invites() {
                             às {time} horas
                           </p>
                         </div>
+
+                        {/* Names section */}
+                        {selectedSessionType?.hasNames && getNamesArray().length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-[#c9a227]/30">
+                            <p className="text-[#c9a227] text-xs uppercase tracking-widest mb-3">
+                              {selectedSessionType.nameLabel}
+                            </p>
+                            <div className="space-y-1">
+                              {getNamesArray().map((name, index) => (
+                                <p key={index} className="text-white text-sm font-medium">
+                                  {name}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Footer */}
                     <div className="bg-[#0d1b2a] py-4 px-6 text-center border-t-2 border-[#c9a227]">
+                      <p className="text-white/80 text-xs mb-2">
+                        {LODGE_ADDRESS}
+                      </p>
                       <p className="text-white/60 text-xs">
                         Traje rigoroso • Presença obrigatória
                       </p>
