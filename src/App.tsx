@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import { ProtectedMinutesRoute } from "@/components/auth/ProtectedMinutesRoute";
 import { ProtectedMemberRoute } from "@/components/auth/ProtectedMemberRoute";
+import { ProtectedInvitesRoute } from "@/components/auth/ProtectedInvitesRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -24,6 +25,7 @@ import AdminSettings from "./pages/admin/Settings";
 import AdminCalendar from "./pages/admin/Calendar";
 import AdminLibrary from "./pages/admin/Library";
 import AdminMinutes from "./pages/admin/Minutes";
+import AdminInvites from "./pages/admin/Invites";
 import MemberInicial from "./pages/member/Inicial";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
@@ -64,6 +66,7 @@ const App = () => (
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             <Route path="/admin/library" element={<ProtectedAdminRoute><AdminLibrary /></ProtectedAdminRoute>} />
             <Route path="/admin/minutes" element={<ProtectedMinutesRoute><AdminMinutes /></ProtectedMinutesRoute>} />
+            <Route path="/admin/invites" element={<ProtectedInvitesRoute><AdminInvites /></ProtectedInvitesRoute>} />
             {/* Member routes - Protected by status */}
             <Route path="/member/inicial" element={<ProtectedMemberRoute><MemberInicial /></ProtectedMemberRoute>} />
             <Route path="/member/card" element={<ProtectedMemberRoute><MemberCard /></ProtectedMemberRoute>} />
