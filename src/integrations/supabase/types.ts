@@ -280,6 +280,7 @@ export type Database = {
           created_at: string
           default_payment_amount: number | null
           id: string
+          logo_url: string | null
           name: string
           organization_id: string | null
           state: string | null
@@ -290,6 +291,7 @@ export type Database = {
           created_at?: string
           default_payment_amount?: number | null
           id?: string
+          logo_url?: string | null
           name: string
           organization_id?: string | null
           state?: string | null
@@ -300,6 +302,7 @@ export type Database = {
           created_at?: string
           default_payment_amount?: number | null
           id?: string
+          logo_url?: string | null
           name?: string
           organization_id?: string | null
           state?: string | null

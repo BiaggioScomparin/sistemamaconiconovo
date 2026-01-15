@@ -21,7 +21,7 @@ export function useCreateLodge() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (lodge: { name: string; city?: string; state?: string; default_payment_amount?: number }) => {
+    mutationFn: async (lodge: { name: string; city?: string; state?: string; default_payment_amount?: number; logo_url?: string }) => {
       const { data, error } = await supabase
         .from('lodges')
         .insert(lodge)
@@ -41,7 +41,7 @@ export function useUpdateLodge() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...lodge }: { id: string; name?: string; city?: string; state?: string; default_payment_amount?: number }) => {
+    mutationFn: async ({ id, ...lodge }: { id: string; name?: string; city?: string; state?: string; default_payment_amount?: number; logo_url?: string }) => {
       const { data, error } = await supabase
         .from('lodges')
         .update(lodge)
