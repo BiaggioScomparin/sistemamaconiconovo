@@ -21,7 +21,7 @@ const SESSION_TYPES = [
   { value: 'magna_iniciacao', label: 'Sessão Magna de Iniciação', hasNames: true, nameLabel: 'Iniciandos' },
   { value: 'magna_elevacao', label: 'Sessão Magna de Elevação', hasNames: true, nameLabel: 'Companheiros a serem elevados' },
   { value: 'magna_exaltacao', label: 'Sessão Magna de Exaltação', hasNames: true, nameLabel: 'Mestres a serem exaltados' },
-  { value: 'instalacao_posse', label: 'Sessão de Instalação e Posse', hasNames: true, nameLabel: 'Oficiais a serem empossados' },
+  { value: 'instalacao_posse', label: 'Sessão Magna de Instalação e Posse', hasNames: true, nameLabel: 'Oficiais a serem empossados' },
   { value: 'publica', label: 'Sessão Pública', hasNames: false },
   { value: 'branca', label: 'Sessão Branca', hasNames: false },
   { value: 'funebre', label: 'Sessão Fúnebre', hasNames: false },
@@ -29,7 +29,8 @@ const SESSION_TYPES = [
 
 const INVITE_TEMPLATES = [
   { value: 'moderno', label: 'Modelo Moderno', description: 'Design contemporâneo com gradiente azul' },
-  { value: 'classico', label: 'Modelo Clássico', description: 'Design tradicional com colunas e moldura' },
+  { value: 'classico', label: 'Modelo Clássico (Vertical)', description: 'Design tradicional vertical' },
+  { value: 'classico_horizontal', label: 'Modelo Clássico (Horizontal)', description: 'Design tradicional horizontal com colunas' },
 ];
 
 const LODGE_ADDRESS = 'Rua Paru, 175 - Vila Mazzei, São Paulo - SP, 02310-200';
@@ -62,6 +63,11 @@ export default function Invites() {
   const formatDateFull = () => {
     if (!date) return '';
     return format(date, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const getDayOfWeek = () => {
+    if (!date) return '';
+    return format(date, 'EEEE', { locale: ptBR });
   };
 
   const handleDownload = async () => {
@@ -366,6 +372,333 @@ export default function Invites() {
     </div>
   );
 
+  const renderClassicoHorizontalTemplate = () => (
+    <div 
+      ref={inviteRef}
+      className="w-[650px] h-[420px] relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, #5DADE2 0%, #85C1E9 30%, #AED6F1 50%, #85C1E9 70%, #5DADE2 100%)',
+      }}
+    >
+      {/* Outer golden decorative border with curve effect */}
+      <div 
+        className="absolute inset-2 rounded-lg pointer-events-none"
+        style={{ 
+          border: '5px solid #B8860B',
+          boxShadow: 'inset 0 0 0 3px #DAA520, 0 0 10px rgba(218,165,32,0.5)',
+        }} 
+      />
+
+      {/* Inner golden curved frame */}
+      <div 
+        className="absolute inset-5 rounded-lg pointer-events-none"
+        style={{ 
+          border: '2px solid #DAA520',
+        }} 
+      />
+
+      {/* Top curved banner - A.G.D.G.A.D.U */}
+      <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20">
+        <div 
+          className="px-10 py-1.5"
+          style={{
+            background: 'linear-gradient(180deg, #DEB887 0%, #D2B48C 50%, #C4A06B 100%)',
+            border: '2px solid #8B4513',
+            borderRadius: '0 0 50px 50px',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
+          }}
+        >
+          <p className="text-[#8B0000] text-[11px] font-bold tracking-[0.25em]">
+            A∴G∴D∴G∴A∴D∴U∴
+          </p>
+        </div>
+      </div>
+
+      {/* Top logos row */}
+      <div className="relative pt-8 px-16 flex items-center justify-center gap-4">
+        {/* Moon/globe - left */}
+        <div 
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, #1a365d 0%, #2c5282 40%, #1a365d 100%)',
+            border: '3px solid #DAA520',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
+          }}
+        >
+          <span className="text-[#B0E0E6] text-xl">☽</span>
+        </div>
+
+        {/* Left emblem - pink with star */}
+        <div 
+          className="w-14 h-14 rounded-full flex items-center justify-center"
+          style={{
+            background: 'radial-gradient(circle, #FFB6C1 20%, #FF69B4 80%)',
+            border: '3px solid #DAA520',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
+          }}
+        >
+          <span className="text-[#1a365d] text-base">✡</span>
+        </div>
+
+        {/* GOIB Logo - center */}
+        <img 
+          src="/images/logo-goib-edital.png" 
+          alt="Logo GOIB" 
+          className="h-16 mx-1"
+        />
+
+        {/* Lodge logo if available */}
+        {(selectedLodge as any)?.logo_url && (
+          <img 
+            src={(selectedLodge as any).logo_url} 
+            alt={`Logo ${selectedLodge?.name}`}
+            className="h-14 object-contain"
+          />
+        )}
+
+        {/* Right emblem - blue globe */}
+        <div 
+          className="w-14 h-14 rounded-full flex items-center justify-center"
+          style={{
+            background: 'radial-gradient(circle, #87CEEB 20%, #4682B4 80%)',
+            border: '3px solid #DAA520',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
+          }}
+        >
+          <span className="text-white text-base">🌐</span>
+        </div>
+
+        {/* Sun globe - right */}
+        <div 
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{
+            background: 'radial-gradient(circle, #FFD700 20%, #FFA500 80%)',
+            border: '3px solid #DAA520',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
+          }}
+        >
+          <span className="text-[#8B4513] text-xl">☀</span>
+        </div>
+      </div>
+
+      {/* Main content with columns */}
+      <div className="flex h-[240px] relative mt-1">
+        {/* Left Column with ornate capital */}
+        <div className="w-16 flex flex-col items-center pt-0 ml-4">
+          {/* Column capital (top ornament) */}
+          <div 
+            className="w-14 h-8 flex items-end justify-center"
+            style={{
+              background: 'linear-gradient(180deg, #DAA520 0%, #B8860B 100%)',
+              borderRadius: '8px 8px 0 0',
+              borderTop: '3px solid #FFD700',
+              boxShadow: '0 -2px 4px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div className="w-6 h-6 rounded-full bg-[#1a365d] border-2 border-[#DAA520] flex items-center justify-center mb-1">
+              <span className="text-[#87CEEB] text-xs">★</span>
+            </div>
+          </div>
+          {/* Column shaft */}
+          <div 
+            className="w-10 flex-1"
+            style={{
+              background: 'linear-gradient(90deg, #8B6914 0%, #CD853F 20%, #DEB887 35%, #F5DEB3 50%, #DEB887 65%, #CD853F 80%, #8B6914 100%)',
+              boxShadow: '3px 0 8px rgba(0,0,0,0.4), -3px 0 8px rgba(0,0,0,0.2)',
+            }}
+          />
+          {/* Column base */}
+          <div 
+            className="w-14 h-5"
+            style={{
+              background: 'linear-gradient(180deg, #CD853F 0%, #8B6914 100%)',
+              borderRadius: '0 0 4px 4px',
+            }}
+          />
+        </div>
+
+        {/* Center content area */}
+        <div className="flex-1 px-6 py-2 flex flex-col items-center justify-center">
+          {/* Inner golden frame with cream/parchment background */}
+          <div 
+            className="w-full h-full rounded-lg px-5 py-3 relative"
+            style={{
+              background: 'linear-gradient(180deg, #FCF8E3 0%, #F5DEB3 30%, #EEE8AA 60%, #F5DEB3 100%)',
+              border: '4px solid #DAA520',
+              boxShadow: 'inset 0 0 15px rgba(218,165,32,0.3), 0 0 10px rgba(0,0,0,0.2)',
+            }}
+          >
+            {/* Title */}
+            <h1 
+              className="text-3xl text-center mb-2"
+              style={{ 
+                fontFamily: '"Brush Script MT", "Segoe Script", Georgia, serif',
+                color: '#1a365d',
+                textShadow: '1px 1px 2px rgba(0,0,0,0.1)',
+              }}
+            >
+              Convite
+            </h1>
+
+            {/* Main invitation text */}
+            <p 
+              className="text-[11px] leading-relaxed text-center mb-2"
+              style={{ color: '#1a365d' }}
+            >
+              A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name}</strong>, 
+              na pessoa de seu Ven∴ M∴ Ir∴, tem a honra e a satisfação de convidar a 
+              todos os IIr∴ para iluminar e abrilhantar nossos trabalhos com vossa 
+              ilustre presença na
+            </p>
+
+            {/* Session type */}
+            <h2 
+              className="text-lg font-bold text-center mb-1"
+              style={{ 
+                fontFamily: '"Brush Script MT", "Segoe Script", Georgia, serif',
+                color: '#1a365d',
+              }}
+            >
+              {getSessionTypeLabel()}
+            </h2>
+
+            {/* Names section */}
+            {selectedSessionType?.hasNames && getNamesArray().length > 0 && (
+              <div className="text-center mb-1">
+                {getNamesArray().map((name, index) => (
+                  <p 
+                    key={index} 
+                    className="text-base font-bold"
+                    style={{ 
+                      fontFamily: '"Brush Script MT", "Segoe Script", Georgia, serif',
+                      color: '#8B4513',
+                    }}
+                  >
+                    {name}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Date and time */}
+            <p 
+              className="text-[11px] text-center mb-1"
+              style={{ color: '#1a365d' }}
+            >
+              a se realizar às <strong>{time}h</strong> do dia{' '}
+              <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ''}</strong>
+              {' '}(<span className="capitalize">{getDayOfWeek()}</span>), no Sagrado 
+              Templo da Aug∴ e Resp∴ Loj∴ Simb∴
+            </p>
+
+            {/* Address */}
+            <p 
+              className="text-[10px] text-center mb-1"
+              style={{ color: '#1a365d' }}
+            >
+              situada na {LODGE_ADDRESS}
+            </p>
+
+            {/* Closing */}
+            <p 
+              className="text-[11px] text-center font-semibold"
+              style={{ color: '#1a365d' }}
+            >
+              Certos da presença de todos, transmitimos nosso T∴F∴A∴
+            </p>
+
+            {/* Small decorative symbols at bottom right */}
+            <div className="absolute bottom-2 right-3 flex gap-2 items-center">
+              <span className="text-[#1a365d] text-sm">☐</span>
+              <span className="text-[#CD5C5C] text-sm">📍</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column with ornate capital */}
+        <div className="w-16 flex flex-col items-center pt-0 mr-4">
+          {/* Column capital (top ornament) */}
+          <div 
+            className="w-14 h-8 flex items-end justify-center"
+            style={{
+              background: 'linear-gradient(180deg, #DAA520 0%, #B8860B 100%)',
+              borderRadius: '8px 8px 0 0',
+              borderTop: '3px solid #FFD700',
+              boxShadow: '0 -2px 4px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div className="w-6 h-6 rounded-full bg-[#1a365d] border-2 border-[#DAA520] flex items-center justify-center mb-1">
+              <span className="text-[#87CEEB] text-xs">✧</span>
+            </div>
+          </div>
+          {/* Column shaft */}
+          <div 
+            className="w-10 flex-1"
+            style={{
+              background: 'linear-gradient(90deg, #8B6914 0%, #CD853F 20%, #DEB887 35%, #F5DEB3 50%, #DEB887 65%, #CD853F 80%, #8B6914 100%)',
+              boxShadow: '3px 0 8px rgba(0,0,0,0.4), -3px 0 8px rgba(0,0,0,0.2)',
+            }}
+          />
+          {/* Column base */}
+          <div 
+            className="w-14 h-5"
+            style={{
+              background: 'linear-gradient(180deg, #CD853F 0%, #8B6914 100%)',
+              borderRadius: '0 0 4px 4px',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Checkered mosaic floor with perspective */}
+      <div 
+        className="h-12 mx-4 overflow-hidden"
+        style={{
+          perspective: '200px',
+          perspectiveOrigin: 'center bottom',
+        }}
+      >
+        <div 
+          className="w-full h-full grid"
+          style={{
+            gridTemplateColumns: 'repeat(25, 1fr)',
+            gridTemplateRows: 'repeat(3, 1fr)',
+            transform: 'rotateX(50deg)',
+            transformOrigin: 'center top',
+          }}
+        >
+          {Array.from({ length: 75 }).map((_, i) => {
+            const row = Math.floor(i / 25);
+            const col = i % 25;
+            const isBlack = (row + col) % 2 === 0;
+            return (
+              <div 
+                key={i}
+                style={{
+                  background: isBlack ? '#1a1a1a' : '#f5f5f5',
+                  border: '0.5px solid rgba(0,0,0,0.1)',
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTemplate = () => {
+    switch (template) {
+      case 'moderno':
+        return renderModernoTemplate();
+      case 'classico':
+        return renderClassicoTemplate();
+      case 'classico_horizontal':
+        return renderClassicoHorizontalTemplate();
+      default:
+        return renderModernoTemplate();
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -377,7 +710,7 @@ export default function Invites() {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
           {/* Form */}
           <Card>
             <CardHeader>
@@ -510,11 +843,11 @@ export default function Invites() {
             </CardHeader>
             <CardContent>
               {showPreview && canGenerate ? (
-                <div className="flex justify-center overflow-auto">
-                  {template === 'moderno' ? renderModernoTemplate() : renderClassicoTemplate()}
+                <div className="flex justify-center overflow-auto py-4">
+                  {renderTemplate()}
                 </div>
               ) : (
-                <div className="h-[500px] flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
+                <div className="h-[450px] flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                   <p>Preencha os dados e clique em "Visualizar"</p>
                 </div>
               )}
