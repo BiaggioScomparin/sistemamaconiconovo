@@ -272,7 +272,7 @@ export function useSignMinute() {
       signerId: string;
       signerName: string;
       signerPosition: string;
-    }) => {
+    }): Promise<{ signature: MinuteSignature; allSigned: boolean }> => {
       // Generate signature hash (timestamp + signer info)
       const signatureData = `${minuteId}-${signerId}-${Date.now()}`;
       const encoder = new TextEncoder();
@@ -319,7 +319,7 @@ export function useSignMinute() {
           .eq('id', minuteId);
       }
 
-      return signature;
+      return { signature: signature as MinuteSignature, allSigned };
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['minute-signatures', variables.minuteId] });
