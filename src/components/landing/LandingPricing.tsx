@@ -95,7 +95,7 @@ export function LandingPricing() {
               )}
             >
               Anual
-              <Badge variant="secondary" className="ml-2 bg-secondary/20 text-secondary">
+              <Badge variant="secondary" className="ml-2 bg-primary text-primary-foreground">
                 -17%
               </Badge>
             </button>
