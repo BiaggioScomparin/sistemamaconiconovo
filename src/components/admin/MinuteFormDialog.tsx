@@ -15,7 +15,7 @@ import { useLodgeMembers } from '@/hooks/useLodgeMembers';
 import { useAttendancesByDate } from '@/hooks/useAttendancesByDate';
 import { MemberSelectField } from './MemberSelectField';
 import { toast } from 'sonner';
-import { Loader2, Users, FileText, BookOpen, Gavel, MessageSquare, RefreshCw } from 'lucide-react';
+import { Loader2, Users, FileText, BookOpen, Gavel, MessageSquare, RefreshCw, Star } from 'lucide-react';
 
 interface MinuteFormDialogProps {
   open: boolean;
@@ -76,6 +76,10 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
     word_for_order: '',
     closing_ritual: '',
     observations: '',
+    
+    // Campos para Sessão Magna
+    magna_ceremony_type: 'iniciacao',
+    initiates: '',
   });
 
   const { data: attendances = [], refetch: refetchAttendances } = useAttendancesByDate(
@@ -116,6 +120,8 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
         word_for_order: minute.word_for_order || '',
         closing_ritual: minute.closing_ritual || '',
         observations: minute.observations || '',
+        magna_ceremony_type: minute.magna_ceremony_type || 'iniciacao',
+        initiates: minute.initiates || '',
       });
     } else {
       setSelectedLodgeId(profile?.lodge_id || '');
@@ -149,6 +155,8 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
         word_for_order: '',
         closing_ritual: '',
         observations: '',
+        magna_ceremony_type: 'iniciacao',
+        initiates: '',
       });
     }
   }, [minute, open, profile?.lodge_id]);
@@ -236,6 +244,8 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
       session_number: formData.session_number ? parseInt(formData.session_number) : null,
       session_type: sessionType,
       lodge_id: selectedLodgeId,
+      magna_ceremony_type: sessionType === 'magna' ? formData.magna_ceremony_type : null,
+      initiates: sessionType === 'magna' ? formData.initiates : null,
     };
 
     try {
@@ -551,6 +561,68 @@ export function MinuteFormDialog({ open, onOpenChange, minute, sessionType }: Mi
                 </div>
               </CardContent>
             </Card>
+
+            {/* Cerimônia Magna - apenas para sessões magna */}
+            {sessionType === 'magna' && (
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-600" />
+                    Cerimônia Magna
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="magna_ceremony_type">Tipo de Cerimônia *</Label>
+                    <Select
+                      value={formData.magna_ceremony_type}
+                      onValueChange={(value) => handleChange('magna_ceremony_type', value)}
+                      disabled={!isEditable}
+                    >
+                      <SelectTrigger id="magna_ceremony_type">
+                        <SelectValue placeholder="Selecione o tipo de cerimônia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="iniciacao">Iniciação</SelectItem>
+                        <SelectItem value="elevacao">Elevação</SelectItem>
+                        <SelectItem value="exaltacao">Exaltação</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.magna_ceremony_type === 'iniciacao' && 'Aprendiz → Entrada na Ordem'}
+                      {formData.magna_ceremony_type === 'elevacao' && 'Aprendiz → Companheiro'}
+                      {formData.magna_ceremony_type === 'exaltacao' && 'Companheiro → Mestre'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="initiates">
+                      {formData.magna_ceremony_type === 'iniciacao' ? 'Iniciados' : 
+                       formData.magna_ceremony_type === 'elevacao' ? 'Elevados' : 'Exaltados'}
+                    </Label>
+                    <Textarea
+                      id="initiates"
+                      value={formData.initiates}
+                      onChange={(e) => handleChange('initiates', e.target.value)}
+                      rows={4}
+                      placeholder={`Liste os candidatos ${
+                        formData.magna_ceremony_type === 'iniciacao' ? 'iniciados' :
+                        formData.magna_ceremony_type === 'elevacao' ? 'elevados' : 'exaltados'
+                      }, um por linha...`}
+                      disabled={!isEditable}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Insira um nome por linha. Estes nomes aparecerão na ata com espaço para assinatura.
+                    </p>
+                    {formData.initiates && (
+                      <p className="text-xs font-medium text-primary">
+                        Total: {formData.initiates.split('\n').filter(n => n.trim()).length} candidato(s)
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Conteúdo da Sessão */}
             <Card>

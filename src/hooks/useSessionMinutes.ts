@@ -42,6 +42,10 @@ export interface SessionMinute {
   closing_ritual: string | null;
   observations: string | null;
   
+  // Campos para Sessão Magna
+  magna_ceremony_type: string | null;
+  initiates: string | null;
+  
   // Campos antigos (mantidos para compatibilidade)
   correspondence_read: string | null;
   treasury_report: string | null;
@@ -49,7 +53,6 @@ export interface SessionMinute {
   deliberations: string | null;
   word_of_order: string | null;
   general_matters: string | null;
-  content: string | null;
   
   // Status
   status: 'draft' | 'completed' | 'signed';
@@ -165,6 +168,8 @@ export function useCreateSessionMinute() {
           word_for_order: minute.word_for_order,
           closing_ritual: minute.closing_ritual,
           observations: minute.observations,
+          magna_ceremony_type: minute.magna_ceremony_type,
+          initiates: minute.initiates,
           created_by: user?.id,
         })
         .select()
@@ -216,6 +221,8 @@ export function useUpdateSessionMinute() {
           word_for_order: minute.word_for_order,
           closing_ritual: minute.closing_ritual,
           observations: minute.observations,
+          magna_ceremony_type: minute.magna_ceremony_type,
+          initiates: minute.initiates,
         })
         .eq('id', id)
         .select()
