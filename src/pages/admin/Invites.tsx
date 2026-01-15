@@ -8,12 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLodges } from '@/hooks/useLodges';
 import { useLodgeMembers } from '@/hooks/useLodgeMembers';
 import { MemberSelectField } from '@/components/admin/MemberSelectField';
+import { CustomInviteTemplate, CustomInvitePreview, TagPosition } from '@/components/admin/CustomInviteTemplate';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Download, Mail, Eye } from 'lucide-react';
+import { CalendarIcon, Download, Mail, Eye, Palette, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
@@ -48,6 +50,9 @@ export default function Invites() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [template, setTemplate] = useState('moderno');
   const [veneravelMestre, setVeneravelMestre] = useState('');
+  const [inviteMode, setInviteMode] = useState<'templates' | 'custom'>('templates');
+  const [customImage, setCustomImage] = useState<string | null>(null);
+  const [tagPositions, setTagPositions] = useState<TagPosition[]>([]);
   const inviteRef = useRef<HTMLDivElement>(null);
 
   const selectedLodge = lodges?.find(l => l.id === lodgeId);
@@ -55,6 +60,7 @@ export default function Invites() {
   const { data: lodgeMembers = [] } = useLodgeMembers(lodgeId);
 
   const canGenerate = date && time && lodgeId && sessionType;
+  const canGenerateCustom = canGenerate && customImage;
 
   const getSessionTypeLabel = () => {
     return selectedSessionType?.label || '';
@@ -724,6 +730,18 @@ export default function Invites() {
     }
   };
 
+  const getInviteData = () => ({
+    lodgeName: selectedLodge?.name || '',
+    lodgeCity: selectedLodge?.city || '',
+    lodgeState: selectedLodge?.state || '',
+    sessionType: getSessionTypeLabel(),
+    date: formatDateFull(),
+    time: time,
+    veneravelMestre: veneravelMestre,
+    names: getNamesArray(),
+    address: LODGE_ADDRESS,
+  });
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -735,164 +753,209 @@ export default function Invites() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
-          {/* Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados do Convite</CardTitle>
-              <CardDescription>Preencha as informações para gerar o convite</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Template selector */}
-              <div className="space-y-2">
-                <Label>Modelo do Convite</Label>
-                <Select value={template} onValueChange={setTemplate}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o modelo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INVITE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        <div className="flex flex-col">
-                          <span>{t.label}</span>
-                          <span className="text-xs text-muted-foreground">{t.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Mode Selector Tabs */}
+        <Tabs value={inviteMode} onValueChange={(v) => setInviteMode(v as 'templates' | 'custom')}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Modelos Prontos
+            </TabsTrigger>
+            <TabsTrigger value="custom" className="flex items-center gap-2">
+              <ImageIcon className="h-4 w-4" />
+              Importar do Canva
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="space-y-2">
-                <Label>Loja</Label>
-                <Select value={lodgeId} onValueChange={(value) => {
-                  setLodgeId(value);
-                  setVeneravelMestre(''); // Reset when lodge changes
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a Loja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lodges?.map((lodge) => (
-                      <SelectItem key={lodge.id} value={lodge.id}>
-                        {lodge.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="grid gap-6 lg:grid-cols-[400px_1fr] mt-6">
+            {/* Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Dados do Convite</CardTitle>
+                <CardDescription>Preencha as informações para gerar o convite</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <TabsContent value="templates" className="mt-0 space-y-4">
+                  {/* Template selector */}
+                  <div className="space-y-2">
+                    <Label>Modelo do Convite</Label>
+                    <Select value={template} onValueChange={setTemplate}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o modelo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INVITE_TEMPLATES.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            <div className="flex flex-col">
+                              <span>{t.label}</span>
+                              <span className="text-xs text-muted-foreground">{t.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
 
-              {lodgeId && (
-                <MemberSelectField
-                  id="veneravel-mestre"
-                  label="Venerável Mestre"
-                  value={veneravelMestre}
-                  onChange={setVeneravelMestre}
-                  members={lodgeMembers}
-                  placeholder="Selecione o Venerável Mestre"
-                />
-              )}
-
-              <div className="space-y-2">
-                <Label>Tipo de Sessão</Label>
-                <Select value={sessionType} onValueChange={setSessionType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SESSION_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data da Sessão</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !date && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, 'PPP', { locale: ptBR }) : 'Selecione a data'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Horário</Label>
-                <Input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                />
-              </div>
-
-              {selectedSessionType?.hasNames && (
-                <div className="space-y-2">
-                  <Label>{selectedSessionType.nameLabel}</Label>
-                  <Textarea
-                    value={names}
-                    onChange={(e) => setNames(e.target.value)}
-                    placeholder="Digite um nome por linha"
-                    rows={4}
+                <TabsContent value="custom" className="mt-0 space-y-4">
+                  <CustomInviteTemplate
+                    customImage={customImage}
+                    onImageChange={setCustomImage}
+                    tagPositions={tagPositions}
+                    onTagPositionsChange={setTagPositions}
+                    inviteData={getInviteData()}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Digite um nome por linha
-                  </p>
-                </div>
-              )}
+                </TabsContent>
 
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handlePreview} disabled={!canGenerate} className="flex-1">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Visualizar
-                </Button>
-                {showPreview && (
-                  <Button onClick={handleDownload} disabled={isGenerating} variant="secondary" className="flex-1">
-                    <Download className="h-4 w-4 mr-2" />
-                    {isGenerating ? 'Gerando...' : 'Baixar PNG'}
-                  </Button>
+                {/* Common fields for both modes */}
+                <div className="space-y-2">
+                  <Label>Loja</Label>
+                  <Select value={lodgeId} onValueChange={(value) => {
+                    setLodgeId(value);
+                    setVeneravelMestre(''); // Reset when lodge changes
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a Loja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lodges?.map((lodge) => (
+                        <SelectItem key={lodge.id} value={lodge.id}>
+                          {lodge.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {lodgeId && (
+                  <MemberSelectField
+                    id="veneravel-mestre"
+                    label="Venerável Mestre"
+                    value={veneravelMestre}
+                    onChange={setVeneravelMestre}
+                    members={lodgeMembers}
+                    placeholder="Selecione o Venerável Mestre"
+                  />
                 )}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Prévia do Convite</CardTitle>
-              <CardDescription>Visualize o convite antes de baixar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {showPreview && canGenerate ? (
-                <div className="flex justify-center overflow-auto py-4">
-                  {renderTemplate()}
+                <div className="space-y-2">
+                  <Label>Tipo de Sessão</Label>
+                  <Select value={sessionType} onValueChange={setSessionType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SESSION_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <div className="h-[450px] flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                  <p>Preencha os dados e clique em "Visualizar"</p>
+
+                <div className="space-y-2">
+                  <Label>Data da Sessão</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !date && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, 'PPP', { locale: ptBR }) : 'Selecione a data'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+
+                <div className="space-y-2">
+                  <Label>Horário</Label>
+                  <Input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                  />
+                </div>
+
+                {selectedSessionType?.hasNames && (
+                  <div className="space-y-2">
+                    <Label>{selectedSessionType.nameLabel}</Label>
+                    <Textarea
+                      value={names}
+                      onChange={(e) => setNames(e.target.value)}
+                      placeholder="Digite um nome por linha"
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Digite um nome por linha
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={handlePreview} 
+                    disabled={inviteMode === 'templates' ? !canGenerate : !canGenerateCustom} 
+                    className="flex-1"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Visualizar
+                  </Button>
+                  {showPreview && (
+                    <Button onClick={handleDownload} disabled={isGenerating} variant="secondary" className="flex-1">
+                      <Download className="h-4 w-4 mr-2" />
+                      {isGenerating ? 'Gerando...' : 'Baixar PNG'}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Prévia do Convite</CardTitle>
+                <CardDescription>Visualize o convite antes de baixar</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {showPreview ? (
+                  <div className="flex justify-center overflow-auto py-4">
+                    {inviteMode === 'templates' ? (
+                      renderTemplate()
+                    ) : customImage ? (
+                      <CustomInvitePreview
+                        customImage={customImage}
+                        tagPositions={tagPositions}
+                        inviteData={getInviteData()}
+                        inviteRef={inviteRef}
+                      />
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="h-[450px] flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
+                    <div className="text-center">
+                      <p>Preencha os dados e clique em "Visualizar"</p>
+                      {inviteMode === 'custom' && !customImage && (
+                        <p className="text-sm mt-2">Importe uma imagem do Canva primeiro</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </Tabs>
       </div>
     </AppLayout>
   );
