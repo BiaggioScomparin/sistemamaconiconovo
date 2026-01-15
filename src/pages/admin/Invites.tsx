@@ -286,8 +286,8 @@ export default function Invites() {
                       <p className="text-white/80 text-xs mb-2">
                         {LODGE_ADDRESS}
                       </p>
-                      <p className="text-white/60 text-xs">
-                        Traje rigoroso • Presença obrigatória
+                      <p className="text-white/80 text-xs">
+                        Traje Maçônico • Aguardamos a presença de todos
                       </p>
                       <p className="text-[#c9a227] text-xs mt-2 tracking-wider">
                         ✧ LIBERDADE • IGUALDADE • FRATERNIDADE ✧
