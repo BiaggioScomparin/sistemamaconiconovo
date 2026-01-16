@@ -745,19 +745,19 @@ export default function Invites() {
         <div 
           className="absolute flex flex-col items-center justify-center"
           style={{
-            top: '235px',
-            left: '175px',
-            right: '175px',
-            bottom: '175px',
+            top: '245px',
+            left: '180px',
+            right: '180px',
+            bottom: '170px',
           }}
         >
           {/* Main invitation text */}
           <p 
-            className="text-center leading-[1.5] px-8"
+            className="text-center leading-[1.4] px-6"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '18px',
+              fontSize: '20px',
             }}
           >
             A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, na
@@ -768,11 +768,11 @@ export default function Invites() {
 
           {/* Session type */}
           <h2 
-            className="text-center mt-3 font-bold"
+            className="text-center mt-2 font-bold"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '26px',
+              fontSize: '28px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
             }}
@@ -787,7 +787,7 @@ export default function Invites() {
               style={{ 
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 color: '#1a365d',
-                fontSize: '15px',
+                fontSize: '17px',
               }}
             >
               Do novo Venerável Mestre para a gestão de {gestao}
@@ -797,11 +797,11 @@ export default function Invites() {
           {/* Main name */}
           {mainName && (
             <h3 
-              className="text-center mt-2 font-bold"
+              className="text-center mt-1 font-bold"
               style={{ 
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 color: '#1a365d',
-                fontSize: '28px',
+                fontSize: '30px',
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
               }}
@@ -812,17 +812,17 @@ export default function Invites() {
 
           {/* Date and time */}
           <p 
-            className="text-center mt-3"
+            className="text-center mt-2"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '18px',
+              fontSize: '20px',
             }}
           >
             a se realizar às <strong>{time || '19:00'}</strong> do dia <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '19 de Janeiro de 2026'}</strong>
             {displayAddress && (
               <>
-                , no templo
+                , no templo situado
                 <br />
                 {displayAddress}
               </>
@@ -831,11 +831,11 @@ export default function Invites() {
 
           {/* Closing message */}
           <p 
-            className="text-center mt-3 font-bold"
+            className="text-center mt-2 font-bold"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '18px',
+              fontSize: '20px',
             }}
           >
             Certos da presença de todos, transmitimos nosso T∴F∴A∴
