@@ -33,6 +33,7 @@ const INVITE_TEMPLATES = [
   { value: 'moderno', label: 'Modelo Moderno', description: 'Design contemporâneo com gradiente azul' },
   { value: 'classico', label: 'Modelo Clássico (Vertical)', description: 'Design tradicional vertical' },
   { value: 'classico_horizontal', label: 'Modelo Clássico (Horizontal)', description: 'Design tradicional horizontal com colunas' },
+  { value: 'instalacao', label: 'Modelo Instalação', description: 'Template especial para Sessão Magna de Instalação' },
 ];
 
 const LODGE_ADDRESS = 'Rua Paru, 175 - Vila Mazzei, São Paulo - SP, 02310-200';
@@ -711,6 +712,119 @@ export default function Invites() {
     </div>
   );
 
+  const renderInstalacaoTemplate = () => {
+    // Extract gestao period from names field - expecting format like "2026-2028" or just years
+    const gestaoMatch = names.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+    const gestao = gestaoMatch ? `${gestaoMatch[1]}-${gestaoMatch[2]}` : '';
+    
+    // Get the main name (first line without gestao info)
+    const nameLines = getNamesArray().filter(line => !line.match(/^\d{4}\s*[-–]\s*\d{4}$/));
+    const mainName = nameLines[0] || '';
+    
+    return (
+      <div 
+        ref={inviteRef}
+        className="w-[1024px] h-[724px] relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(/images/invite-template-instalacao.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Text overlay container - positioned to match the image layout */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pt-[140px]">
+          {/* Main invitation text */}
+          <p 
+            className="text-center px-24 leading-relaxed"
+            style={{ 
+              fontFamily: 'Georgia, serif',
+              color: '#1a365d',
+              fontSize: '18px',
+              textShadow: '0 1px 2px rgba(255,255,255,0.5)',
+            }}
+          >
+            A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, nº {selectedLodge?.name?.match(/nº?\s*(\d+)/i)?.[1] || '001'}, na
+            <br />
+            pessoa de seu Ven∴ M∴ Ir∴ <strong>{veneravelMestre || 'Nome do Venerável'}</strong>, tem a honra e a
+            <br />
+            satisfação de convidar a todos os IIr∴ para iluminar e abrilhantar
+            <br />
+            nossos trabalhos com vossa ilustre presença na
+          </p>
+
+          {/* Session type */}
+          <h2 
+            className="text-center mt-4 font-bold"
+            style={{ 
+              fontFamily: 'Georgia, serif',
+              color: '#1a365d',
+              fontSize: '26px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+            }}
+          >
+            {getSessionTypeLabel() || 'SESSÃO MAGNA DE INSTALAÇÃO E POSSE'}
+          </h2>
+
+          {/* Subtitle for gestao */}
+          {gestao && (
+            <p 
+              className="text-center mt-1"
+              style={{ 
+                fontFamily: 'Georgia, serif',
+                color: '#1a365d',
+                fontSize: '16px',
+              }}
+            >
+              Do novo Venerável Mestre para a gestão de {gestao}
+            </p>
+          )}
+
+          {/* Main name */}
+          {mainName && (
+            <h3 
+              className="text-center mt-2 font-bold"
+              style={{ 
+                fontFamily: 'Georgia, serif',
+                color: '#1a365d',
+                fontSize: '28px',
+                textTransform: 'uppercase',
+              }}
+            >
+              {mainName}
+            </h3>
+          )}
+
+          {/* Date and time */}
+          <p 
+            className="text-center mt-3"
+            style={{ 
+              fontFamily: 'Georgia, serif',
+              color: '#1a365d',
+              fontSize: '18px',
+            }}
+          >
+            a se realizar às <strong>{time || '19:00'}</strong> do dia <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '19 de Janeiro de 2026'}</strong>, no templo
+            <br />
+            do Tucuruvi {LODGE_ADDRESS.replace('Rua ', '')}
+          </p>
+
+          {/* Closing message */}
+          <p 
+            className="text-center mt-4 font-semibold"
+            style={{ 
+              fontFamily: 'Georgia, serif',
+              color: '#1a365d',
+              fontSize: '18px',
+            }}
+          >
+            Certos da presença de todos, transmitimos nosso T∴F∴A∴
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const renderTemplate = () => {
     switch (template) {
       case 'moderno':
@@ -719,6 +833,8 @@ export default function Invites() {
         return renderClassicoTemplate();
       case 'classico_horizontal':
         return renderClassicoHorizontalTemplate();
+      case 'instalacao':
+        return renderInstalacaoTemplate();
       default:
         return renderModernoTemplate();
     }
