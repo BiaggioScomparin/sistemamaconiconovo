@@ -745,10 +745,10 @@ export default function Invites() {
         <div 
           className="absolute flex flex-col items-center justify-center"
           style={{
-            top: '200px',
+            top: '235px',
             left: '175px',
             right: '175px',
-            bottom: '185px',
+            bottom: '175px',
           }}
         >
           {/* Main invitation text */}
@@ -760,7 +760,7 @@ export default function Invites() {
               fontSize: '18px',
             }}
           >
-            A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, nº 001, na
+            A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, na
             {' '}pessoa de seu Ven∴ M∴ Ir∴ <strong>{veneravelMestre || 'Nome do Venerável'}</strong>, tem a honra e a
             {' '}satisfação de convidar a todos os IIr∴ para iluminar e abrilhantar
             {' '}nossos trabalhos com vossa ilustre presença na
