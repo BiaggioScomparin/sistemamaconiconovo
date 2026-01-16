@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useLodges } from '@/hooks/useLodges';
 import { useLodgeMembers } from '@/hooks/useLodgeMembers';
 import { MemberSelectField } from '@/components/admin/MemberSelectField';
@@ -49,6 +50,8 @@ export default function Invites() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [template, setTemplate] = useState('moderno');
   const [veneravelMestre, setVeneravelMestre] = useState('');
+  const [showLodgeAddress, setShowLodgeAddress] = useState(true);
+  const [customAddress, setCustomAddress] = useState('');
   const inviteRef = useRef<HTMLDivElement>(null);
 
   const selectedLodge = lodges?.find(l => l.id === lodgeId);
@@ -720,6 +723,13 @@ export default function Invites() {
     // Get the main name (first line without gestao info)
     const nameLines = getNamesArray().filter(line => !line.match(/^\d{4}\s*[-–]\s*\d{4}$/));
     const mainName = nameLines[0] || '';
+
+    // Get address to display
+    const displayAddress = showLodgeAddress 
+      ? (customAddress || (selectedLodge?.city && selectedLodge?.state 
+          ? `${selectedLodge.city} - ${selectedLodge.state}` 
+          : LODGE_ADDRESS))
+      : '';
     
     return (
       <div 
@@ -731,23 +741,23 @@ export default function Invites() {
           backgroundPosition: 'center',
         }}
       >
-        {/* Text overlay container - positioned in the white area */}
+        {/* Text overlay container - positioned in the white area between columns */}
         <div 
           className="absolute flex flex-col items-center justify-center"
           style={{
-            top: '180px',
-            left: '150px',
-            right: '150px',
-            bottom: '160px',
+            top: '200px',
+            left: '175px',
+            right: '175px',
+            bottom: '185px',
           }}
         >
           {/* Main invitation text */}
           <p 
-            className="text-center leading-[1.6] px-6"
+            className="text-center leading-[1.5] px-8"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '19px',
+              fontSize: '18px',
             }}
           >
             A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, nº 001, na
@@ -758,11 +768,11 @@ export default function Invites() {
 
           {/* Session type */}
           <h2 
-            className="text-center mt-4 font-bold"
+            className="text-center mt-3 font-bold"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '28px',
+              fontSize: '26px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
             }}
@@ -777,7 +787,7 @@ export default function Invites() {
               style={{ 
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 color: '#1a365d',
-                fontSize: '16px',
+                fontSize: '15px',
               }}
             >
               Do novo Venerável Mestre para a gestão de {gestao}
@@ -791,7 +801,7 @@ export default function Invites() {
               style={{ 
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 color: '#1a365d',
-                fontSize: '30px',
+                fontSize: '28px',
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
               }}
@@ -802,24 +812,30 @@ export default function Invites() {
 
           {/* Date and time */}
           <p 
-            className="text-center mt-4"
+            className="text-center mt-3"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '19px',
+              fontSize: '18px',
             }}
           >
-            a se realizar às <strong>{time || '19:00'}</strong> do dia <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '19 de Janeiro de 2026'}</strong>, no templo
-            {' '}do Tucuruvi {LODGE_ADDRESS.replace('Rua ', '')}
+            a se realizar às <strong>{time || '19:00'}</strong> do dia <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '19 de Janeiro de 2026'}</strong>
+            {displayAddress && (
+              <>
+                , no templo
+                <br />
+                {displayAddress}
+              </>
+            )}
           </p>
 
           {/* Closing message */}
           <p 
-            className="text-center mt-4 font-bold"
+            className="text-center mt-3 font-bold"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '19px',
+              fontSize: '18px',
             }}
           >
             Certos da presença de todos, transmitimos nosso T∴F∴A∴
@@ -976,6 +992,36 @@ export default function Invites() {
                   <p className="text-xs text-muted-foreground">
                     Digite um nome por linha
                   </p>
+                </div>
+              )}
+
+              {/* Address options - only for Convite Maçônico Tradicional */}
+              {template === 'instalacao' && (
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="show-address"
+                      checked={showLodgeAddress}
+                      onCheckedChange={(checked) => setShowLodgeAddress(checked === true)}
+                    />
+                    <Label htmlFor="show-address" className="text-sm font-normal">
+                      Exibir endereço no convite
+                    </Label>
+                  </div>
+                  
+                  {showLodgeAddress && (
+                    <div className="space-y-2">
+                      <Label>Endereço personalizado (opcional)</Label>
+                      <Input
+                        value={customAddress}
+                        onChange={(e) => setCustomAddress(e.target.value)}
+                        placeholder={selectedLodge?.city ? `${selectedLodge.city} - ${selectedLodge.state}` : LODGE_ADDRESS}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Deixe em branco para usar o endereço da Loja
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
