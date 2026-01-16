@@ -33,7 +33,7 @@ const INVITE_TEMPLATES = [
   { value: 'moderno', label: 'Modelo Moderno', description: 'Design contemporâneo com gradiente azul' },
   { value: 'classico', label: 'Modelo Clássico (Vertical)', description: 'Design tradicional vertical' },
   { value: 'classico_horizontal', label: 'Modelo Clássico (Horizontal)', description: 'Design tradicional horizontal com colunas' },
-  { value: 'instalacao', label: 'Modelo Instalação', description: 'Template especial para Sessão Magna de Instalação' },
+  { value: 'instalacao', label: 'Convite Maçônico Tradicional', description: 'Template tradicional com colunas e piso mosaico' },
 ];
 
 const LODGE_ADDRESS = 'Rua Paru, 175 - Vila Mazzei, São Paulo - SP, 02310-200';
@@ -733,41 +733,38 @@ export default function Invites() {
       >
         {/* Text overlay container - positioned in the white area */}
         <div 
-          className="absolute flex flex-col items-center justify-start"
+          className="absolute flex flex-col items-center justify-center"
           style={{
-            top: '195px',
-            left: '130px',
-            right: '130px',
-            bottom: '180px',
+            top: '180px',
+            left: '150px',
+            right: '150px',
+            bottom: '160px',
           }}
         >
           {/* Main invitation text */}
           <p 
-            className="text-center leading-relaxed px-4"
+            className="text-center leading-[1.6] px-6"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '17px',
+              fontSize: '19px',
             }}
           >
             A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, nº 001, na
-            <br />
-            pessoa de seu Ven∴ M∴ Ir∴ <strong>{veneravelMestre || 'Nome do Venerável'}</strong>, tem a honra e a
-            <br />
-            satisfação de convidar a todos os IIr∴ para iluminar e abrilhantar
-            <br />
-            nossos trabalhos com vossa ilustre presença na
+            {' '}pessoa de seu Ven∴ M∴ Ir∴ <strong>{veneravelMestre || 'Nome do Venerável'}</strong>, tem a honra e a
+            {' '}satisfação de convidar a todos os IIr∴ para iluminar e abrilhantar
+            {' '}nossos trabalhos com vossa ilustre presença na
           </p>
 
           {/* Session type */}
           <h2 
-            className="text-center mt-3 font-bold"
+            className="text-center mt-4 font-bold"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '24px',
+              fontSize: '28px',
               textTransform: 'uppercase',
-              letterSpacing: '1px',
+              letterSpacing: '2px',
             }}
           >
             {getSessionTypeLabel() || 'SESSÃO MAGNA DE INSTALAÇÃO E POSSE'}
@@ -780,7 +777,7 @@ export default function Invites() {
               style={{ 
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 color: '#1a365d',
-                fontSize: '15px',
+                fontSize: '16px',
               }}
             >
               Do novo Venerável Mestre para a gestão de {gestao}
@@ -794,8 +791,9 @@ export default function Invites() {
               style={{ 
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 color: '#1a365d',
-                fontSize: '26px',
+                fontSize: '30px',
                 textTransform: 'uppercase',
+                letterSpacing: '1px',
               }}
             >
               {mainName}
@@ -804,25 +802,24 @@ export default function Invites() {
 
           {/* Date and time */}
           <p 
-            className="text-center mt-3"
+            className="text-center mt-4"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '17px',
+              fontSize: '19px',
             }}
           >
             a se realizar às <strong>{time || '19:00'}</strong> do dia <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '19 de Janeiro de 2026'}</strong>, no templo
-            <br />
-            do Tucuruvi {LODGE_ADDRESS.replace('Rua ', '')}
+            {' '}do Tucuruvi {LODGE_ADDRESS.replace('Rua ', '')}
           </p>
 
           {/* Closing message */}
           <p 
-            className="text-center mt-3 font-semibold"
+            className="text-center mt-4 font-bold"
             style={{ 
               fontFamily: 'Georgia, "Times New Roman", serif',
               color: '#1a365d',
-              fontSize: '17px',
+              fontSize: '19px',
             }}
           >
             Certos da presença de todos, transmitimos nosso T∴F∴A∴
