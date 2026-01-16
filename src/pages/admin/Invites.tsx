@@ -713,20 +713,121 @@ export default function Invites() {
   );
 
   const renderInstalacaoTemplate = () => {
-    // This template displays the image as-is
-    // To use dynamic texts, provide a background-only version of the image (without texts)
+    // Extract gestao period from names field - expecting format like "2026-2028"
+    const gestaoMatch = names.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+    const gestao = gestaoMatch ? `${gestaoMatch[1]}-${gestaoMatch[2]}` : '';
+    
+    // Get the main name (first line without gestao info)
+    const nameLines = getNamesArray().filter(line => !line.match(/^\d{4}\s*[-–]\s*\d{4}$/));
+    const mainName = nameLines[0] || '';
+    
     return (
       <div 
         ref={inviteRef}
         className="w-[1024px] h-[724px] relative overflow-hidden"
         style={{
-          backgroundImage: 'url(/images/invite-template-instalacao.png)',
+          backgroundImage: 'url(/images/invite-template-instalacao-bg.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
-        {/* Image already contains all texts - no overlay needed */}
-        {/* To add dynamic texts, provide a version of the image without texts */}
+        {/* Text overlay container - positioned in the white area */}
+        <div 
+          className="absolute flex flex-col items-center justify-start"
+          style={{
+            top: '195px',
+            left: '130px',
+            right: '130px',
+            bottom: '180px',
+          }}
+        >
+          {/* Main invitation text */}
+          <p 
+            className="text-center leading-relaxed px-4"
+            style={{ 
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              color: '#1a365d',
+              fontSize: '17px',
+            }}
+          >
+            A Aug∴ e Resp∴ Loj∴ Simb∴ <strong>{selectedLodge?.name || 'Lealdade e Justiça'}</strong>, nº 001, na
+            <br />
+            pessoa de seu Ven∴ M∴ Ir∴ <strong>{veneravelMestre || 'Nome do Venerável'}</strong>, tem a honra e a
+            <br />
+            satisfação de convidar a todos os IIr∴ para iluminar e abrilhantar
+            <br />
+            nossos trabalhos com vossa ilustre presença na
+          </p>
+
+          {/* Session type */}
+          <h2 
+            className="text-center mt-3 font-bold"
+            style={{ 
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              color: '#1a365d',
+              fontSize: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            {getSessionTypeLabel() || 'SESSÃO MAGNA DE INSTALAÇÃO E POSSE'}
+          </h2>
+
+          {/* Subtitle for gestao */}
+          {gestao && (
+            <p 
+              className="text-center mt-1"
+              style={{ 
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                color: '#1a365d',
+                fontSize: '15px',
+              }}
+            >
+              Do novo Venerável Mestre para a gestão de {gestao}
+            </p>
+          )}
+
+          {/* Main name */}
+          {mainName && (
+            <h3 
+              className="text-center mt-2 font-bold"
+              style={{ 
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                color: '#1a365d',
+                fontSize: '26px',
+                textTransform: 'uppercase',
+              }}
+            >
+              {mainName}
+            </h3>
+          )}
+
+          {/* Date and time */}
+          <p 
+            className="text-center mt-3"
+            style={{ 
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              color: '#1a365d',
+              fontSize: '17px',
+            }}
+          >
+            a se realizar às <strong>{time || '19:00'}</strong> do dia <strong>{date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '19 de Janeiro de 2026'}</strong>, no templo
+            <br />
+            do Tucuruvi {LODGE_ADDRESS.replace('Rua ', '')}
+          </p>
+
+          {/* Closing message */}
+          <p 
+            className="text-center mt-3 font-semibold"
+            style={{ 
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              color: '#1a365d',
+              fontSize: '17px',
+            }}
+          >
+            Certos da presença de todos, transmitimos nosso T∴F∴A∴
+          </p>
+        </div>
       </div>
     );
   };
