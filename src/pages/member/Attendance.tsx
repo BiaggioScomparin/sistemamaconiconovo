@@ -289,7 +289,7 @@ const Attendance = () => {
                       {attendances.map((attendance: any) => (
                         <TableRow key={attendance.id}>
                           <TableCell>
-                            {format(new Date(attendance.session_date), 'dd/MM/yyyy')}
+                            {format(new Date(attendance.session_date + 'T12:00:00'), 'dd/MM/yyyy')}
                           </TableCell>
                           <TableCell className="max-w-[120px] truncate">
                             {attendance.lodges?.name}
