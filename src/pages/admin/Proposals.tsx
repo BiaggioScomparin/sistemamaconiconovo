@@ -31,7 +31,7 @@ import {
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
 import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
 
-type ProfileStatus = 'proposta' | 'sindicancia' | 'reprovado' | 'membro' | 'pending' | 'approved' | 'rejected';
+type ProfileStatus = 'proposta' | 'sindicancia' | 'sindicancia_aprovada' | 'aguardando_iniciacao' | 'reprovado' | 'membro' | 'pending' | 'approved' | 'rejected';
 
 interface Profile {
   id: string;
@@ -92,6 +92,7 @@ interface Profile {
   opinion_equality: string | null;
   opinion_fraternity: string | null;
   sponsor_name: string | null;
+  initiation_scheduled_date: string | null;
   lodges?: { id: string; name: string; city?: string | null; state?: string | null } | null;
 }
 
@@ -99,6 +100,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   proposta: { label: 'Proposta', color: 'bg-blue-500', icon: FileText },
   pending: { label: 'Proposta', color: 'bg-blue-500', icon: FileText },
   sindicancia: { label: 'Sindicância', color: 'bg-yellow-500', icon: SearchIcon },
+  sindicancia_aprovada: { label: 'Sindicância Aprovada', color: 'bg-orange-500', icon: UserCheck },
+  aguardando_iniciacao: { label: 'Aguardando Iniciação', color: 'bg-purple-500', icon: Calendar },
   reprovado: { label: 'Reprovado', color: 'bg-red-500', icon: UserX },
   rejected: { label: 'Reprovado', color: 'bg-red-500', icon: UserX },
   membro: { label: 'Membro', color: 'bg-green-500', icon: UserCheck },
@@ -131,6 +134,7 @@ export default function AdminProposals() {
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [selectedLodge, setSelectedLodge] = useState<string>('');
+  const [initiationDate, setInitiationDate] = useState<string>('');
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('proposta');
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
@@ -166,6 +170,8 @@ export default function AdminProposals() {
     const statusMap: Record<string, string[]> = {
       proposta: ['proposta', 'pending'],
       sindicancia: ['sindicancia'],
+      sindicancia_aprovada: ['sindicancia_aprovada'],
+      aguardando_iniciacao: ['aguardando_iniciacao'],
       reprovado: ['reprovado', 'rejected'],
       membro: ['membro', 'approved'],
     };
@@ -181,6 +187,16 @@ export default function AdminProposals() {
       toast({ 
         title: 'Erro', 
         description: 'Selecione uma Loja Maçônica para o novo membro.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    // If changing to 'aguardando_iniciacao', need to select a date
+    if (newStatus === 'aguardando_iniciacao' && !initiationDate) {
+      toast({ 
+        title: 'Erro', 
+        description: 'Informe a data prevista para a iniciação.', 
         variant: 'destructive' 
       });
       return;
@@ -220,9 +236,16 @@ export default function AdminProposals() {
         // Just update the status
         console.log('Updating status to:', newStatus, 'for profile:', selectedProfile.id);
         
+        const updatePayload: Record<string, any> = { status: newStatus };
+        
+        // If aguardando_iniciacao, also save the initiation date
+        if (newStatus === 'aguardando_iniciacao') {
+          updatePayload.initiation_scheduled_date = initiationDate;
+        }
+        
         const { data: updateData, error } = await supabase
           .from('profiles')
-          .update({ status: newStatus })
+          .update(updatePayload)
           .eq('id', selectedProfile.id)
           .select();
 
@@ -245,6 +268,7 @@ export default function AdminProposals() {
       setSelectedProfile(null);
       setNewStatus('');
       setSelectedLodge('');
+      setInitiationDate('');
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
@@ -326,6 +350,12 @@ export default function AdminProposals() {
               <span>{profile.lodges.name}</span>
             </div>
           )}
+          {profile.status === 'aguardando_iniciacao' && profile.initiation_scheduled_date && (
+            <div className="flex items-center gap-2 text-purple-600 text-sm font-medium">
+              <Calendar className="h-4 w-4" />
+              <span>Iniciação: {formatDate(profile.initiation_scheduled_date)}</span>
+            </div>
+          )}
         </div>
         
         <div className="flex gap-3 flex-wrap">
@@ -367,6 +397,8 @@ export default function AdminProposals() {
   const tabCounts = {
     proposta: filterProfiles('proposta').length,
     sindicancia: filterProfiles('sindicancia').length,
+    sindicancia_aprovada: filterProfiles('sindicancia_aprovada').length,
+    aguardando_iniciacao: filterProfiles('aguardando_iniciacao').length,
     reprovado: filterProfiles('reprovado').length,
     membro: filterProfiles('membro').length,
   };
@@ -382,26 +414,34 @@ export default function AdminProposals() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="proposta" className="flex gap-2">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="proposta" className="flex gap-2 text-xs">
               <FileText className="h-4 w-4" />
               Propostas ({tabCounts.proposta})
             </TabsTrigger>
-            <TabsTrigger value="sindicancia" className="flex gap-2">
+            <TabsTrigger value="sindicancia" className="flex gap-2 text-xs">
               <SearchIcon className="h-4 w-4" />
               Sindicância ({tabCounts.sindicancia})
             </TabsTrigger>
-            <TabsTrigger value="reprovado" className="flex gap-2">
+            <TabsTrigger value="sindicancia_aprovada" className="flex gap-2 text-xs">
+              <UserCheck className="h-4 w-4" />
+              Sind. Aprovada ({tabCounts.sindicancia_aprovada})
+            </TabsTrigger>
+            <TabsTrigger value="aguardando_iniciacao" className="flex gap-2 text-xs">
+              <Calendar className="h-4 w-4" />
+              Aguard. Iniciação ({tabCounts.aguardando_iniciacao})
+            </TabsTrigger>
+            <TabsTrigger value="reprovado" className="flex gap-2 text-xs">
               <UserX className="h-4 w-4" />
               Reprovados ({tabCounts.reprovado})
             </TabsTrigger>
-            <TabsTrigger value="membro" className="flex gap-2">
+            <TabsTrigger value="membro" className="flex gap-2 text-xs">
               <UserCheck className="h-4 w-4" />
               Membros ({tabCounts.membro})
             </TabsTrigger>
           </TabsList>
 
-          {['proposta', 'sindicancia', 'reprovado', 'membro'].map((status) => (
+          {['proposta', 'sindicancia', 'sindicancia_aprovada', 'aguardando_iniciacao', 'reprovado', 'membro'].map((status) => (
             <TabsContent key={status} value={status} className="mt-6">
               {isLoading ? (
                 <p className="text-muted-foreground">Carregando...</p>
@@ -454,11 +494,28 @@ export default function AdminProposals() {
                 <SelectContent>
                   <SelectItem value="proposta">Proposta</SelectItem>
                   <SelectItem value="sindicancia">Sindicância</SelectItem>
+                  <SelectItem value="sindicancia_aprovada">Sindicância Aprovada</SelectItem>
+                  <SelectItem value="aguardando_iniciacao">Aguardando Iniciação</SelectItem>
                   <SelectItem value="reprovado">Reprovado</SelectItem>
                   <SelectItem value="membro">Membro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {newStatus === 'aguardando_iniciacao' && (
+              <div className="space-y-2">
+                <Label>Data Prevista para Iniciação *</Label>
+                <input
+                  type="date"
+                  value={initiationDate}
+                  onChange={(e) => setInitiationDate(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Esta data será exibida para o candidato acompanhar.
+                </p>
+              </div>
+            )}
 
             {newStatus === 'membro' && (
               <div className="space-y-2">
@@ -495,7 +552,7 @@ export default function AdminProposals() {
             </Button>
             <Button
               onClick={handleStatusChange}
-              disabled={updating || !newStatus || (newStatus === 'membro' && !selectedProfile?.email)}
+              disabled={updating || !newStatus || (newStatus === 'membro' && !selectedProfile?.email) || (newStatus === 'aguardando_iniciacao' && !initiationDate)}
             >
               {updating ? 'Atualizando...' : 'Confirmar'}
             </Button>
