@@ -53,11 +53,13 @@ interface Profile {
   nationality: string | null;
   street: string | null;
   number: string | null;
+  complement: string | null;
   neighborhood: string | null;
   cep: string | null;
   residence_time: string | null;
   voter_title: string | null;
   voter_zone: string | null;
+  voter_city: string | null;
   identity_number: string | null;
   identity_issuer: string | null;
   father_name: string | null;
@@ -65,15 +67,31 @@ interface Profile {
   education_level: string | null;
   civil_status: string | null;
   spouse_name: string | null;
+  spouse_profession: string | null;
+  spouse_retired: boolean | null;
   marriage_date: string | null;
   is_retired: boolean | null;
   employer: string | null;
+  employer_phone: string | null;
   work_street: string | null;
   work_neighborhood: string | null;
   work_city: string | null;
   work_state: string | null;
   work_cep: string | null;
   work_time: string | null;
+  monthly_income: string | null;
+  opinion_masonry: string | null;
+  expectation_masonry: string | null;
+  informed_financial_values: boolean | null;
+  can_afford_financial: boolean | null;
+  agrees_investigation_fee: boolean | null;
+  aware_no_refund: boolean | null;
+  opinion_family: string | null;
+  believes_supreme_being: boolean | null;
+  opinion_freedom: string | null;
+  opinion_equality: string | null;
+  opinion_fraternity: string | null;
+  sponsor_name: string | null;
   lodges?: { id: string; name: string; city?: string | null; state?: string | null } | null;
 }
 
@@ -118,6 +136,16 @@ export default function AdminProposals() {
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
   const [editalDialogOpen, setEditalDialogOpen] = useState(false);
   const [editalProfile, setEditalProfile] = useState<Profile | null>(null);
+  const [viewProfileChildren, setViewProfileChildren] = useState<{ name: string; birth_date: string }[]>([]);
+
+  // Fetch children when viewing a profile
+  const fetchChildren = async (profileId: string) => {
+    const { data } = await supabase
+      .from('children')
+      .select('name, birth_date')
+      .eq('profile_id', profileId);
+    setViewProfileChildren(data || []);
+  };
 
   if (loading) {
     return (
@@ -303,7 +331,10 @@ export default function AdminProposals() {
         <div className="flex gap-3 flex-wrap">
           <Button
             variant="outline"
-            onClick={() => setViewProfile(profile)}
+            onClick={() => {
+              setViewProfile(profile);
+              fetchChildren(profile.id);
+            }}
           >
             <Eye className="mr-2 h-4 w-4" />
             Ver Detalhes
@@ -473,70 +504,306 @@ export default function AdminProposals() {
       </Dialog>
 
       {/* View Details Dialog */}
-      <Dialog open={!!viewProfile} onOpenChange={(open) => !open && setViewProfile(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <Dialog open={!!viewProfile} onOpenChange={(open) => {
+        if (!open) {
+          setViewProfile(null);
+          setViewProfileChildren([]);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-12 w-12">
                 <AvatarImage src={viewProfile?.photo_url || undefined} />
-                <AvatarFallback className="bg-primary text-primary-foreground">
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                   {viewProfile?.full_name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              {viewProfile?.full_name}
+              <div>
+                <span className="text-xl">{viewProfile?.full_name}</span>
+                <div className="mt-1 flex items-center gap-2">
+                  {viewProfile && getStatusBadge(viewProfile.status)}
+                  <span className="text-sm text-muted-foreground font-normal">
+                    Proposta em {formatDate(viewProfile?.proposal_date || viewProfile?.created_at || '')}
+                  </span>
+                </div>
+              </div>
             </DialogTitle>
           </DialogHeader>
           
           {viewProfile && (
             <div className="space-y-6 py-4">
-              <div className="flex items-center gap-2">
-                {getStatusBadge(viewProfile.status)}
-                <span className="text-sm text-muted-foreground">
-                  Cadastrado em {formatDate(viewProfile.created_at)}
-                </span>
+              {/* Dados Pessoais */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Dados Pessoais</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">E-mail</Label>
+                    <p className="text-sm">{viewProfile.email || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">CPF</Label>
+                    <p className="text-sm">{viewProfile.cpf || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Data de Nascimento</Label>
+                    <p className="text-sm">{formatDate(viewProfile.birth_date)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Naturalidade</Label>
+                    <p className="text-sm">{viewProfile.naturality || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Nacionalidade</Label>
+                    <p className="text-sm">{viewProfile.nationality || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Telefone Fixo</Label>
+                    <p className="text-sm">{viewProfile.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Celular</Label>
+                    <p className="text-sm">{viewProfile.cell_phone || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">RG</Label>
+                    <p className="text-sm">{viewProfile.identity_number || '-'} {viewProfile.identity_issuer ? `(${viewProfile.identity_issuer})` : ''}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Título de Eleitor</Label>
+                    <p className="text-sm">{viewProfile.voter_title || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Zona Eleitoral</Label>
+                    <p className="text-sm">{viewProfile.voter_zone || '-'} {viewProfile.voter_city ? `- ${viewProfile.voter_city}` : ''}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Escolaridade</Label>
+                    <p className="text-sm">{viewProfile.education_level || '-'}</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">E-mail</Label>
-                  <p>{viewProfile.email || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">CPF</Label>
-                  <p>{viewProfile.cpf || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Telefone</Label>
-                  <p>{viewProfile.phone || viewProfile.cell_phone || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Data de Nascimento</Label>
-                  <p>{formatDate(viewProfile.birth_date)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Cidade/Estado</Label>
-                  <p>{[viewProfile.city, viewProfile.state].filter(Boolean).join(' - ') || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Profissão</Label>
-                  <p>{viewProfile.profession || '-'}</p>
-                </div>
-                {viewProfile.lodges?.name && (
+              {/* Endereço Residencial */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Endereço Residencial</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-muted-foreground">Loja</Label>
-                    <p>{viewProfile.lodges.name}</p>
+                    <Label className="text-muted-foreground text-xs">CEP</Label>
+                    <p className="text-sm">{viewProfile.cep || '-'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-muted-foreground text-xs">Logradouro</Label>
+                    <p className="text-sm">{viewProfile.street || '-'}{viewProfile.number ? `, ${viewProfile.number}` : ''}{viewProfile.complement ? ` - ${viewProfile.complement}` : ''}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Bairro</Label>
+                    <p className="text-sm">{viewProfile.neighborhood || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Cidade/UF</Label>
+                    <p className="text-sm">{[viewProfile.city, viewProfile.state].filter(Boolean).join(' - ') || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Tempo de Residência</Label>
+                    <p className="text-sm">{viewProfile.residence_time || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filiação */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Filiação</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Nome do Pai</Label>
+                    <p className="text-sm">{viewProfile.father_name || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Nome da Mãe</Label>
+                    <p className="text-sm">{viewProfile.mother_name || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estado Civil e Família */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Estado Civil e Família</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Estado Civil</Label>
+                    <p className="text-sm">{viewProfile.civil_status || '-'}</p>
+                  </div>
+                  {viewProfile.marriage_date && (
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Data de Casamento</Label>
+                      <p className="text-sm">{formatDate(viewProfile.marriage_date)}</p>
+                    </div>
+                  )}
+                  {viewProfile.spouse_name && (
+                    <>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Nome do Cônjuge</Label>
+                        <p className="text-sm">{viewProfile.spouse_name}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Profissão do Cônjuge</Label>
+                        <p className="text-sm">{viewProfile.spouse_profession || '-'} {viewProfile.spouse_retired ? '(Aposentado(a))' : ''}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {viewProfileChildren.length > 0 && (
+                  <div className="mt-3">
+                    <Label className="text-muted-foreground text-xs">Filhos</Label>
+                    <div className="mt-1 space-y-1">
+                      {viewProfileChildren.map((child, index) => (
+                        <p key={index} className="text-sm">
+                          {child.name} - Nascimento: {formatDate(child.birth_date)}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* Dados Profissionais */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Dados Profissionais</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Profissão</Label>
+                    <p className="text-sm">{viewProfile.profession || '-'} {viewProfile.is_retired ? '(Aposentado)' : ''}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Empregador</Label>
+                    <p className="text-sm">{viewProfile.employer || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Telefone do Trabalho</Label>
+                    <p className="text-sm">{viewProfile.employer_phone || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Tempo na Empresa</Label>
+                    <p className="text-sm">{viewProfile.work_time || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Renda Mensal</Label>
+                    <p className="text-sm">{viewProfile.monthly_income || '-'}</p>
+                  </div>
+                </div>
+                {(viewProfile.work_street || viewProfile.work_city) && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">CEP do Trabalho</Label>
+                      <p className="text-sm">{viewProfile.work_cep || '-'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-muted-foreground text-xs">Endereço do Trabalho</Label>
+                      <p className="text-sm">{viewProfile.work_street || '-'}, {viewProfile.work_neighborhood || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Cidade/UF do Trabalho</Label>
+                      <p className="text-sm">{[viewProfile.work_city, viewProfile.work_state].filter(Boolean).join(' - ') || '-'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Questionário Maçônico */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Questionário Maçônico</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">O que pensa sobre a Maçonaria?</Label>
+                    <p className="text-sm whitespace-pre-wrap">{viewProfile.opinion_masonry || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">O que espera da Maçonaria?</Label>
+                    <p className="text-sm whitespace-pre-wrap">{viewProfile.expectation_masonry || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">O que sua família pensa sobre a sua decisão?</Label>
+                    <p className="text-sm whitespace-pre-wrap">{viewProfile.opinion_family || '-'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Crê em um Ser Supremo?</Label>
+                      <p className="text-sm">{viewProfile.believes_supreme_being ? 'Sim' : 'Não'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">O que pensa sobre Liberdade?</Label>
+                    <p className="text-sm whitespace-pre-wrap">{viewProfile.opinion_freedom || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">O que pensa sobre Igualdade?</Label>
+                    <p className="text-sm whitespace-pre-wrap">{viewProfile.opinion_equality || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">O que pensa sobre Fraternidade?</Label>
+                    <p className="text-sm whitespace-pre-wrap">{viewProfile.opinion_fraternity || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informações Financeiras */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-foreground border-b pb-2">Declarações Financeiras</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Foi informado dos valores?</Label>
+                    <p className="text-sm">{viewProfile.informed_financial_values ? 'Sim' : 'Não'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Pode arcar com os custos?</Label>
+                    <p className="text-sm">{viewProfile.can_afford_financial ? 'Sim' : 'Não'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Concorda com taxa de sindicância?</Label>
+                    <p className="text-sm">{viewProfile.agrees_investigation_fee ? 'Sim' : 'Não'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Ciente da não devolução?</Label>
+                    <p className="text-sm">{viewProfile.aware_no_refund ? 'Sim' : 'Não'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Padrinho */}
+              {viewProfile.sponsor_name && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground border-b pb-2">Indicação</h3>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Nome do Padrinho/Indicador</Label>
+                    <p className="text-sm">{viewProfile.sponsor_name}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Loja */}
+              {viewProfile.lodges?.name && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground border-b pb-2">Loja Maçônica</h3>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Loja</Label>
+                    <p className="text-sm">{viewProfile.lodges.name} {viewProfile.lodges.city ? `- ${viewProfile.lodges.city}/${viewProfile.lodges.state}` : ''}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewProfile(null)}>
+            <Button variant="outline" onClick={() => {
+              setViewProfile(null);
+              setViewProfileChildren([]);
+            }}>
               Fechar
             </Button>
             <Button onClick={() => {
               setViewProfile(null);
+              setViewProfileChildren([]);
               if (viewProfile) {
                 setSelectedProfile(viewProfile);
                 setNewStatus('');
