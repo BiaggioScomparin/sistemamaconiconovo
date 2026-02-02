@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Save, Settings as SettingsIcon, Percent, Database } from 'lucide-react';
+import { Eye, EyeOff, Save, Settings as SettingsIcon, Percent, Database, CreditCard } from 'lucide-react';
 import { DatabaseBackupButton } from '@/components/admin/DatabaseBackupButton';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface AppSetting {
   id: string;
@@ -20,8 +21,12 @@ interface AppSetting {
 export default function Settings() {
   const queryClient = useQueryClient();
   const [mercadoPagoToken, setMercadoPagoToken] = useState('');
-  const [showToken, setShowToken] = useState(false);
+  const [showMpToken, setShowMpToken] = useState(false);
   const [creditCardFee, setCreditCardFee] = useState('4.99');
+  const [paymentGateway, setPaymentGateway] = useState('mercado_pago');
+  const [infinitepayClientId, setInfinitepayClientId] = useState('');
+  const [infinitepayClientSecret, setInfinitepayClientSecret] = useState('');
+  const [showInfinitepaySecret, setShowInfinitepaySecret] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['app-settings'],
@@ -45,6 +50,18 @@ export default function Settings() {
       if (ccFee?.value) {
         setCreditCardFee(ccFee.value);
       }
+      const gateway = settings.find(s => s.key === 'payment_gateway');
+      if (gateway?.value) {
+        setPaymentGateway(gateway.value);
+      }
+      const ipClientId = settings.find(s => s.key === 'infinitepay_client_id');
+      if (ipClientId?.value) {
+        setInfinitepayClientId(ipClientId.value);
+      }
+      const ipClientSecret = settings.find(s => s.key === 'infinitepay_client_secret');
+      if (ipClientSecret?.value) {
+        setInfinitepayClientSecret(ipClientSecret.value);
+      }
     }
   }, [settings]);
 
@@ -67,7 +84,7 @@ export default function Settings() {
     },
   });
 
-  const handleSaveToken = () => {
+  const handleSaveMpToken = () => {
     if (!mercadoPagoToken.trim()) {
       toast.error('Por favor, insira o token do Mercado Pago');
       return;
@@ -87,6 +104,30 @@ export default function Settings() {
     updateSettingMutation.mutate({
       key: 'credit_card_fee_percent',
       value: creditCardFee,
+    });
+  };
+
+  const handleSaveGateway = (value: string) => {
+    setPaymentGateway(value);
+    updateSettingMutation.mutate({
+      key: 'payment_gateway',
+      value: value,
+    });
+  };
+
+  const handleSaveInfinitepayCredentials = () => {
+    if (!infinitepayClientId.trim() || !infinitepayClientSecret.trim()) {
+      toast.error('Por favor, insira o Client ID e Client Secret do InfinitePay');
+      return;
+    }
+    
+    Promise.all([
+      updateSettingMutation.mutateAsync({ key: 'infinitepay_client_id', value: infinitepayClientId }),
+      updateSettingMutation.mutateAsync({ key: 'infinitepay_client_secret', value: infinitepayClientSecret }),
+    ]).then(() => {
+      toast.success('Credenciais do InfinitePay salvas com sucesso!');
+    }).catch(() => {
+      toast.error('Erro ao salvar credenciais do InfinitePay');
     });
   };
 
@@ -111,24 +152,117 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Gateway Selection Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Integração Mercado Pago</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Gateway de Pagamento
+            </CardTitle>
             <CardDescription>
-              Configure o token de acesso do Mercado Pago para habilitar pagamentos via PIX e Cartão
+              Escolha qual gateway será usado para processar os pagamentos
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="mercado-pago-token">Access Token</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
+          <CardContent>
+            <RadioGroup 
+              value={paymentGateway} 
+              onValueChange={handleSaveGateway}
+              className="space-y-3"
+            >
+              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                <RadioGroupItem value="mercado_pago" id="mercado_pago" />
+                <Label htmlFor="mercado_pago" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Mercado Pago</div>
+                  <div className="text-sm text-muted-foreground">PIX e Cartão de Crédito via Mercado Pago</div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                <RadioGroupItem value="infinitepay" id="infinitepay" />
+                <Label htmlFor="infinitepay" className="flex-1 cursor-pointer">
+                  <div className="font-medium">InfinitePay</div>
+                  <div className="text-sm text-muted-foreground">PIX e Cartão de Crédito via InfinitePay (CloudWalk)</div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Mercado Pago Config */}
+        {paymentGateway === 'mercado_pago' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Integração Mercado Pago</CardTitle>
+              <CardDescription>
+                Configure o token de acesso do Mercado Pago para habilitar pagamentos via PIX e Cartão
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mercado-pago-token">Access Token</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="mercado-pago-token"
+                      type={showMpToken ? 'text' : 'password'}
+                      value={mercadoPagoToken}
+                      onChange={(e) => setMercadoPagoToken(e.target.value)}
+                      placeholder="APP_USR-XXXXXXXX..."
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowMpToken(!showMpToken)}
+                    >
+                      {showMpToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button onClick={handleSaveMpToken} disabled={updateSettingMutation.isPending}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Você pode obter o Access Token no painel do Mercado Pago em: 
+                  Seu negócio → Configurações → Gestão e Administração → Credenciais
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* InfinitePay Config */}
+        {paymentGateway === 'infinitepay' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Integração InfinitePay</CardTitle>
+              <CardDescription>
+                Configure as credenciais do InfinitePay para habilitar pagamentos via PIX e Cartão.
+                Entre em contato com parcerias@cloudwalk.io para obter suas credenciais de API.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="infinitepay-client-id">Client ID</Label>
+                <Input
+                  id="infinitepay-client-id"
+                  type="text"
+                  value={infinitepayClientId}
+                  onChange={(e) => setInfinitepayClientId(e.target.value)}
+                  placeholder="Seu Client ID..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="infinitepay-client-secret">Client Secret</Label>
+                <div className="relative">
                   <Input
-                    id="mercado-pago-token"
-                    type={showToken ? 'text' : 'password'}
-                    value={mercadoPagoToken}
-                    onChange={(e) => setMercadoPagoToken(e.target.value)}
-                    placeholder="APP_USR-XXXXXXXX..."
+                    id="infinitepay-client-secret"
+                    type={showInfinitepaySecret ? 'text' : 'password'}
+                    value={infinitepayClientSecret}
+                    onChange={(e) => setInfinitepayClientSecret(e.target.value)}
+                    placeholder="Seu Client Secret..."
                     className="pr-10"
                   />
                   <Button
@@ -136,23 +270,19 @@ export default function Settings() {
                     variant="ghost"
                     size="icon"
                     className="absolute right-0 top-0 h-full"
-                    onClick={() => setShowToken(!showToken)}
+                    onClick={() => setShowInfinitepaySecret(!showInfinitepaySecret)}
                   >
-                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showInfinitepaySecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                <Button onClick={handleSaveToken} disabled={updateSettingMutation.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salvar
-                </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Você pode obter o Access Token no painel do Mercado Pago em: 
-                Seu negócio → Configurações → Gestão e Administração → Credenciais
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <Button onClick={handleSaveInfinitepayCredentials} disabled={updateSettingMutation.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Credenciais
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
