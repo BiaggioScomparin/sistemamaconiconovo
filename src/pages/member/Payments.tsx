@@ -49,15 +49,16 @@ export default function Payments() {
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
   const [creditCardFee, setCreditCardFee] = useState(4.99);
   const [generatingCardCheckoutId, setGeneratingCardCheckoutId] = useState<string | null>(null);
+  const [paymentGateway, setPaymentGateway] = useState('mercado_pago');
 
-  // Fetch credit card fee from settings
+  // Fetch credit card fee and payment gateway from settings
   const { data: settings } = useQuery({
     queryKey: ['app-settings-public'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('app_settings')
         .select('key, value')
-        .in('key', ['credit_card_fee_percent']);
+        .in('key', ['credit_card_fee_percent', 'payment_gateway']);
 
       if (error) {
         console.error('Error fetching settings:', error);
@@ -72,6 +73,10 @@ export default function Payments() {
       const feeSetting = settings.find(s => s.key === 'credit_card_fee_percent');
       if (feeSetting?.value) {
         setCreditCardFee(parseFloat(feeSetting.value));
+      }
+      const gatewaySetting = settings.find(s => s.key === 'payment_gateway');
+      if (gatewaySetting?.value) {
+        setPaymentGateway(gatewaySetting.value);
       }
     }
   }, [settings]);
@@ -101,7 +106,10 @@ export default function Payments() {
       // Usa o valor armazenado + multa de 50 se em atraso
       const amount = now > due ? payment.amount + 50 : payment.amount;
 
-      const response = await supabase.functions.invoke('generate-pix', {
+      // Choose the correct function based on gateway
+      const functionName = paymentGateway === 'infinitepay' ? 'generate-pix-infinitepay' : 'generate-pix';
+
+      const response = await supabase.functions.invoke(functionName, {
         body: {
           payment_id: payment.id,
           amount,
@@ -130,7 +138,10 @@ export default function Payments() {
     mutationFn: async (payment: Payment) => {
       const cardAmount = getCardAmount(payment);
 
-      const response = await supabase.functions.invoke('create-card-checkout', {
+      // Choose the correct function based on gateway
+      const functionName = paymentGateway === 'infinitepay' ? 'create-card-checkout-infinitepay' : 'create-card-checkout';
+
+      const response = await supabase.functions.invoke(functionName, {
         body: {
           payment_id: payment.id,
           amount: parseFloat(cardAmount.toFixed(2)),
@@ -147,7 +158,7 @@ export default function Payments() {
     onSuccess: (data) => {
       setGeneratingCardCheckoutId(null);
       if (data.checkout_url) {
-        // Redireciona para o checkout do Mercado Pago
+        // Redireciona para o checkout
         window.location.href = data.checkout_url;
       } else {
         toast.error('Erro ao obter URL de checkout');
