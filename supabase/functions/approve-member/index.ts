@@ -86,7 +86,9 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Create the user with secure random password
+    // Try to create the user, or find existing one
+    let authUserId: string;
+    
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: securePassword,
@@ -94,11 +96,34 @@ serve(async (req) => {
     });
 
     if (createError) {
-      console.error('Create user error:', createError);
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (createError.message?.includes('already been registered')) {
+        // User already exists, find them by email
+        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) {
+          console.error('List users error:', listError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to find existing user' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        const existingUser = listData.users.find(u => u.email === email);
+        if (!existingUser) {
+          return new Response(
+            JSON.stringify({ error: 'User exists but could not be found' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        authUserId = existingUser.id;
+        console.log('Using existing auth user:', authUserId);
+      } else {
+        console.error('Create user error:', createError);
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      authUserId = userData.user.id;
     }
 
     // Send password reset email so user can set their own password
@@ -111,13 +136,13 @@ serve(async (req) => {
       console.error('Failed to send password reset email:', resetError);
     }
 
-    // Add member role
+    // Add member role (ignore if already exists)
     const { error: roleInsertError } = await supabaseAdmin
       .from('user_roles')
-      .insert({
-        user_id: userData.user.id,
+      .upsert({
+        user_id: authUserId,
         role: 'member'
-      });
+      }, { onConflict: 'user_id,role', ignoreDuplicates: true });
 
     if (roleInsertError) {
       console.error('Role insert error:', roleInsertError);
@@ -125,7 +150,7 @@ serve(async (req) => {
 
     // Update profile with user_id, status, and optionally lodge_id
     const updateData: Record<string, unknown> = {
-      user_id: userData.user.id,
+      user_id: authUserId,
       status: 'membro'
     };
     
@@ -150,7 +175,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Member approved successfully. A password reset email has been sent.',
-        user_id: userData.user.id 
+        user_id: authUserId 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
