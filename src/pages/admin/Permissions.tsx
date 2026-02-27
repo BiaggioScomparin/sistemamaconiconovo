@@ -50,6 +50,7 @@ const Permissions = () => {
         .from('profiles')
         .select('id, full_name, cim_number, email, member_status, user_id, user_permissions(*)')
         .not('user_id', 'is', null)
+        .eq('status', 'membro')
         .order('full_name', { ascending: true });
 
       if (profilesError) throw profilesError;
