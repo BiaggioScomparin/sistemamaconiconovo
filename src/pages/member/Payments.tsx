@@ -223,7 +223,7 @@ export default function Payments() {
             <CardTitle>Informações de Pagamento</CardTitle>
             <CardDescription>
               {(() => {
-                const baseAmount = profile?.lodge?.default_payment_amount ?? 200;
+                const baseAmount = (profile as any)?.lodges?.default_payment_amount ?? profile?.lodge?.default_payment_amount ?? 200;
                 const lateAmount = baseAmount + 50;
                 return `Valor: R$ ${baseAmount.toFixed(2).replace('.', ',')} até dia 10 | R$ ${lateAmount.toFixed(2).replace('.', ',')} após dia 10`;
               })()}
