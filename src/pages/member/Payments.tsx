@@ -222,7 +222,11 @@ export default function Payments() {
           <CardHeader>
             <CardTitle>Informações de Pagamento</CardTitle>
             <CardDescription>
-              Valor: R$ 200,00 até dia 10 | R$ 250,00 após dia 10
+              {(() => {
+                const baseAmount = profile?.lodge?.default_payment_amount ?? 200;
+                const lateAmount = baseAmount + 50;
+                return `Valor: R$ ${baseAmount.toFixed(2).replace('.', ',')} até dia 10 | R$ ${lateAmount.toFixed(2).replace('.', ',')} após dia 10`;
+              })()}
               <br />
               <span className="text-xs text-muted-foreground">
                 Pagamento com cartão inclui taxa de {creditCardFee.toFixed(2).replace('.', ',')}%
