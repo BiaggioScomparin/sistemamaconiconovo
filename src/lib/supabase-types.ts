@@ -43,6 +43,7 @@ export interface Profile {
   updated_at: string;
   lodge?: Lodge;
   lodges?: Lodge;
+}
 
 export interface Child {
   id: string;
