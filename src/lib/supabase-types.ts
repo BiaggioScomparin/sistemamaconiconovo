@@ -8,6 +8,8 @@ export interface Lodge {
   name: string;
   city: string | null;
   state: string | null;
+  default_payment_amount: number | null;
+  logo_url: string | null;
   created_at: string;
   updated_at: string;
 }
