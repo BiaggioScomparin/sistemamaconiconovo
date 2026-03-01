@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface SendWhatsAppRequest {
@@ -46,7 +46,6 @@ Deno.serve(async (req) => {
 
     if (instanceError || !instance) {
       console.error("No active WhatsApp instance for lodge:", lodge_id);
-      // Log the failure
       await supabase.from("notification_logs").insert({
         lodge_id,
         rule_id: rule_id || null,
@@ -66,21 +65,44 @@ Deno.serve(async (req) => {
 
     // Clean phone number (remove non-digits)
     const cleanPhone = phone.replace(/\D/g, "");
+    const apiFormat = instance.api_format || "z-pro";
+    const baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
 
-    // Send via Z-API compatible endpoint
-    const apiUrl = `${instance.base_url}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
+    let apiUrl: string;
+    let fetchHeaders: Record<string, string>;
+    let fetchBody: string;
 
-    console.log("Sending WhatsApp to URL:", apiUrl, "phone:", cleanPhone);
+    if (apiFormat === "z-api") {
+      // Z-API format: POST {base_url}/instances/{instance_id}/token/{token}/send-text
+      apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
+      fetchHeaders = { "Content-Type": "application/json" };
+      fetchBody = JSON.stringify({ phone: cleanPhone, message });
+    } else {
+      // Z-Pro / CloudZAPI / Wattend format
+      // POST {base_url}/message/sendText with apikey header
+      apiUrl = `${baseUrl}/message/sendText`;
+      fetchHeaders = {
+        "Content-Type": "application/json",
+        "apikey": instance.token,
+      };
+      fetchBody = JSON.stringify({
+        numbers: [cleanPhone],
+        options: {
+          delay: 1200,
+          presence: "composing",
+        },
+        textMessage: {
+          text: message,
+        },
+      });
+    }
+
+    console.log(`Sending WhatsApp (${apiFormat}) to URL:`, apiUrl, "phone:", cleanPhone);
 
     const response = await fetch(apiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone: cleanPhone,
-        message: message,
-      }),
+      headers: fetchHeaders,
+      body: fetchBody,
     });
 
     const responseText = await response.text();
