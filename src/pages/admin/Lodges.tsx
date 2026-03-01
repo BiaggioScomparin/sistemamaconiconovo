@@ -335,6 +335,7 @@ export default function AdminLodges() {
                     <TableHead>Cidade</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Valor Mensalidade</TableHead>
+                    <TableHead>Gateway</TableHead>
                     <TableHead className="w-24">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
