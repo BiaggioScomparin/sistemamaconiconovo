@@ -362,6 +362,11 @@ export default function AdminLodges() {
                         R$ {Number((lodge as any).default_payment_amount || 200).toFixed(2).replace('.', ',')}
                       </TableCell>
                       <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {(lodge as any).payment_gateway === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex gap-2">
                           <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(lodge)}>
                             <Pencil className="h-4 w-4" />
