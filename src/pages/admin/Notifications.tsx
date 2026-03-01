@@ -227,8 +227,21 @@ export default function AdminNotifications() {
                   </div>
                   
                   <div className="space-y-2">
+                    <Label>Provedor da API</Label>
+                    <Select value={wpApiFormat} onValueChange={setWpApiFormat}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o provedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="wattend">Wattend</SelectItem>
+                        <SelectItem value="z-api">Z-API</SelectItem>
+                        <SelectItem value="z-pro">Z-Pro / CloudZAPI</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>URL Base da API</Label>
-                    <Input value={wpBaseUrl} onChange={(e) => setWpBaseUrl(e.target.value)} placeholder="https://api.z-api.io" />
+                    <Input value={wpBaseUrl} onChange={(e) => setWpBaseUrl(e.target.value)} placeholder="https://api.wattend.io" />
                   </div>
                   <div className="space-y-2">
                     <Label>Instance ID</Label>
