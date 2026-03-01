@@ -109,6 +109,7 @@ export default function Settings() {
 
   const handleSaveGateway = (value: string) => {
     setPaymentGateway(value);
+    // Gateway is now configured per lodge, this is kept for backward compatibility
     updateSettingMutation.mutate({
       key: 'payment_gateway',
       value: value,
