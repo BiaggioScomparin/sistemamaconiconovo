@@ -122,6 +122,7 @@ export default function AdminLodges() {
           state: formData.state,
           default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
           logo_url: logoUrl,
+          payment_gateway: formData.payment_gateway,
         };
 
         await updateLodge.mutateAsync({ id: editingLodge.id, ...dataToSave });
