@@ -159,6 +159,33 @@ export default function AdminNotifications() {
     }
   };
 
+  const handleOpenEdit = (rule: NotificationRule) => {
+    setEditingRule(rule);
+    setEditDaysOffset(String(rule.days_offset ?? ''));
+    setEditHoursBefore(String(rule.hours_before ?? ''));
+    setEditRepeatDays(String(rule.repeat_interval_days ?? ''));
+    setEditTemplate(rule.message_template || '');
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRule) return;
+    try {
+      await updateRule.mutateAsync({
+        id: editingRule.id,
+        days_offset: editingRule.category === 'payment_before_due' ? parseInt(editDaysOffset) || 0 : editingRule.days_offset,
+        hours_before: editingRule.category === 'event_same_day' ? (parseInt(editHoursBefore) || null) : editingRule.hours_before,
+        repeat_interval_days: editingRule.category === 'payment_overdue' ? (parseInt(editRepeatDays) || null) : editingRule.repeat_interval_days,
+        message_template: editTemplate || null,
+      });
+      toast.success('Regra atualizada!');
+      setEditDialogOpen(false);
+      setEditingRule(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar');
+    }
+  };
+
   const getCategoryInfo = (cat: string) => CATEGORY_LABELS[cat] || { label: cat, description: '', icon: Bell };
 
   const getStatusBadge = (status: string) => {
