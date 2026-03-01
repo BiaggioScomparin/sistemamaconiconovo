@@ -200,7 +200,7 @@ export default function Settings() {
         )}
 
         {/* InfinitePay Config */}
-        {paymentGateway === 'infinitepay' && (
+        {(
           <Card>
             <CardHeader>
               <CardTitle>Integração InfinitePay</CardTitle>
