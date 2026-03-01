@@ -77,7 +77,10 @@ Deno.serve(async (req) => {
     } else if (apiFormat === "wattend") {
       // Wattend format: POST {base_url}/v2/api/external/{instance_id}
       apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}`;
-      fetchHeaders = { "Content-Type": "application/json" };
+      fetchHeaders = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${instance.token}`,
+      };
       fetchBody = JSON.stringify({
         body: message,
         number: cleanPhone,
