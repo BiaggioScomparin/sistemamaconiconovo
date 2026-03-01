@@ -53,6 +53,7 @@ export default function AdminNotifications() {
   const [wpToken, setWpToken] = useState('');
   const [wpBaseUrl, setWpBaseUrl] = useState('https://api.z-api.io');
   const [wpActive, setWpActive] = useState(true);
+  const [wpApiFormat, setWpApiFormat] = useState('wattend');
   const [showToken, setShowToken] = useState(false);
 
   // Dialog state for adding rule
