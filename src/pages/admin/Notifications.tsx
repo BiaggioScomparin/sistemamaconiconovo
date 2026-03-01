@@ -491,6 +491,64 @@ export default function AdminNotifications() {
             </TabsContent>
           </Tabs>
         )}
+
+        {/* Edit Rule Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar Regra de Notificação</DialogTitle>
+            </DialogHeader>
+            {editingRule && (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Tipo</Label>
+                  <p className="font-medium">{getCategoryInfo(editingRule.category).label}</p>
+                </div>
+
+                {editingRule.category === 'payment_before_due' && (
+                  <div className="space-y-2">
+                    <Label>Quantos dias antes do vencimento?</Label>
+                    <Input type="number" min="1" max="30" value={editDaysOffset} onChange={(e) => setEditDaysOffset(e.target.value)} />
+                  </div>
+                )}
+
+                {editingRule.category === 'payment_overdue' && (
+                  <div className="space-y-2">
+                    <Label>Repetir a cada quantos dias?</Label>
+                    <Input type="number" min="1" max="30" value={editRepeatDays} onChange={(e) => setEditRepeatDays(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">O membro será notificado novamente a cada X dias enquanto a mensalidade estiver vencida.</p>
+                  </div>
+                )}
+
+                {editingRule.category === 'event_same_day' && (
+                  <div className="space-y-2">
+                    <Label>Quantas horas antes do evento?</Label>
+                    <Input type="number" min="1" max="24" value={editHoursBefore} onChange={(e) => setEditHoursBefore(e.target.value)} placeholder="Ex: 2" />
+                    <p className="text-xs text-muted-foreground">Deixe vazio para notificar no início do dia.</p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Mensagem Personalizada (opcional)</Label>
+                  <Textarea
+                    value={editTemplate}
+                    onChange={(e) => setEditTemplate(e.target.value)}
+                    placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}"
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Variáveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}
+                  </p>
+                </div>
+
+                <Button onClick={handleSaveEdit} className="w-full" disabled={updateRule.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
