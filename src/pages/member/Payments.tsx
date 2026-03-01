@@ -51,6 +51,16 @@ export default function Payments() {
   const [generatingCardCheckoutId, setGeneratingCardCheckoutId] = useState<string | null>(null);
   const [paymentGateway, setPaymentGateway] = useState('mercado_pago');
 
+  // Derive payment gateway from the member's lodge
+  useEffect(() => {
+    if (profile) {
+      const lodgeData = (profile as any)?.lodges || (profile as any)?.lodge;
+      if (lodgeData?.payment_gateway) {
+        setPaymentGateway(lodgeData.payment_gateway);
+      }
+    }
+  }, [profile]);
+
   // Fetch credit card fee and payment gateway from settings
   const { data: settings } = useQuery({
     queryKey: ['app-settings-public'],
