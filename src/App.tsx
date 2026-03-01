@@ -70,6 +70,7 @@ const App = () => (
             <Route path="/admin/minutes" element={<ProtectedMinutesRoute><AdminMinutes /></ProtectedMinutesRoute>} />
             <Route path="/admin/invites" element={<ProtectedInvitesRoute><AdminInvites /></ProtectedInvitesRoute>} />
             <Route path="/admin/notifications" element={<ProtectedAdminRoute><AdminNotifications /></ProtectedAdminRoute>} />
+            <Route path="/admin/reports" element={<ProtectedAdminRoute><AdminReports /></ProtectedAdminRoute>} />
             {/* Member routes - Protected by status */}
             <Route path="/member/inicial" element={<ProtectedMemberRoute><MemberInicial /></ProtectedMemberRoute>} />
             <Route path="/member/card" element={<ProtectedMemberRoute><MemberCard /></ProtectedMemberRoute>} />

@@ -69,6 +69,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: '/admin/invites', label: 'Convites', icon: Mail },
     { href: '/admin/permissions', label: 'Permissões', icon: Shield },
     { href: '/admin/notifications', label: 'Notificações', icon: Bell },
+    { href: '/admin/reports', label: 'Relatórios', icon: BarChart3 },
     { href: '/admin/settings', label: 'Configurações', icon: Settings },
   ];
 
