@@ -25,7 +25,7 @@ export default function AdminLodges() {
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLodge, setEditingLodge] = useState<Lodge | null>(null);
-  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '' });
+  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago' });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
