@@ -154,7 +154,7 @@ export default function Settings() {
         </div>
 
         {/* Mercado Pago Config */}
-        {paymentGateway === 'mercado_pago' && (
+        {(
           <Card>
             <CardHeader>
               <CardTitle>Integração Mercado Pago</CardTitle>
