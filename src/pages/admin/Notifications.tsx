@@ -78,11 +78,13 @@ export default function AdminNotifications() {
       setWpToken(whatsappInstance.token);
       setWpBaseUrl(whatsappInstance.base_url);
       setWpActive(whatsappInstance.is_active);
+      setWpApiFormat((whatsappInstance as any).api_format || 'wattend');
     } else {
       setWpInstanceId('');
       setWpToken('');
-      setWpBaseUrl('https://api.z-api.io');
+      setWpBaseUrl('https://api.wattend.io');
       setWpActive(true);
+      setWpApiFormat('wattend');
     }
   }, [whatsappInstance]);
 
