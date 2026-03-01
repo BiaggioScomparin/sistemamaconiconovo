@@ -64,6 +64,14 @@ export default function AdminNotifications() {
   const [newRepeatDays, setNewRepeatDays] = useState('7');
   const [newTemplate, setNewTemplate] = useState('');
 
+  // Dialog state for editing rule
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<NotificationRule | null>(null);
+  const [editDaysOffset, setEditDaysOffset] = useState('');
+  const [editHoursBefore, setEditHoursBefore] = useState('');
+  const [editRepeatDays, setEditRepeatDays] = useState('');
+  const [editTemplate, setEditTemplate] = useState('');
+
   // Auto-select first lodge
   useEffect(() => {
     if (lodges && lodges.length > 0 && !selectedLodgeId) {
