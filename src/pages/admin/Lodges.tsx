@@ -52,7 +52,8 @@ export default function AdminLodges() {
         city: lodge.city || '', 
         state: lodge.state || '',
         default_payment_amount: String((lodge as any).default_payment_amount || 200),
-        logo_url: logoUrl
+        logo_url: logoUrl,
+        payment_gateway: (lodge as any).payment_gateway || 'mercado_pago'
       });
       setLogoPreview(logoUrl || null);
     } else {
