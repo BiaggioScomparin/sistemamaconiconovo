@@ -1194,6 +1194,7 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          api_format: string
           base_url: string
           created_at: string
           id: string
@@ -1204,6 +1205,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          api_format?: string
           base_url?: string
           created_at?: string
           id?: string
@@ -1214,6 +1216,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          api_format?: string
           base_url?: string
           created_at?: string
           id?: string
