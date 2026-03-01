@@ -480,6 +480,124 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          category: string
+          error_message: string | null
+          id: string
+          lodge_id: string
+          message: string | null
+          phone: string | null
+          profile_id: string | null
+          reference_id: string | null
+          rule_id: string | null
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          category: string
+          error_message?: string | null
+          id?: string
+          lodge_id: string
+          message?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          reference_id?: string | null
+          rule_id?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          category?: string
+          error_message?: string | null
+          id?: string
+          lodge_id?: string
+          message?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          reference_id?: string | null
+          rule_id?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_lodge_id_fkey"
+            columns: ["lodge_id"]
+            isOneToOne: false
+            referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "lodge_members_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "notification_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_rules: {
+        Row: {
+          category: string
+          created_at: string
+          days_offset: number | null
+          hours_before: number | null
+          id: string
+          is_enabled: boolean
+          lodge_id: string
+          message_template: string | null
+          repeat_interval_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          days_offset?: number | null
+          hours_before?: number | null
+          id?: string
+          is_enabled?: boolean
+          lodge_id: string
+          message_template?: string | null
+          repeat_interval_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          days_offset?: number | null
+          hours_before?: number | null
+          id?: string
+          is_enabled?: boolean
+          lodge_id?: string
+          message_template?: string | null
+          repeat_interval_days?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_rules_lodge_id_fkey"
+            columns: ["lodge_id"]
+            isOneToOne: false
+            referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1073,6 +1191,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_instances: {
+        Row: {
+          base_url: string
+          created_at: string
+          id: string
+          instance_id: string
+          is_active: boolean
+          lodge_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          base_url?: string
+          created_at?: string
+          id?: string
+          instance_id: string
+          is_active?: boolean
+          lodge_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string
+          created_at?: string
+          id?: string
+          instance_id?: string
+          is_active?: boolean
+          lodge_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_lodge_id_fkey"
+            columns: ["lodge_id"]
+            isOneToOne: true
+            referencedRelation: "lodges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
