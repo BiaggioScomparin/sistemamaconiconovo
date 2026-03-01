@@ -70,6 +70,8 @@ Deno.serve(async (req) => {
     // Send via Z-API compatible endpoint
     const apiUrl = `${instance.base_url}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
 
+    console.log("Sending WhatsApp to URL:", apiUrl, "phone:", cleanPhone);
+
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
@@ -81,7 +83,15 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    console.log("WhatsApp API response status:", response.status, "body:", responseText);
+
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
 
     if (!response.ok) {
       console.error("WhatsApp API error:", responseData);
