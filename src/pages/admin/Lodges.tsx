@@ -244,6 +244,7 @@ export default function AdminLodges() {
                       <SelectValue placeholder="Selecione o gateway" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="manual">Manual (sem pagamento online)</SelectItem>
                       <SelectItem value="mercado_pago">Mercado Pago</SelectItem>
                       <SelectItem value="infinitepay">InfinitePay</SelectItem>
                     </SelectContent>
