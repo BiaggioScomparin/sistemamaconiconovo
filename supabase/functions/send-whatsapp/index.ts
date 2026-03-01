@@ -36,7 +36,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get WhatsApp instance for this lodge
     const { data: instance, error: instanceError } = await supabase
       .from("whatsapp_instances")
       .select("*")
@@ -47,14 +46,9 @@ Deno.serve(async (req) => {
     if (instanceError || !instance) {
       console.error("No active WhatsApp instance for lodge:", lodge_id);
       await supabase.from("notification_logs").insert({
-        lodge_id,
-        rule_id: rule_id || null,
-        profile_id: profile_id || null,
-        category: category || "manual",
-        reference_id: reference_id || null,
-        phone,
-        message,
-        status: "failed",
+        lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
+        category: category || "manual", reference_id: reference_id || null,
+        phone, message, status: "failed",
         error_message: "No active WhatsApp instance configured for this lodge",
       });
       return new Response(
@@ -63,7 +57,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Clean phone number (remove non-digits)
     const cleanPhone = phone.replace(/\D/g, "");
     const apiFormat = instance.api_format || "z-pro";
     const baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
@@ -77,23 +70,24 @@ Deno.serve(async (req) => {
       apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
       fetchHeaders = { "Content-Type": "application/json" };
       fetchBody = JSON.stringify({ phone: cleanPhone, message });
+    } else if (apiFormat === "wattend") {
+      // Wattend format: POST {base_url}/v2/api/external/{instance_id}
+      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}`;
+      fetchHeaders = { "Content-Type": "application/json" };
+      fetchBody = JSON.stringify({
+        body: message,
+        number: cleanPhone,
+        externalKey: instance.token,
+        isClosed: false,
+      });
     } else {
-      // Z-Pro / CloudZAPI / Wattend format
-      // POST {base_url}/message/sendText with apikey header
+      // Z-Pro / CloudZAPI format
       apiUrl = `${baseUrl}/message/sendText`;
-      fetchHeaders = {
-        "Content-Type": "application/json",
-        "apikey": instance.token,
-      };
+      fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
       fetchBody = JSON.stringify({
         numbers: [cleanPhone],
-        options: {
-          delay: 1200,
-          presence: "composing",
-        },
-        textMessage: {
-          text: message,
-        },
+        options: { delay: 1200, presence: "composing" },
+        textMessage: { text: message },
       });
     }
 
@@ -109,23 +103,14 @@ Deno.serve(async (req) => {
     console.log("WhatsApp API response status:", response.status, "body:", responseText);
 
     let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { raw: responseText };
-    }
+    try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
 
     if (!response.ok) {
       console.error("WhatsApp API error:", responseData);
       await supabase.from("notification_logs").insert({
-        lodge_id,
-        rule_id: rule_id || null,
-        profile_id: profile_id || null,
-        category: category || "manual",
-        reference_id: reference_id || null,
-        phone: cleanPhone,
-        message,
-        status: "failed",
+        lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
+        category: category || "manual", reference_id: reference_id || null,
+        phone: cleanPhone, message, status: "failed",
         error_message: JSON.stringify(responseData),
       });
       return new Response(
@@ -134,16 +119,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Log success
     await supabase.from("notification_logs").insert({
-      lodge_id,
-      rule_id: rule_id || null,
-      profile_id: profile_id || null,
-      category: category || "manual",
-      reference_id: reference_id || null,
-      phone: cleanPhone,
-      message,
-      status: "sent",
+      lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
+      category: category || "manual", reference_id: reference_id || null,
+      phone: cleanPhone, message, status: "sent",
     });
 
     return new Response(
