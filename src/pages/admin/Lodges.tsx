@@ -231,7 +231,26 @@ export default function AdminLodges() {
                     Este valor será usado ao gerar mensalidades automaticamente. Após vencimento, será acrescido R$50,00 de multa.
                   </p>
                 </div>
-                
+
+                {/* Payment Gateway Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="payment_gateway">Gateway de Pagamento</Label>
+                  <Select
+                    value={formData.payment_gateway}
+                    onValueChange={(value) => setFormData({ ...formData, payment_gateway: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o gateway" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mercado_pago">Mercado Pago</SelectItem>
+                      <SelectItem value="infinitepay">InfinitePay</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Gateway usado para processar pagamentos PIX e cartão desta loja.
+                  </p>
+                </div>
                 {/* Logo Upload */}
                 <div className="space-y-2">
                   <Label>Logo da Loja</Label>
