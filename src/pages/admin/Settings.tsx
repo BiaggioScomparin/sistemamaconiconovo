@@ -153,41 +153,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Gateway Selection Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Gateway de Pagamento
-            </CardTitle>
-            <CardDescription>
-              Escolha qual gateway será usado para processar os pagamentos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup 
-              value={paymentGateway} 
-              onValueChange={handleSaveGateway}
-              className="space-y-3"
-            >
-              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                <RadioGroupItem value="mercado_pago" id="mercado_pago" />
-                <Label htmlFor="mercado_pago" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Mercado Pago</div>
-                  <div className="text-sm text-muted-foreground">PIX e Cartão de Crédito via Mercado Pago</div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                <RadioGroupItem value="infinitepay" id="infinitepay" />
-                <Label htmlFor="infinitepay" className="flex-1 cursor-pointer">
-                  <div className="font-medium">InfinitePay</div>
-                  <div className="text-sm text-muted-foreground">PIX e Cartão de Crédito via InfinitePay (CloudWalk)</div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
         {/* Mercado Pago Config */}
         {paymentGateway === 'mercado_pago' && (
           <Card>
