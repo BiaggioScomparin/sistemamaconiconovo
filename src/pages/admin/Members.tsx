@@ -284,6 +284,7 @@ export default function AdminMembers() {
     initiation_date: profile.initiation_date || undefined,
     mother_name: profile.mother_name || undefined,
     spouse_name: profile.spouse_name || undefined,
+    cell_phone: (profile as any).cell_phone || undefined,
     cim_number: profile.cim_number || undefined,
     degree: (profile as any).degree || 'Aprendiz',
     cargo: (profile as any).cargo || undefined,
