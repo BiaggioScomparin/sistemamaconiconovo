@@ -277,7 +277,7 @@ export default function Payments() {
                       <span>{format(parseISO(payment.paid_at), "dd/MM/yyyy 'às' HH:mm")}</span>
                     </div>
                   )}
-                  {payment.status !== 'paid' && (
+                  {payment.status !== 'paid' && paymentGateway !== 'manual' && (
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       {payment.pix_qr_code ? (
                         <Button 
@@ -325,6 +325,13 @@ export default function Payments() {
                           <span className="text-xs">R$ {getCardAmount(payment).toFixed(2).replace('.', ',')}</span>
                         </div>
                       </Button>
+                    </div>
+                  )}
+                  {payment.status !== 'paid' && paymentGateway === 'manual' && (
+                    <div className="mt-3 p-3 bg-muted rounded-lg text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Pagamento confirmado manualmente pela administração.
+                      </p>
                     </div>
                   )}
                 </CardContent>
