@@ -303,15 +303,16 @@ async function processEventRule(
   supabase: any, supabaseUrl: string, anonKey: string,
   rule: any, today: Date, todayStr: string, results: any[]
 ) {
-  const { data: members } = await supabase
+  const { data: rawMembers } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, lodge_id")
+    .select("id, full_name, phone, cell_phone, lodge_id")
     .eq("lodge_id", rule.lodge_id)
     .eq("status", "membro")
-    .eq("member_status", "active")
-    .not("phone", "is", null);
+    .eq("member_status", "active");
 
-  if (!members || members.length === 0) return;
+  const members = (rawMembers || [])
+    .map((m: any) => ({ ...m, phone: m.phone || m.cell_phone }))
+    .filter((m: any) => m.phone && m.phone.trim() !== "");
 
   if (rule.category === "event_created") {
     // Events created today for this lodge
