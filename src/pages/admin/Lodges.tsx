@@ -134,6 +134,7 @@ export default function AdminLodges() {
           city: formData.city,
           state: formData.state,
           default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
+          payment_gateway: formData.payment_gateway,
         };
 
         const newLodge = await createLodge.mutateAsync(dataToSave);
