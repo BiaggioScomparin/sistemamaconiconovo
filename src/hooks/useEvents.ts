@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { triggerNotifications } from '@/lib/triggerNotifications';
 
 export interface Event {
   id: string;
@@ -67,8 +66,6 @@ export function useCreateEvent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      // Dispara notificações automaticamente ao criar evento
-      triggerNotifications();
     },
   });
 }
