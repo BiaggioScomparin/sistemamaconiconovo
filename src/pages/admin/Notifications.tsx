@@ -53,6 +53,7 @@ export default function AdminNotifications() {
   const [wpToken, setWpToken] = useState('');
   const [wpBaseUrl, setWpBaseUrl] = useState('https://api.z-api.io');
   const [wpActive, setWpActive] = useState(true);
+  const [wpApiFormat, setWpApiFormat] = useState('wattend');
   const [showToken, setShowToken] = useState(false);
 
   // Dialog state for adding rule
@@ -77,11 +78,13 @@ export default function AdminNotifications() {
       setWpToken(whatsappInstance.token);
       setWpBaseUrl(whatsappInstance.base_url);
       setWpActive(whatsappInstance.is_active);
+      setWpApiFormat((whatsappInstance as any).api_format || 'wattend');
     } else {
       setWpInstanceId('');
       setWpToken('');
-      setWpBaseUrl('https://api.z-api.io');
+      setWpBaseUrl('https://api.wattend.io');
       setWpActive(true);
+      setWpApiFormat('wattend');
     }
   }, [whatsappInstance]);
 
@@ -97,6 +100,7 @@ export default function AdminNotifications() {
         token: wpToken,
         base_url: wpBaseUrl,
         is_active: wpActive,
+        api_format: wpApiFormat,
       });
       toast.success('Configuração WhatsApp salva!');
     } catch (err: any) {
@@ -208,10 +212,10 @@ export default function AdminNotifications() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MessageSquare className="h-5 w-5" />
-                    Conexão WhatsApp (Z-API)
+                    Conexão WhatsApp
                   </CardTitle>
                   <CardDescription>
-                    Configure a instância Z-API para envio de mensagens WhatsApp desta loja
+                    Configure a instância para envio de mensagens WhatsApp desta loja
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -224,8 +228,21 @@ export default function AdminNotifications() {
                   </div>
                   
                   <div className="space-y-2">
+                    <Label>Provedor da API</Label>
+                    <Select value={wpApiFormat} onValueChange={setWpApiFormat}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o provedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="wattend">Wattend</SelectItem>
+                        <SelectItem value="z-api">Z-API</SelectItem>
+                        <SelectItem value="z-pro">Z-Pro / CloudZAPI</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>URL Base da API</Label>
-                    <Input value={wpBaseUrl} onChange={(e) => setWpBaseUrl(e.target.value)} placeholder="https://api.z-api.io" />
+                    <Input value={wpBaseUrl} onChange={(e) => setWpBaseUrl(e.target.value)} placeholder="https://api.wattend.io" />
                   </div>
                   <div className="space-y-2">
                     <Label>Instance ID</Label>
