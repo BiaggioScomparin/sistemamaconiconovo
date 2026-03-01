@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerNotifications } from '@/lib/triggerNotifications';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -191,6 +192,8 @@ export default function Financeiro() {
       queryClient.invalidateQueries({ queryKey: ['lodge-financial-report'] });
       toast.success('Mensalidades geradas com sucesso!');
       setShowGenerateDialog(false);
+      // Dispara notificações automaticamente
+      triggerNotifications();
     },
     onError: (error: any) => {
       console.error('Error generating payments:', error);
