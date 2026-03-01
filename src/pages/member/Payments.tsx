@@ -61,14 +61,14 @@ export default function Payments() {
     }
   }, [profile]);
 
-  // Fetch credit card fee and payment gateway from settings
+  // Fetch credit card fee from settings
   const { data: settings } = useQuery({
     queryKey: ['app-settings-public'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('app_settings')
         .select('key, value')
-        .in('key', ['credit_card_fee_percent', 'payment_gateway']);
+        .eq('key', 'credit_card_fee_percent');
 
       if (error) {
         console.error('Error fetching settings:', error);
