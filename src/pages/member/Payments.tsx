@@ -327,6 +327,13 @@ export default function Payments() {
                       </Button>
                     </div>
                   )}
+                  {payment.status !== 'paid' && paymentGateway === 'manual' && (
+                    <div className="mt-3 p-3 bg-muted rounded-lg text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Pagamento confirmado manualmente pela administração.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
