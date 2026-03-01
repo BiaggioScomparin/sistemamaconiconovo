@@ -103,14 +103,18 @@ async function processPaymentRule(
   supabase: any, supabaseUrl: string, anonKey: string,
   rule: any, today: Date, todayStr: string, results: any[]
 ) {
-  // Get members from this lodge with phone numbers
-  const { data: members } = await supabase
+  // Get members from this lodge with phone numbers (phone or cell_phone)
+  const { data: rawMembers } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, lodge_id")
+    .select("id, full_name, phone, cell_phone, lodge_id")
     .eq("lodge_id", rule.lodge_id)
     .eq("status", "membro")
-    .eq("member_status", "active")
-    .not("phone", "is", null);
+    .eq("member_status", "active");
+
+  // Use cell_phone as fallback when phone is empty
+  const members = (rawMembers || [])
+    .map((m: any) => ({ ...m, phone: m.phone || m.cell_phone }))
+    .filter((m: any) => m.phone && m.phone.trim() !== "");
 
   if (!members || members.length === 0) return;
 
