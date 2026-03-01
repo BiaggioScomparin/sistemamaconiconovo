@@ -100,6 +100,7 @@ export default function AdminNotifications() {
         token: wpToken,
         base_url: wpBaseUrl,
         is_active: wpActive,
+        api_format: wpApiFormat,
       });
       toast.success('Configuração WhatsApp salva!');
     } catch (err: any) {
