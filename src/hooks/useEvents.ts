@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { triggerNotifications } from '@/lib/triggerNotifications';
 
 export interface Event {
   id: string;
