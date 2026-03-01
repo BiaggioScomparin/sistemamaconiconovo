@@ -107,7 +107,7 @@ export function useWhatsAppInstance(lodgeId?: string) {
 export function useUpsertWhatsAppInstance() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (instance: { lodge_id: string; instance_id: string; token: string; base_url: string; is_active: boolean }) => {
+    mutationFn: async (instance: { lodge_id: string; instance_id: string; token: string; base_url: string; is_active: boolean; api_format?: string }) => {
       // Check if exists
       const { data: existing } = await supabase
         .from('whatsapp_instances')
