@@ -7,11 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Building2, Upload, Image } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Lodge } from '@/lib/supabase-types';
 
 export default function AdminLodges() {
@@ -24,7 +26,7 @@ export default function AdminLodges() {
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLodge, setEditingLodge] = useState<Lodge | null>(null);
-  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '' });
+  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago' });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -51,12 +53,13 @@ export default function AdminLodges() {
         city: lodge.city || '', 
         state: lodge.state || '',
         default_payment_amount: String((lodge as any).default_payment_amount || 200),
-        logo_url: logoUrl
+        logo_url: logoUrl,
+        payment_gateway: (lodge as any).payment_gateway || 'mercado_pago'
       });
       setLogoPreview(logoUrl || null);
     } else {
       setEditingLodge(null);
-      setFormData({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '' });
+      setFormData({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago' });
       setLogoPreview(null);
     }
     setLogoFile(null);
@@ -120,6 +123,7 @@ export default function AdminLodges() {
           state: formData.state,
           default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
           logo_url: logoUrl,
+          payment_gateway: formData.payment_gateway,
         };
 
         await updateLodge.mutateAsync({ id: editingLodge.id, ...dataToSave });
@@ -131,6 +135,7 @@ export default function AdminLodges() {
           city: formData.city,
           state: formData.state,
           default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
+          payment_gateway: formData.payment_gateway,
         };
 
         const newLodge = await createLodge.mutateAsync(dataToSave);
@@ -227,7 +232,26 @@ export default function AdminLodges() {
                     Este valor será usado ao gerar mensalidades automaticamente. Após vencimento, será acrescido R$50,00 de multa.
                   </p>
                 </div>
-                
+
+                {/* Payment Gateway Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="payment_gateway">Gateway de Pagamento</Label>
+                  <Select
+                    value={formData.payment_gateway}
+                    onValueChange={(value) => setFormData({ ...formData, payment_gateway: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o gateway" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mercado_pago">Mercado Pago</SelectItem>
+                      <SelectItem value="infinitepay">InfinitePay</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Gateway usado para processar pagamentos PIX e cartão desta loja.
+                  </p>
+                </div>
                 {/* Logo Upload */}
                 <div className="space-y-2">
                   <Label>Logo da Loja</Label>
@@ -312,6 +336,7 @@ export default function AdminLodges() {
                     <TableHead>Cidade</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Valor Mensalidade</TableHead>
+                    <TableHead>Gateway</TableHead>
                     <TableHead className="w-24">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -336,6 +361,11 @@ export default function AdminLodges() {
                       <TableCell>{lodge.state || '-'}</TableCell>
                       <TableCell>
                         R$ {Number((lodge as any).default_payment_amount || 200).toFixed(2).replace('.', ',')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {(lodge as any).payment_gateway === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

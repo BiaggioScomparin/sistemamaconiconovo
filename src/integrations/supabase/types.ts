@@ -283,6 +283,7 @@ export type Database = {
           logo_url: string | null
           name: string
           organization_id: string | null
+          payment_gateway: string
           state: string | null
           updated_at: string
         }
@@ -294,6 +295,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           organization_id?: string | null
+          payment_gateway?: string
           state?: string | null
           updated_at?: string
         }
@@ -305,6 +307,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           organization_id?: string | null
+          payment_gateway?: string
           state?: string | null
           updated_at?: string
         }

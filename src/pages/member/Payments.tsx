@@ -51,14 +51,24 @@ export default function Payments() {
   const [generatingCardCheckoutId, setGeneratingCardCheckoutId] = useState<string | null>(null);
   const [paymentGateway, setPaymentGateway] = useState('mercado_pago');
 
-  // Fetch credit card fee and payment gateway from settings
+  // Derive payment gateway from the member's lodge
+  useEffect(() => {
+    if (profile) {
+      const lodgeData = (profile as any)?.lodges || (profile as any)?.lodge;
+      if (lodgeData?.payment_gateway) {
+        setPaymentGateway(lodgeData.payment_gateway);
+      }
+    }
+  }, [profile]);
+
+  // Fetch credit card fee from settings
   const { data: settings } = useQuery({
     queryKey: ['app-settings-public'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('app_settings')
         .select('key, value')
-        .in('key', ['credit_card_fee_percent', 'payment_gateway']);
+        .eq('key', 'credit_card_fee_percent');
 
       if (error) {
         console.error('Error fetching settings:', error);
@@ -73,10 +83,6 @@ export default function Payments() {
       const feeSetting = settings.find(s => s.key === 'credit_card_fee_percent');
       if (feeSetting?.value) {
         setCreditCardFee(parseFloat(feeSetting.value));
-      }
-      const gatewaySetting = settings.find(s => s.key === 'payment_gateway');
-      if (gatewaySetting?.value) {
-        setPaymentGateway(gatewaySetting.value);
       }
     }
   }, [settings]);
