@@ -58,7 +58,7 @@ export default function AdminLodges() {
       setLogoPreview(logoUrl || null);
     } else {
       setEditingLodge(null);
-      setFormData({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '' });
+      setFormData({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago' });
       setLogoPreview(null);
     }
     setLogoFile(null);
