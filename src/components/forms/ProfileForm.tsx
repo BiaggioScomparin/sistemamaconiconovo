@@ -268,6 +268,17 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             <Label htmlFor="spouse_name">Nome da Esposa</Label>
             <Input {...register('spouse_name')} id="spouse_name" />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cell_phone">Celular</Label>
+            <Input 
+              {...register('cell_phone')} 
+              id="cell_phone" 
+              placeholder="5511999999999"
+              maxLength={20}
+            />
+            <p className="text-xs text-muted-foreground">Formato: 5511999999999 (usado para notificações WhatsApp)</p>
+          </div>
         </div>
       </div>
 
