@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const CATEGORY_LABELS: Record<string, { label: string; description: string; icon: any }> = {
@@ -63,6 +63,14 @@ export default function AdminNotifications() {
   const [newHoursBefore, setNewHoursBefore] = useState('');
   const [newRepeatDays, setNewRepeatDays] = useState('7');
   const [newTemplate, setNewTemplate] = useState('');
+
+  // Dialog state for editing rule
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<NotificationRule | null>(null);
+  const [editDaysOffset, setEditDaysOffset] = useState('');
+  const [editHoursBefore, setEditHoursBefore] = useState('');
+  const [editRepeatDays, setEditRepeatDays] = useState('');
+  const [editTemplate, setEditTemplate] = useState('');
 
   // Auto-select first lodge
   useEffect(() => {
@@ -148,6 +156,33 @@ export default function AdminNotifications() {
       toast.success('Regra excluída');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao excluir');
+    }
+  };
+
+  const handleOpenEdit = (rule: NotificationRule) => {
+    setEditingRule(rule);
+    setEditDaysOffset(String(rule.days_offset ?? ''));
+    setEditHoursBefore(String(rule.hours_before ?? ''));
+    setEditRepeatDays(String(rule.repeat_interval_days ?? ''));
+    setEditTemplate(rule.message_template || '');
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRule) return;
+    try {
+      await updateRule.mutateAsync({
+        id: editingRule.id,
+        days_offset: editingRule.category === 'payment_before_due' ? parseInt(editDaysOffset) || 0 : editingRule.days_offset,
+        hours_before: editingRule.category === 'event_same_day' ? (parseInt(editHoursBefore) || null) : editingRule.hours_before,
+        repeat_interval_days: editingRule.category === 'payment_overdue' ? (parseInt(editRepeatDays) || null) : editingRule.repeat_interval_days,
+        message_template: editTemplate || null,
+      });
+      toast.success('Regra atualizada!');
+      setEditDialogOpen(false);
+      setEditingRule(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar');
     }
   };
 
@@ -391,6 +426,9 @@ export default function AdminNotifications() {
                             <Badge variant={rule.is_enabled ? 'default' : 'secondary'}>
                               {rule.is_enabled ? 'Ativa' : 'Inativa'}
                             </Badge>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(rule)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -453,6 +491,64 @@ export default function AdminNotifications() {
             </TabsContent>
           </Tabs>
         )}
+
+        {/* Edit Rule Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar Regra de Notificação</DialogTitle>
+            </DialogHeader>
+            {editingRule && (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Tipo</Label>
+                  <p className="font-medium">{getCategoryInfo(editingRule.category).label}</p>
+                </div>
+
+                {editingRule.category === 'payment_before_due' && (
+                  <div className="space-y-2">
+                    <Label>Quantos dias antes do vencimento?</Label>
+                    <Input type="number" min="1" max="30" value={editDaysOffset} onChange={(e) => setEditDaysOffset(e.target.value)} />
+                  </div>
+                )}
+
+                {editingRule.category === 'payment_overdue' && (
+                  <div className="space-y-2">
+                    <Label>Repetir a cada quantos dias?</Label>
+                    <Input type="number" min="1" max="30" value={editRepeatDays} onChange={(e) => setEditRepeatDays(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">O membro será notificado novamente a cada X dias enquanto a mensalidade estiver vencida.</p>
+                  </div>
+                )}
+
+                {editingRule.category === 'event_same_day' && (
+                  <div className="space-y-2">
+                    <Label>Quantas horas antes do evento?</Label>
+                    <Input type="number" min="1" max="24" value={editHoursBefore} onChange={(e) => setEditHoursBefore(e.target.value)} placeholder="Ex: 2" />
+                    <p className="text-xs text-muted-foreground">Deixe vazio para notificar no início do dia.</p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Mensagem Personalizada (opcional)</Label>
+                  <Textarea
+                    value={editTemplate}
+                    onChange={(e) => setEditTemplate(e.target.value)}
+                    placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}"
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Variáveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}
+                  </p>
+                </div>
+
+                <Button onClick={handleSaveEdit} className="w-full" disabled={updateRule.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
