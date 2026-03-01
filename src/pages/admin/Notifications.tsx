@@ -211,10 +211,10 @@ export default function AdminNotifications() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MessageSquare className="h-5 w-5" />
-                    Conexão WhatsApp (Z-API)
+                    Conexão WhatsApp
                   </CardTitle>
                   <CardDescription>
-                    Configure a instância Z-API para envio de mensagens WhatsApp desta loja
+                    Configure a instância para envio de mensagens WhatsApp desta loja
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
