@@ -59,7 +59,11 @@ Deno.serve(async (req) => {
 
     const cleanPhone = phone.replace(/\D/g, "");
     const apiFormat = instance.api_format || "z-pro";
-    const baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
+    let baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
+    // Ensure base_url has protocol
+    if (baseUrl && !baseUrl.startsWith("http")) {
+      baseUrl = `https://${baseUrl}`;
+    }
 
     let apiUrl: string;
     let fetchHeaders: Record<string, string>;
