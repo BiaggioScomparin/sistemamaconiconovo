@@ -27,6 +27,7 @@ import AdminLibrary from "./pages/admin/Library";
 import AdminMinutes from "./pages/admin/Minutes";
 import AdminInvites from "./pages/admin/Invites";
 import AdminNotifications from "./pages/admin/Notifications";
+import AdminReports from "./pages/admin/Reports";
 import MemberInicial from "./pages/member/Inicial";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
