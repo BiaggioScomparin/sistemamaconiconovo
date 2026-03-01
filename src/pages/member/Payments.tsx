@@ -84,10 +84,6 @@ export default function Payments() {
       if (feeSetting?.value) {
         setCreditCardFee(parseFloat(feeSetting.value));
       }
-      const gatewaySetting = settings.find(s => s.key === 'payment_gateway');
-      if (gatewaySetting?.value) {
-        setPaymentGateway(gatewaySetting.value);
-      }
     }
   }, [settings]);
 

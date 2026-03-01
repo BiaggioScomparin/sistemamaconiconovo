@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Building2, Upload, Image } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Lodge } from '@/lib/supabase-types';
 
 export default function AdminLodges() {
