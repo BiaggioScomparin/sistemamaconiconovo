@@ -426,6 +426,9 @@ export default function AdminNotifications() {
                             <Badge variant={rule.is_enabled ? 'default' : 'secondary'}>
                               {rule.is_enabled ? 'Ativa' : 'Inativa'}
                             </Badge>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(rule)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
