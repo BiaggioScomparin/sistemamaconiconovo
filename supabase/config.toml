@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.create-card-checkout]
 verify_jwt = false
+
+[functions.process-notifications]
+verify_jwt = false
