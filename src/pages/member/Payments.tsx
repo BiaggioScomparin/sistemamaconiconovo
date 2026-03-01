@@ -277,7 +277,7 @@ export default function Payments() {
                       <span>{format(parseISO(payment.paid_at), "dd/MM/yyyy 'às' HH:mm")}</span>
                     </div>
                   )}
-                  {payment.status !== 'paid' && (
+                  {payment.status !== 'paid' && paymentGateway !== 'manual' && (
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       {payment.pix_qr_code ? (
                         <Button 

@@ -365,7 +365,7 @@ export default function AdminLodges() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {(lodge as any).payment_gateway === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'}
+                          {(lodge as any).payment_gateway === 'infinitepay' ? 'InfinitePay' : (lodge as any).payment_gateway === 'manual' ? 'Manual' : 'Mercado Pago'}
                         </Badge>
                       </TableCell>
                       <TableCell>
