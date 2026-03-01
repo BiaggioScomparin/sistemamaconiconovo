@@ -191,6 +191,8 @@ export default function Financeiro() {
       queryClient.invalidateQueries({ queryKey: ['lodge-financial-report'] });
       toast.success('Mensalidades geradas com sucesso!');
       setShowGenerateDialog(false);
+      // Dispara notificações automaticamente
+      triggerNotifications();
     },
     onError: (error: any) => {
       console.error('Error generating payments:', error);
