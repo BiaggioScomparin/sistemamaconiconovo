@@ -55,6 +55,8 @@ export function useUpdateLodge() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lodges'] });
       queryClient.invalidateQueries({ queryKey: ['lodge-financial-report'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['lodges-for-payments'] });
     },
   });
 }
