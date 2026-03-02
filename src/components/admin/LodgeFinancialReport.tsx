@@ -73,6 +73,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
           city: lodge.city,
           state: lodge.state,
           default_payment_amount: Number(lodge.default_payment_amount) || 200,
+          payment_gateway: lodge.payment_gateway || 'mercado_pago',
           paid_count: paid.length,
           pending_count: pending.length,
           overdue_count: overdue.length,
