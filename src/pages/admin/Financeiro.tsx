@@ -53,6 +53,7 @@ interface PaymentWithProfile {
   profiles: {
     full_name: string;
     cim_number: string | null;
+    lodge_id: string | null;
     lodges: {
       name: string;
     } | null;
