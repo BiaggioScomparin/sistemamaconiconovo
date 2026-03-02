@@ -375,7 +375,7 @@ export default function AdminNotifications() {
                             <Textarea
                               value={newTemplate}
                               onChange={(e) => setNewTemplate(e.target.value)}
-                              placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}"
+                              placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}, {{aniversariante}}, {{anos}}"
                               rows={4}
                             />
                             <p className="text-xs text-muted-foreground">
