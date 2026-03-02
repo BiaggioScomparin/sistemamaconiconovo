@@ -220,6 +220,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
               <TableRow className="bg-muted/50 font-bold">
                 <TableCell>Total Geral</TableCell>
                 <TableCell>-</TableCell>
+                <TableCell>-</TableCell>
                 <TableCell className="text-center">
                   <Badge className="bg-green-500">{totals?.paid_count}</Badge>
                 </TableCell>
