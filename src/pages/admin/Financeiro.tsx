@@ -368,7 +368,7 @@ export default function Financeiro() {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-5">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -378,6 +378,19 @@ export default function Financeiro() {
                   className="pl-10"
                 />
               </div>
+              <Select value={lodgeFilter} onValueChange={setLodgeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Loja" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Lojas</SelectItem>
+                  {lodges?.map((lodge) => (
+                    <SelectItem key={lodge.id} value={lodge.id}>
+                      {lodge.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
