@@ -189,6 +189,11 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {lodge.payment_gateway === 'infinitepay' ? 'InfinitePay' : lodge.payment_gateway === 'manual' ? 'Manual' : 'Mercado Pago'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <Badge variant="outline">{formatCurrency(lodge.default_payment_amount)}</Badge>
                   </TableCell>
                   <TableCell className="text-center">
