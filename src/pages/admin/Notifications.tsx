@@ -379,7 +379,7 @@ export default function AdminNotifications() {
                               rows={4}
                             />
                             <p className="text-xs text-muted-foreground">
-                              Variáveis disponíveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}
+                              Variáveis disponíveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}, {'{{aniversariante}}'}, {'{{anos}}'}
                             </p>
                           </div>
 
