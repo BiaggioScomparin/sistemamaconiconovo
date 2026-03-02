@@ -281,8 +281,7 @@ export default function Financeiro() {
     const actualStatus = now > due && payment.status === 'pending' ? 'overdue' : payment.status;
     const matchesStatus = statusFilter === 'all' || actualStatus === statusFilter;
 
-    const matchesLodge = lodgeFilter === 'all' || 
-      (payment.profiles.lodges?.name && lodges?.find(l => l.id === lodgeFilter)?.name === payment.profiles.lodges.name);
+    const matchesLodge = lodgeFilter === 'all' || payment.profiles.lodge_id === lodgeFilter;
 
     return matchesSearch && matchesStatus && matchesLodge;
   });
