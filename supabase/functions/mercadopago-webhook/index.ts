@@ -29,7 +29,6 @@ Deno.serve(async (req) => {
     console.log('Webhook received:', JSON.stringify(body))
 
     // Mercado Pago sends different types of notifications
-    // We're interested in payment notifications
     if (body.type === 'payment' || body.action === 'payment.updated' || body.action === 'payment.created') {
       const paymentId = body.data?.id
 
@@ -40,7 +39,6 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Fetch payment details from Mercado Pago
       if (mercadoPagoToken) {
         const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
           headers: {
@@ -50,41 +48,85 @@ Deno.serve(async (req) => {
 
         if (mpResponse.ok) {
           const paymentData = await mpResponse.json()
-          console.log('Payment data from MP:', JSON.stringify(paymentData))
+          console.log('Payment data from MP:', JSON.stringify({
+            id: paymentData.id,
+            status: paymentData.status,
+            external_reference: paymentData.external_reference,
+            payment_method_id: paymentData.payment_method_id,
+            transaction_amount: paymentData.transaction_amount,
+          }))
 
-          // Check if payment is approved
           if (paymentData.status === 'approved') {
             const transactionId = paymentData.id?.toString()
+            const externalReference = paymentData.external_reference
+            const paymentMethodId = paymentData.payment_method_id
+            const isCard = paymentMethodId && !['pix'].includes(paymentMethodId)
 
-            // Find and update the payment in our database
-            const { data: existingPayment, error: findError } = await supabaseClient
+            let found = false
+
+            // Strategy 1: Find by pix_transaction_id
+            const { data: byTransactionId, error: err1 } = await supabaseClient
               .from('monthly_payments')
-              .select('id')
+              .select('id, status')
               .eq('pix_transaction_id', transactionId)
-              .single()
+              .maybeSingle()
 
-            if (existingPayment && !findError) {
+            if (byTransactionId && !err1 && byTransactionId.status !== 'paid') {
               const { error: updateError } = await supabaseClient
                 .from('monthly_payments')
                 .update({
                   status: 'paid',
                   paid_at: new Date().toISOString(),
-                  payment_method: 'pix',
+                  payment_method: isCard ? 'card' : 'pix',
                 })
-                .eq('id', existingPayment.id)
+                .eq('id', byTransactionId.id)
 
               if (updateError) {
-                console.error('Error updating payment:', updateError)
+                console.error('Error updating payment by transaction_id:', updateError)
               } else {
-                console.log('Payment confirmed successfully:', existingPayment.id)
+                console.log('Payment confirmed by transaction_id:', byTransactionId.id)
+                found = true
               }
-            } else {
-              console.log('Payment not found with transaction ID:', transactionId)
+            }
+
+            // Strategy 2: Find by external_reference (payment_id sent during checkout)
+            if (!found && externalReference) {
+              const { data: byExtRef, error: err2 } = await supabaseClient
+                .from('monthly_payments')
+                .select('id, status')
+                .eq('id', externalReference)
+                .maybeSingle()
+
+              if (byExtRef && !err2 && byExtRef.status !== 'paid') {
+                const { error: updateError } = await supabaseClient
+                  .from('monthly_payments')
+                  .update({
+                    status: 'paid',
+                    paid_at: new Date().toISOString(),
+                    payment_method: isCard ? 'card' : 'pix',
+                    pix_transaction_id: transactionId,
+                  })
+                  .eq('id', byExtRef.id)
+
+                if (updateError) {
+                  console.error('Error updating payment by external_reference:', updateError)
+                } else {
+                  console.log('Payment confirmed by external_reference:', byExtRef.id)
+                  found = true
+                }
+              }
+            }
+
+            if (!found) {
+              console.log('Payment not found. transaction_id:', transactionId, 'external_reference:', externalReference)
             }
           }
         } else {
-          console.error('Error fetching payment from MP:', await mpResponse.text())
+          const errText = await mpResponse.text()
+          console.error('Error fetching payment from MP:', mpResponse.status, errText)
         }
+      } else {
+        console.error('Mercado Pago token not configured in app_settings')
       }
     }
 
@@ -94,7 +136,6 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Webhook error:', error)
-    // Always return 200 to Mercado Pago to avoid retries
     return new Response(JSON.stringify({ received: true, error: 'Internal error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
