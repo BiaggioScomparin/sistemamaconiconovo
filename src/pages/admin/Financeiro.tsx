@@ -137,7 +137,7 @@ export default function Financeiro() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lodges')
-        .select('id, name, default_payment_amount')
+        .select('id, name, default_payment_amount, payment_gateway')
         .order('name');
 
       if (error) throw error;
@@ -533,7 +533,7 @@ export default function Financeiro() {
                   <SelectItem value="all">Todas as Lojas</SelectItem>
                   {lodges?.map((lodge) => (
                     <SelectItem key={lodge.id} value={lodge.id}>
-                      {lodge.name} (R$ {Number(lodge.default_payment_amount || 200).toFixed(2).replace('.', ',')})
+                      {lodge.name} (R$ {Number(lodge.default_payment_amount || 200).toFixed(2).replace('.', ',')} - {lodge.payment_gateway === 'infinitepay' ? 'InfinitePay' : lodge.payment_gateway === 'manual' ? 'Manual' : 'Mercado Pago'})
                     </SelectItem>
                   ))}
                 </SelectContent>

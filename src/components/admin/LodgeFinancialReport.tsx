@@ -12,6 +12,7 @@ interface LodgeReportData {
   city: string | null;
   state: string | null;
   default_payment_amount: number;
+  payment_gateway: string;
   paid_count: number;
   pending_count: number;
   overdue_count: number;
@@ -32,7 +33,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
       // Fetch lodges with their default payment amounts
       const { data: lodges, error: lodgesError } = await supabase
         .from('lodges')
-        .select('id, name, city, state, default_payment_amount')
+        .select('id, name, city, state, default_payment_amount, payment_gateway')
         .order('name');
 
       if (lodgesError) throw lodgesError;
@@ -72,6 +73,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
           city: lodge.city,
           state: lodge.state,
           default_payment_amount: Number(lodge.default_payment_amount) || 200,
+          payment_gateway: lodge.payment_gateway || 'mercado_pago',
           paid_count: paid.length,
           pending_count: pending.length,
           overdue_count: overdue.length,
@@ -94,6 +96,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
           city: null,
           state: null,
           default_payment_amount: 200,
+          payment_gateway: 'manual',
           paid_count: paid.length,
           pending_count: pending.length,
           overdue_count: overdue.length,
@@ -147,6 +150,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Loja</TableHead>
+                <TableHead>Gateway</TableHead>
                 <TableHead>Valor Padrão</TableHead>
                 <TableHead className="text-center">
                   <div className="flex items-center justify-center gap-1">
@@ -185,6 +189,11 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {lodge.payment_gateway === 'infinitepay' ? 'InfinitePay' : lodge.payment_gateway === 'manual' ? 'Manual' : 'Mercado Pago'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <Badge variant="outline">{formatCurrency(lodge.default_payment_amount)}</Badge>
                   </TableCell>
                   <TableCell className="text-center">
@@ -210,6 +219,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
               {/* Totals Row */}
               <TableRow className="bg-muted/50 font-bold">
                 <TableCell>Total Geral</TableCell>
+                <TableCell>-</TableCell>
                 <TableCell>-</TableCell>
                 <TableCell className="text-center">
                   <Badge className="bg-green-500">{totals?.paid_count}</Badge>
