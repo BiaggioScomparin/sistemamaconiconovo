@@ -53,6 +53,7 @@ interface PaymentWithProfile {
   profiles: {
     full_name: string;
     cim_number: string | null;
+    lodge_id: string | null;
     lodges: {
       name: string;
     } | null;
@@ -84,6 +85,7 @@ export default function Financeiro() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
+  const [lodgeFilter, setLodgeFilter] = useState<string>('all');
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [generateMonth, setGenerateMonth] = useState((new Date().getMonth() + 1).toString());
   const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
@@ -100,7 +102,7 @@ export default function Financeiro() {
         .from('monthly_payments')
         .select(`
           *,
-          profiles!inner(full_name, cim_number, lodges(name))
+          profiles!inner(full_name, cim_number, lodge_id, lodges(name))
         `)
         .order('reference_year', { ascending: false })
         .order('reference_month', { ascending: false });
@@ -279,7 +281,9 @@ export default function Financeiro() {
     const actualStatus = now > due && payment.status === 'pending' ? 'overdue' : payment.status;
     const matchesStatus = statusFilter === 'all' || actualStatus === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesLodge = lodgeFilter === 'all' || payment.profiles.lodge_id === lodgeFilter;
+
+    return matchesSearch && matchesStatus && matchesLodge;
   });
 
   const stats = {
@@ -367,7 +371,7 @@ export default function Financeiro() {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-5">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -377,6 +381,19 @@ export default function Financeiro() {
                   className="pl-10"
                 />
               </div>
+              <Select value={lodgeFilter} onValueChange={setLodgeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Loja" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Lojas</SelectItem>
+                  {lodges?.map((lodge) => (
+                    <SelectItem key={lodge.id} value={lodge.id}>
+                      {lodge.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
