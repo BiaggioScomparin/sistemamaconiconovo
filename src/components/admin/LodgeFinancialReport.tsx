@@ -12,6 +12,7 @@ interface LodgeReportData {
   city: string | null;
   state: string | null;
   default_payment_amount: number;
+  payment_gateway: string;
   paid_count: number;
   pending_count: number;
   overdue_count: number;
