@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
+import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const CATEGORY_LABELS: Record<string, { label: string; description: string; icon: any }> = {
@@ -35,6 +35,8 @@ const CATEGORY_LABELS: Record<string, { label: string; description: string; icon
   event_created: { label: 'Evento Criado', description: 'Quando um novo evento for criado para a loja', icon: CalendarDays },
   event_before_day: { label: 'Véspera do Evento', description: 'Um dia antes do evento', icon: CalendarDays },
   event_same_day: { label: 'Dia do Evento', description: 'No dia do evento (configurar horário)', icon: Bell },
+  birthday: { label: 'Aniversário Natalício', description: 'Notifica todos os membros no dia do aniversário de um irmão', icon: Cake },
+  initiation_anniversary: { label: 'Aniversário de Ordem', description: 'Notifica todos os membros no dia do aniversário de iniciação de um irmão', icon: Award },
 };
 
 export default function AdminNotifications() {
@@ -373,11 +375,11 @@ export default function AdminNotifications() {
                             <Textarea
                               value={newTemplate}
                               onChange={(e) => setNewTemplate(e.target.value)}
-                              placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}"
+                              placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}, {{aniversariante}}, {{anos}}"
                               rows={4}
                             />
                             <p className="text-xs text-muted-foreground">
-                              Variáveis disponíveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}
+                              Variáveis disponíveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}, {'{{aniversariante}}'}, {'{{anos}}'}
                             </p>
                           </div>
 
