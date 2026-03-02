@@ -96,6 +96,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
           city: null,
           state: null,
           default_payment_amount: 200,
+          payment_gateway: 'manual',
           paid_count: paid.length,
           pending_count: pending.length,
           overdue_count: overdue.length,
