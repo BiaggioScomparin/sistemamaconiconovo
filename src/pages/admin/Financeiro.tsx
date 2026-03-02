@@ -137,7 +137,7 @@ export default function Financeiro() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lodges')
-        .select('id, name, default_payment_amount')
+        .select('id, name, default_payment_amount, payment_gateway')
         .order('name');
 
       if (error) throw error;
