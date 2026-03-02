@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
           await processPaymentRule(supabase, supabaseUrl, anonKey, rule, today, todayStr, results);
         } else if (rule.category.startsWith("event_")) {
           await processEventRule(supabase, supabaseUrl, anonKey, rule, today, todayStr, results);
+        } else if (rule.category === "birthday" || rule.category === "initiation_anniversary") {
+          await processAnniversaryRule(supabase, supabaseUrl, anonKey, rule, today, todayStr, results);
         }
       } catch (err) {
         console.error(`Error processing rule ${rule.id}:`, err);
