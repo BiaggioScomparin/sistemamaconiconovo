@@ -102,7 +102,7 @@ export default function Financeiro() {
         .from('monthly_payments')
         .select(`
           *,
-          profiles!inner(full_name, cim_number, lodges(name))
+          profiles!inner(full_name, cim_number, lodge_id, lodges(name))
         `)
         .order('reference_year', { ascending: false })
         .order('reference_month', { ascending: false });
