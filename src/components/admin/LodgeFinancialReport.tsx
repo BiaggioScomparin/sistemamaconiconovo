@@ -33,7 +33,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
       // Fetch lodges with their default payment amounts
       const { data: lodges, error: lodgesError } = await supabase
         .from('lodges')
-        .select('id, name, city, state, default_payment_amount')
+        .select('id, name, city, state, default_payment_amount, payment_gateway')
         .order('name');
 
       if (lodgesError) throw lodgesError;
