@@ -471,3 +471,77 @@ function formatDate(dateStr: string): string {
   const [y, m, d] = dateStr.split("-");
   return `${d}/${m}/${y}`;
 }
+
+async function processAnniversaryRule(
+  supabase: any, supabaseUrl: string, anonKey: string,
+  rule: any, today: Date, todayStr: string, results: any[]
+) {
+  const todayMonth = today.getMonth() + 1; // 1-12
+  const todayDay = today.getDate();
+
+  // Get all active members of this lodge
+  const { data: rawMembers } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone, cell_phone, lodge_id, birth_date, initiation_date")
+    .eq("lodge_id", rule.lodge_id)
+    .eq("status", "membro")
+    .eq("member_status", "active");
+
+  const members = (rawMembers || [])
+    .map((m: any) => ({ ...m, phone: m.phone || m.cell_phone }));
+
+  const membersWithPhone = members.filter((m: any) => m.phone && m.phone.trim() !== "");
+
+  if (!members || members.length === 0) return;
+
+  // Determine which field to check
+  const dateField = rule.category === "birthday" ? "birth_date" : "initiation_date";
+
+  // Find members whose anniversary is today
+  const birthdayMembers = members.filter((m: any) => {
+    if (!m[dateField]) return false;
+    const [y, mo, d] = m[dateField].split("-").map(Number);
+    return mo === todayMonth && d === todayDay;
+  });
+
+  if (birthdayMembers.length === 0) return;
+
+  // For each birthday member, notify all other members with phone
+  for (const bdMember of birthdayMembers) {
+    const bdDate = new Date(bdMember[dateField] + "T12:00:00");
+    const years = today.getFullYear() - bdDate.getFullYear();
+    const label = rule.category === "birthday" ? "aniversário natalício" : "aniversário de ordem";
+
+    for (const recipient of membersWithPhone) {
+      const alreadySent = await checkAlreadySent(supabase, rule.id, `${rule.category}_${bdMember.id}`, todayStr, recipient.id);
+      if (alreadySent) continue;
+
+      let msg: string;
+      if (rule.message_template) {
+        msg = replacePlaceholders(rule.message_template, {
+          nome: recipient.full_name,
+          aniversariante: bdMember.full_name,
+          anos: String(years),
+          data: formatDate(todayStr),
+        });
+      } else {
+        if (rule.category === "birthday") {
+          msg = `Olá ${recipient.full_name}! 🎂\n\nHoje é o aniversário natalício do Ir∴ *${bdMember.full_name}*, completando ${years} anos!\n\nNão esqueça de parabenizá-lo! 🎉`;
+        } else {
+          msg = `Olá ${recipient.full_name}! ⭐\n\nHoje é o aniversário de ordem do Ir∴ *${bdMember.full_name}*, completando ${years} anos de iniciação maçônica!\n\nFraternais saudações! 🏛️`;
+        }
+      }
+
+      await sendWhatsApp(supabaseUrl, anonKey, {
+        lodge_id: rule.lodge_id,
+        phone: recipient.phone,
+        message: msg,
+        rule_id: rule.id,
+        profile_id: recipient.id,
+        category: rule.category,
+        reference_id: `${rule.category}_${bdMember.id}`,
+      });
+      results.push({ sent: true, category: rule.category, member: recipient.full_name, celebrant: bdMember.full_name });
+    }
+  }
+}
