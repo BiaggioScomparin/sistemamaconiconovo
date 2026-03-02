@@ -533,7 +533,7 @@ export default function Financeiro() {
                   <SelectItem value="all">Todas as Lojas</SelectItem>
                   {lodges?.map((lodge) => (
                     <SelectItem key={lodge.id} value={lodge.id}>
-                      {lodge.name} (R$ {Number(lodge.default_payment_amount || 200).toFixed(2).replace('.', ',')})
+                      {lodge.name} (R$ {Number(lodge.default_payment_amount || 200).toFixed(2).replace('.', ',')} - {lodge.payment_gateway === 'infinitepay' ? 'InfinitePay' : lodge.payment_gateway === 'manual' ? 'Manual' : 'Mercado Pago'})
                     </SelectItem>
                   ))}
                 </SelectContent>
