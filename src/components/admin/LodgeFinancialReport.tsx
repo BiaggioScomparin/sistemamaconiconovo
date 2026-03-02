@@ -150,6 +150,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Loja</TableHead>
+                <TableHead>Gateway</TableHead>
                 <TableHead>Valor Padrão</TableHead>
                 <TableHead className="text-center">
                   <div className="flex items-center justify-center gap-1">
