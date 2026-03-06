@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award } from 'lucide-react';
+import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award, Copy } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const CATEGORY_LABELS: Record<string, { label: string; description: string; icon: any }> = {
@@ -65,6 +65,12 @@ export default function AdminNotifications() {
   const [newHoursBefore, setNewHoursBefore] = useState('');
   const [newRepeatDays, setNewRepeatDays] = useState('7');
   const [newTemplate, setNewTemplate] = useState('');
+
+  // Dialog state for cloning rules
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneSourceLodgeId, setCloneSourceLodgeId] = useState('');
+  const [cloneLoading, setCloneLoading] = useState(false);
+  const { data: sourceRulesForClone } = useNotificationRules(cloneSourceLodgeId || undefined);
 
   // Dialog state for editing rule
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -185,6 +191,40 @@ export default function AdminNotifications() {
       setEditingRule(null);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao atualizar');
+    }
+  };
+
+  const handleCloneRules = async () => {
+    if (!selectedLodgeId || !cloneSourceLodgeId || !sourceRulesForClone?.length) {
+      toast.error('Selecione uma loja de origem com regras');
+      return;
+    }
+    if (selectedLodgeId === cloneSourceLodgeId) {
+      toast.error('A loja de origem deve ser diferente da loja de destino');
+      return;
+    }
+    setCloneLoading(true);
+    try {
+      let created = 0;
+      for (const rule of sourceRulesForClone) {
+        await createRule.mutateAsync({
+          lodge_id: selectedLodgeId,
+          category: rule.category,
+          is_enabled: rule.is_enabled,
+          days_offset: rule.days_offset,
+          hours_before: rule.hours_before,
+          repeat_interval_days: rule.repeat_interval_days,
+          message_template: rule.message_template,
+        });
+        created++;
+      }
+      toast.success(`${created} regra(s) clonada(s) com sucesso!`);
+      setCloneDialogOpen(false);
+      setCloneSourceLodgeId('');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao clonar regras');
+    } finally {
+      setCloneLoading(false);
     }
   };
 
@@ -324,10 +364,66 @@ export default function AdminNotifications() {
                       </CardTitle>
                       <CardDescription>Defina quando e como os membros serão notificados</CardDescription>
                     </div>
-                    <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> Nova Regra</Button>
-                      </DialogTrigger>
+                    <div className="flex gap-2">
+                      <Dialog open={cloneDialogOpen} onOpenChange={setCloneDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline"><Copy className="h-4 w-4 mr-2" /> Clonar de Outra Loja</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Clonar Regras de Outra Loja</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Loja de Origem</Label>
+                              <Select value={cloneSourceLodgeId} onValueChange={setCloneSourceLodgeId}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione a loja de origem" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {lodges?.filter(l => l.id !== selectedLodgeId).map((lodge) => (
+                                    <SelectItem key={lodge.id} value={lodge.id}>{lodge.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {cloneSourceLodgeId && sourceRulesForClone && (
+                              <div className="space-y-2">
+                                <Label>Regras encontradas: {sourceRulesForClone.length}</Label>
+                                <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
+                                  {sourceRulesForClone.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">Nenhuma regra encontrada nesta loja.</p>
+                                  ) : (
+                                    sourceRulesForClone.map((r) => {
+                                      const info = getCategoryInfo(r.category);
+                                      return (
+                                        <div key={r.id} className="flex items-center gap-2 text-sm py-1">
+                                          <Badge variant={r.is_enabled ? 'default' : 'secondary'} className="text-xs">
+                                            {r.is_enabled ? 'Ativa' : 'Inativa'}
+                                          </Badge>
+                                          <span>{info.label}</span>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            <Button
+                              onClick={handleCloneRules}
+                              disabled={cloneLoading || !cloneSourceLodgeId || !sourceRulesForClone?.length}
+                              className="w-full"
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              {cloneLoading ? 'Clonando...' : `Clonar ${sourceRulesForClone?.length || 0} Regra(s)`}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" /> Nova Regra</Button>
+                        </DialogTrigger>
                       <DialogContent className="max-w-lg">
                         <DialogHeader>
                           <DialogTitle>Nova Regra de Notificação</DialogTitle>
@@ -389,6 +485,7 @@ export default function AdminNotifications() {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
