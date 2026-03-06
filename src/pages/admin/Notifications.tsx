@@ -364,10 +364,66 @@ export default function AdminNotifications() {
                       </CardTitle>
                       <CardDescription>Defina quando e como os membros serão notificados</CardDescription>
                     </div>
-                    <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> Nova Regra</Button>
-                      </DialogTrigger>
+                    <div className="flex gap-2">
+                      <Dialog open={cloneDialogOpen} onOpenChange={setCloneDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline"><Copy className="h-4 w-4 mr-2" /> Clonar de Outra Loja</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Clonar Regras de Outra Loja</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Loja de Origem</Label>
+                              <Select value={cloneSourceLodgeId} onValueChange={setCloneSourceLodgeId}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione a loja de origem" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {lodges?.filter(l => l.id !== selectedLodgeId).map((lodge) => (
+                                    <SelectItem key={lodge.id} value={lodge.id}>{lodge.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {cloneSourceLodgeId && sourceRulesForClone && (
+                              <div className="space-y-2">
+                                <Label>Regras encontradas: {sourceRulesForClone.length}</Label>
+                                <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
+                                  {sourceRulesForClone.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">Nenhuma regra encontrada nesta loja.</p>
+                                  ) : (
+                                    sourceRulesForClone.map((r) => {
+                                      const info = getCategoryInfo(r.category);
+                                      return (
+                                        <div key={r.id} className="flex items-center gap-2 text-sm py-1">
+                                          <Badge variant={r.is_enabled ? 'default' : 'secondary'} className="text-xs">
+                                            {r.is_enabled ? 'Ativa' : 'Inativa'}
+                                          </Badge>
+                                          <span>{info.label}</span>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            <Button
+                              onClick={handleCloneRules}
+                              disabled={cloneLoading || !cloneSourceLodgeId || !sourceRulesForClone?.length}
+                              className="w-full"
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              {cloneLoading ? 'Clonando...' : `Clonar ${sourceRulesForClone?.length || 0} Regra(s)`}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" /> Nova Regra</Button>
+                        </DialogTrigger>
                       <DialogContent className="max-w-lg">
                         <DialogHeader>
                           <DialogTitle>Nova Regra de Notificação</DialogTitle>
