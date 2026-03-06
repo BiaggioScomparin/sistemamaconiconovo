@@ -485,6 +485,7 @@ export default function AdminNotifications() {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
