@@ -66,6 +66,12 @@ export default function AdminNotifications() {
   const [newRepeatDays, setNewRepeatDays] = useState('7');
   const [newTemplate, setNewTemplate] = useState('');
 
+  // Dialog state for cloning rules
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneSourceLodgeId, setCloneSourceLodgeId] = useState('');
+  const [cloneLoading, setCloneLoading] = useState(false);
+  const { data: sourceRulesForClone } = useNotificationRules(cloneSourceLodgeId || undefined);
+
   // Dialog state for editing rule
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<NotificationRule | null>(null);
