@@ -194,6 +194,40 @@ export default function AdminNotifications() {
     }
   };
 
+  const handleCloneRules = async () => {
+    if (!selectedLodgeId || !cloneSourceLodgeId || !sourceRulesForClone?.length) {
+      toast.error('Selecione uma loja de origem com regras');
+      return;
+    }
+    if (selectedLodgeId === cloneSourceLodgeId) {
+      toast.error('A loja de origem deve ser diferente da loja de destino');
+      return;
+    }
+    setCloneLoading(true);
+    try {
+      let created = 0;
+      for (const rule of sourceRulesForClone) {
+        await createRule.mutateAsync({
+          lodge_id: selectedLodgeId,
+          category: rule.category,
+          is_enabled: rule.is_enabled,
+          days_offset: rule.days_offset,
+          hours_before: rule.hours_before,
+          repeat_interval_days: rule.repeat_interval_days,
+          message_template: rule.message_template,
+        });
+        created++;
+      }
+      toast.success(`${created} regra(s) clonada(s) com sucesso!`);
+      setCloneDialogOpen(false);
+      setCloneSourceLodgeId('');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao clonar regras');
+    } finally {
+      setCloneLoading(false);
+    }
+  };
+
   const getCategoryInfo = (cat: string) => CATEGORY_LABELS[cat] || { label: cat, description: '', icon: Bell };
 
   const getStatusBadge = (status: string) => {
