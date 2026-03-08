@@ -1,0 +1,1 @@
+UPDATE public.subscription_plans SET price_monthly = 199.33 WHERE name = 'Professional';
