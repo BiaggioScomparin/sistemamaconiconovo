@@ -43,8 +43,10 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+    // Use Brazil timezone to avoid UTC offset issues
+    const nowBrazil = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const today = nowBrazil;
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const results: any[] = [];
 
     // Get all enabled notification rules grouped by lodge
