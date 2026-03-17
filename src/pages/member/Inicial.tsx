@@ -108,12 +108,12 @@ export default function Inicial() {
   };
 
   const formatBirthday = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + "T12:00:00");
     return format(date, "dd 'de' MMMM", { locale: ptBR });
   };
 
   const formatOrderAnniversary = (initiationDate: string) => {
-    const initDate = new Date(initiationDate);
+    const initDate = new Date(initiationDate + "T12:00:00");
     const today = new Date();
     const years = today.getFullYear() - initDate.getFullYear();
     return {
