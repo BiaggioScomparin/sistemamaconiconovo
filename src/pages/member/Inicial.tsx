@@ -57,12 +57,12 @@ export default function Inicial() {
   const birthdaysThisMonth = lodgeMembers
     .filter(m => {
       if (!m.birth_date) return false;
-      const birthMonth = new Date(m.birth_date).getMonth() + 1;
+      const birthMonth = new Date(m.birth_date + "T12:00:00").getMonth() + 1;
       return birthMonth === currentMonth;
     })
     .sort((a, b) => {
-      const dayA = new Date(a.birth_date).getDate();
-      const dayB = new Date(b.birth_date).getDate();
+      const dayA = new Date(a.birth_date + "T12:00:00").getDate();
+      const dayB = new Date(b.birth_date + "T12:00:00").getDate();
       return dayA - dayB;
     });
 
@@ -70,12 +70,12 @@ export default function Inicial() {
   const orderAnniversariesThisMonth = lodgeMembers
     .filter(m => {
       if (!m.initiation_date) return false;
-      const initiationMonth = new Date(m.initiation_date).getMonth() + 1;
+      const initiationMonth = new Date(m.initiation_date + "T12:00:00").getMonth() + 1;
       return initiationMonth === currentMonth;
     })
     .sort((a, b) => {
-      const dayA = new Date(a.initiation_date!).getDate();
-      const dayB = new Date(b.initiation_date!).getDate();
+      const dayA = new Date(a.initiation_date! + "T12:00:00").getDate();
+      const dayB = new Date(b.initiation_date! + "T12:00:00").getDate();
       return dayA - dayB;
     });
 
