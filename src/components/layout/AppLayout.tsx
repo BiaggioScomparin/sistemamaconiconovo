@@ -48,6 +48,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Check if user can access invites (only Venerável Mestre)
   const canAccessInvites = profile?.lodge_position === 'veneravel_mestre';
 
+  // Check if user can access attendance management (Chanceler)
+  const canAccessAttendances = profile?.lodge_position && 
+    ['chanceler', 'Chanceler'].includes(profile.lodge_position);
+
   // Check if current route is an admin route
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
 
@@ -108,6 +112,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     // Invites visible only for Venerável Mestre
     if (canAccessInvites) {
       links.push({ href: '/admin/invites', label: 'Convites', icon: Mail });
+    }
+
+    // Attendance management visible for Chanceler
+    if (canAccessAttendances) {
+      links.push({ href: '/admin/attendances', label: 'Presenças', icon: ClipboardList });
     }
     
     return links;

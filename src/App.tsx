@@ -8,6 +8,7 @@ import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import { ProtectedMinutesRoute } from "@/components/auth/ProtectedMinutesRoute";
 import { ProtectedMemberRoute } from "@/components/auth/ProtectedMemberRoute";
 import { ProtectedInvitesRoute } from "@/components/auth/ProtectedInvitesRoute";
+import { ProtectedAttendanceRoute } from "@/components/auth/ProtectedAttendanceRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -61,7 +62,7 @@ const App = () => (
             <Route path="/admin/members" element={<ProtectedAdminRoute><AdminMembers /></ProtectedAdminRoute>} />
             <Route path="/admin/approvals" element={<ProtectedAdminRoute><AdminApprovals /></ProtectedAdminRoute>} />
             <Route path="/admin/proposals" element={<ProtectedAdminRoute><AdminProposals /></ProtectedAdminRoute>} />
-            <Route path="/admin/attendances" element={<ProtectedAdminRoute><AdminAttendances /></ProtectedAdminRoute>} />
+            <Route path="/admin/attendances" element={<ProtectedAttendanceRoute><AdminAttendances /></ProtectedAttendanceRoute>} />
             <Route path="/admin/permissions" element={<ProtectedAdminRoute><AdminPermissions /></ProtectedAdminRoute>} />
             <Route path="/admin/financeiro" element={<ProtectedAdminRoute><AdminFinanceiro /></ProtectedAdminRoute>} />
             <Route path="/admin/calendar" element={<ProtectedAdminRoute><AdminCalendar /></ProtectedAdminRoute>} />
