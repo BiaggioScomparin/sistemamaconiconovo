@@ -113,6 +113,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (canAccessInvites) {
       links.push({ href: '/admin/invites', label: 'Convites', icon: Mail });
     }
+
+    // Attendance management visible for Chanceler
+    if (canAccessAttendances) {
+      links.push({ href: '/admin/attendances', label: 'Presenças', icon: ClipboardList });
+    }
     
     return links;
   };
