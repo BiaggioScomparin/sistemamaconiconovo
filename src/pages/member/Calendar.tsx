@@ -41,7 +41,7 @@ export default function MemberCalendar() {
   const emptyDays = Array(startDayOfWeek).fill(null);
 
   const getEventsForDay = (date: Date) => {
-    return events?.filter((event) => isSameDay(new Date(event.event_date + 'T00:00:00'), date)) || [];
+    return events?.filter((event) => isSameDay(new Date(event.event_date + 'T12:00:00'), date)) || [];
   };
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
