@@ -58,7 +58,7 @@ export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSign
         returnBase64: true
       });
       
-      const sessionDate = format(new Date(minute.session_date), 'dd-MM-yyyy', { locale: ptBR });
+      const sessionDate = format(new Date(minute.session_date + 'T12:00:00'), 'dd-MM-yyyy', { locale: ptBR });
       const sessionType = minute.session_type === 'ordinaria' ? 'Ordinaria' : 'Magna';
       const fileName = `Ata_${sessionType}_${sessionDate}_N${minute.session_number || 'X'}_Assinada.pdf`;
 
@@ -128,7 +128,7 @@ export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSign
           </DialogTitle>
           <DialogDescription>
             Sessão {minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'} de{' '}
-            {format(new Date(minute.session_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            {format(new Date(minute.session_date + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </DialogDescription>
         </DialogHeader>
 

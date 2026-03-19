@@ -42,7 +42,7 @@ export function GoogleDriveBackupButton({ minute, onGeneratePdf }: GoogleDriveBa
     try {
       const pdfContent = await onGeneratePdf();
       
-      const sessionDate = format(new Date(minute.session_date), 'dd-MM-yyyy', { locale: ptBR });
+      const sessionDate = format(new Date(minute.session_date + 'T12:00:00'), 'dd-MM-yyyy', { locale: ptBR });
       const sessionType = minute.session_type === 'ordinaria' ? 'Ordinaria' : 'Magna';
       const fileName = `Ata_${sessionType}_${sessionDate}_N${minute.session_number || 'X'}.pdf`;
 

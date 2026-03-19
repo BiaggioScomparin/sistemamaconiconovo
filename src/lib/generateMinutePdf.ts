@@ -48,7 +48,7 @@ export async function generateMinutePdf({
   const contentWidth = pageWidth - 2 * margin;
   let y = 20;
 
-  const sessionDate = new Date(minute.session_date);
+  const sessionDate = new Date(minute.session_date + 'T12:00:00');
   const day = format(sessionDate, 'd', { locale: ptBR });
   const month = format(sessionDate, 'MMMM', { locale: ptBR });
   const year = format(sessionDate, 'yyyy', { locale: ptBR });

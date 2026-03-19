@@ -98,7 +98,7 @@ export function useDashboardStats() {
         .in('status', ['approved', 'membro']);
 
       const birthdaysThisMonth = birthdays?.filter((profile) => {
-        const birthMonth = new Date(profile.birth_date).getMonth() + 1;
+        const birthMonth = new Date(profile.birth_date + 'T12:00:00').getMonth() + 1;
         return birthMonth === currentMonth;
       }) || [];
 

@@ -22,7 +22,7 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Ata de Sessão ${minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'} - ${format(new Date(minute.session_date), 'dd/MM/yyyy')}</title>
+          <title>Ata de Sessão ${minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'} - ${format(new Date(minute.session_date + 'T12:00:00'), 'dd/MM/yyyy')}</title>
           <style>
             @page {
               size: A4;
@@ -354,7 +354,7 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
     return undefined;
   };
 
-  const sessionDate = new Date(minute.session_date);
+  const sessionDate = new Date(minute.session_date + 'T12:00:00');
   const day = format(sessionDate, 'd', { locale: ptBR });
   const month = format(sessionDate, 'MMMM', { locale: ptBR });
   const year = format(sessionDate, 'yyyy', { locale: ptBR });
