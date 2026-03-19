@@ -199,7 +199,7 @@ export default function MemberCalendar() {
                             {format(new Date(event.event_date + 'T12:00:00'), 'd')}
                           </span>
                           <span className="text-xs uppercase">
-                            {format(new Date(event.event_date + 'T00:00:00'), 'MMM', { locale: ptBR })}
+                            {format(new Date(event.event_date + 'T12:00:00'), 'MMM', { locale: ptBR })}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
