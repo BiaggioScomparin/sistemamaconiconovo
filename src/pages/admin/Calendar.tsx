@@ -248,7 +248,7 @@ export default function AdminCalendar() {
                       >
                         <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-primary/10 text-primary shrink-0">
                           <span className="text-lg font-bold leading-none">
-                            {format(new Date(event.event_date + 'T00:00:00'), 'd')}
+                            {format(new Date(event.event_date + 'T12:00:00'), 'd')}
                           </span>
                           <span className="text-xs uppercase">
                             {format(new Date(event.event_date + 'T00:00:00'), 'MMM', { locale: ptBR })}
