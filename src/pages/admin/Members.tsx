@@ -46,6 +46,7 @@ import { generateBatchCardsPDF } from '@/lib/generateBatchCards';
 import { downloadMembersTemplate } from '@/lib/excelMembersTemplate';
 import { CreateMemberDialog } from '@/components/admin/CreateMemberDialog';
 import { ImportMembersDialog } from '@/components/admin/ImportMembersDialog';
+import { MemberDetailDialog } from '@/components/admin/MemberDetailDialog';
 import logoGoib from '@/assets/logo-goib.png';
 
 interface ColumnFilters {
