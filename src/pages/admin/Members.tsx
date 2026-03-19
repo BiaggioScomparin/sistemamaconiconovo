@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download, Filter, X } from 'lucide-react';
+import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download, Filter, X, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
