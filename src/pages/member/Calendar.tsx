@@ -192,7 +192,7 @@ export default function MemberCalendar() {
                       <div
                         key={event.id}
                         className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => setSelectedDate(new Date(event.event_date + 'T00:00:00'))}
+                        onClick={() => setSelectedDate(new Date(event.event_date + 'T12:00:00'))}
                       >
                         <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-primary/10 text-primary shrink-0">
                           <span className="text-lg font-bold leading-none">
