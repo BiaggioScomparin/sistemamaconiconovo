@@ -880,6 +880,13 @@ export default function AdminMembers() {
         open={importMembersOpen} 
         onOpenChange={setImportMembersOpen} 
       />
+
+      {/* Member Detail Dialog */}
+      <MemberDetailDialog
+        profile={viewingProfile}
+        open={!!viewingProfile}
+        onOpenChange={(open) => !open && setViewingProfile(null)}
+      />
     </AppLayout>
   );
 }
