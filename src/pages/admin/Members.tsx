@@ -88,6 +88,7 @@ export default function AdminMembers() {
   // Create member dialogs
   const [createMemberOpen, setCreateMemberOpen] = useState(false);
   const [importMembersOpen, setImportMembersOpen] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
