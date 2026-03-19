@@ -8,6 +8,7 @@ import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import { ProtectedMinutesRoute } from "@/components/auth/ProtectedMinutesRoute";
 import { ProtectedMemberRoute } from "@/components/auth/ProtectedMemberRoute";
 import { ProtectedInvitesRoute } from "@/components/auth/ProtectedInvitesRoute";
+import { ProtectedAttendanceRoute } from "@/components/auth/ProtectedAttendanceRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
