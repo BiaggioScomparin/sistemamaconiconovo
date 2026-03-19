@@ -227,7 +227,7 @@ export default function AdminMinutes() {
                             </CardTitle>
                             <CardDescription className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
-                              {format(new Date(minute.session_date), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                              {format(new Date(minute.session_date + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                             </CardDescription>
                           </div>
                           <Badge variant="outline" className={statusConfig[minute.status].color}>
