@@ -40,7 +40,7 @@ export default function AdminCalendar() {
   const emptyDays = Array(startDayOfWeek).fill(null);
 
   const getEventsForDay = (date: Date) => {
-    return events?.filter((event) => isSameDay(new Date(event.event_date + 'T00:00:00'), date)) || [];
+    return events?.filter((event) => isSameDay(new Date(event.event_date + 'T12:00:00'), date)) || [];
   };
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -244,14 +244,14 @@ export default function AdminCalendar() {
                       <div
                         key={event.id}
                         className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => setSelectedDate(new Date(event.event_date + 'T00:00:00'))}
+                        onClick={() => setSelectedDate(new Date(event.event_date + 'T12:00:00'))}
                       >
                         <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-primary/10 text-primary shrink-0">
                           <span className="text-lg font-bold leading-none">
-                            {format(new Date(event.event_date + 'T00:00:00'), 'd')}
+                            {format(new Date(event.event_date + 'T12:00:00'), 'd')}
                           </span>
                           <span className="text-xs uppercase">
-                            {format(new Date(event.event_date + 'T00:00:00'), 'MMM', { locale: ptBR })}
+                            {format(new Date(event.event_date + 'T12:00:00'), 'MMM', { locale: ptBR })}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">

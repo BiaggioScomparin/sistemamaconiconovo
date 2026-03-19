@@ -220,10 +220,10 @@ export default function Inicial() {
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-lg bg-primary/10 text-primary shrink-0">
                         <span className="text-xl font-bold leading-none">
-                          {format(new Date(event.event_date + 'T00:00:00'), 'd')}
+                          {format(new Date(event.event_date + 'T12:00:00'), 'd')}
                         </span>
                         <span className="text-xs uppercase">
-                          {format(new Date(event.event_date + 'T00:00:00'), 'MMM', { locale: ptBR })}
+                          {format(new Date(event.event_date + 'T12:00:00'), 'MMM', { locale: ptBR })}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">

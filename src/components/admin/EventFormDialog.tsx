@@ -76,7 +76,7 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
       form.reset({
         title: event.title,
         description: event.description || '',
-        event_date: new Date(event.event_date + 'T00:00:00'),
+        event_date: new Date(event.event_date + 'T12:00:00'),
         event_time: event.event_time?.slice(0, 5) || '',
         lodge_id: event.lodge_id || '__all__',
       });
