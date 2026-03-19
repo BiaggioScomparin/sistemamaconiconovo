@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download, Filter, X } from 'lucide-react';
+import { Users, Pencil, Trash2, Key, CreditCard, Loader2, UserPlus, FileSpreadsheet, Download, Filter, X, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -46,6 +46,7 @@ import { generateBatchCardsPDF } from '@/lib/generateBatchCards';
 import { downloadMembersTemplate } from '@/lib/excelMembersTemplate';
 import { CreateMemberDialog } from '@/components/admin/CreateMemberDialog';
 import { ImportMembersDialog } from '@/components/admin/ImportMembersDialog';
+import { MemberDetailDialog } from '@/components/admin/MemberDetailDialog';
 import logoGoib from '@/assets/logo-goib.png';
 
 interface ColumnFilters {
@@ -87,6 +88,7 @@ export default function AdminMembers() {
   // Create member dialogs
   const [createMemberOpen, setCreateMemberOpen] = useState(false);
   const [importMembersOpen, setImportMembersOpen] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -632,6 +634,14 @@ export default function AdminMembers() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => setViewingProfile(profile)}
+                              title="Ver Detalhes"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleEdit(profile)}
                               title="Editar"
                             >
@@ -869,6 +879,13 @@ export default function AdminMembers() {
       <ImportMembersDialog 
         open={importMembersOpen} 
         onOpenChange={setImportMembersOpen} 
+      />
+
+      {/* Member Detail Dialog */}
+      <MemberDetailDialog
+        profile={viewingProfile}
+        open={!!viewingProfile}
+        onOpenChange={(open) => !open && setViewingProfile(null)}
       />
     </AppLayout>
   );
