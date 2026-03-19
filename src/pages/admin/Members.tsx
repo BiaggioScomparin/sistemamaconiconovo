@@ -634,6 +634,14 @@ export default function AdminMembers() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => setViewingProfile(profile)}
+                              title="Ver Detalhes"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleEdit(profile)}
                               title="Editar"
                             >
