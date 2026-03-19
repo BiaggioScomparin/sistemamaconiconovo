@@ -88,7 +88,7 @@ export function useDashboardReports() {
       const ages: number[] = [];
       profiles?.forEach(p => {
         if (p.birth_date) {
-          const birth = new Date(p.birth_date);
+          const birth = new Date(p.birth_date + 'T12:00:00');
           const age = Math.floor((now.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
           if (age > 0 && age < 120) ages.push(age);
         }

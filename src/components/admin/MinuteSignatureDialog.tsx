@@ -128,7 +128,7 @@ export function MinuteSignatureDialog({ open, onOpenChange, minute }: MinuteSign
           </DialogTitle>
           <DialogDescription>
             Sessão {minute.session_type === 'ordinaria' ? 'Ordinária' : 'Magna'} de{' '}
-            {format(new Date(minute.session_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            {format(new Date(minute.session_date + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </DialogDescription>
         </DialogHeader>
 

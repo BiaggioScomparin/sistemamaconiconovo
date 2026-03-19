@@ -53,8 +53,8 @@ export default function MemberCalendar() {
   const selectedDateEvents = selectedDate ? getEventsForDay(selectedDate) : [];
 
   const upcomingEvents = events
-    ?.filter((event) => new Date(event.event_date) >= today)
-    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+    ?.filter((event) => new Date(event.event_date + 'T12:00:00') >= today)
+    .sort((a, b) => new Date(a.event_date + 'T12:00:00').getTime() - new Date(b.event_date + 'T12:00:00').getTime())
     .slice(0, 5) || [];
 
   return (

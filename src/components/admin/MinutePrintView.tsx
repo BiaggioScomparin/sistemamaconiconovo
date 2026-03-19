@@ -354,7 +354,7 @@ export function MinutePrintView({ minute, signatures, lodgeName }: MinutePrintVi
     return undefined;
   };
 
-  const sessionDate = new Date(minute.session_date);
+  const sessionDate = new Date(minute.session_date + 'T12:00:00');
   const day = format(sessionDate, 'd', { locale: ptBR });
   const month = format(sessionDate, 'MMMM', { locale: ptBR });
   const year = format(sessionDate, 'yyyy', { locale: ptBR });
