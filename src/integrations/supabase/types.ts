@@ -760,6 +760,7 @@ export type Database = {
           proposal_date: string | null
           residence_time: string | null
           sponsor_name: string | null
+          spouse_birth_date: string | null
           spouse_name: string | null
           spouse_profession: string | null
           spouse_retired: boolean | null
@@ -829,6 +830,7 @@ export type Database = {
           proposal_date?: string | null
           residence_time?: string | null
           sponsor_name?: string | null
+          spouse_birth_date?: string | null
           spouse_name?: string | null
           spouse_profession?: string | null
           spouse_retired?: boolean | null
@@ -898,6 +900,7 @@ export type Database = {
           proposal_date?: string | null
           residence_time?: string | null
           sponsor_name?: string | null
+          spouse_birth_date?: string | null
           spouse_name?: string | null
           spouse_profession?: string | null
           spouse_retired?: boolean | null

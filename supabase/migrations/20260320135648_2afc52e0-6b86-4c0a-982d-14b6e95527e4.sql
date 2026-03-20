@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN spouse_birth_date date;
