@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { WhatsAppGroupPicker } from '@/components/admin/WhatsAppGroupPicker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -269,17 +270,13 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
           </div>
 
           {sendMode === 'group' && (
-            <div className="space-y-2">
-              <Label>ID do Grupo WhatsApp</Label>
-              <Input
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                placeholder="Ex: 120363xxxxx@g.us"
-              />
-              <p className="text-xs text-muted-foreground">
-                Obtenha o ID do grupo na API do seu provedor WhatsApp.
-              </p>
-            </div>
+            <WhatsAppGroupPicker
+              lodgeId={lodgeId}
+              value={groupId}
+              onChange={setGroupId}
+              label="ID do Grupo WhatsApp"
+              description="Selecione um grupo ou digite o ID manualmente."
+            />
           )}
 
           {sendMode === 'individual' && (
