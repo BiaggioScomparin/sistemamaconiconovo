@@ -23,7 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award, Copy, Baby, Heart } from 'lucide-react';
+import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award, Copy, Baby, Heart, Send } from 'lucide-react';
+import { GroupMessagePanel } from '@/components/admin/GroupMessagePanel';
 import { format, parseISO } from 'date-fns';
 
 const CATEGORY_LABELS: Record<string, { label: string; description: string; icon: any }> = {
@@ -270,7 +271,7 @@ export default function AdminNotifications() {
 
         {selectedLodgeId && (
           <Tabs defaultValue="whatsapp" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="whatsapp">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 WhatsApp
@@ -278,6 +279,10 @@ export default function AdminNotifications() {
               <TabsTrigger value="rules">
                 <Bell className="h-4 w-4 mr-2" />
                 Regras
+              </TabsTrigger>
+              <TabsTrigger value="group">
+                <Send className="h-4 w-4 mr-2" />
+                Comunicação em Grupo
               </TabsTrigger>
               <TabsTrigger value="logs">
                 <Clock className="h-4 w-4 mr-2" />
@@ -540,6 +545,11 @@ export default function AdminNotifications() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Group Message Tab */}
+            <TabsContent value="group">
+              <GroupMessagePanel lodgeId={selectedLodgeId} />
             </TabsContent>
 
             {/* Logs Tab */}
