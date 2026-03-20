@@ -55,15 +55,12 @@ Deno.serve(async (req) => {
       apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/groups`;
       fetchHeaders = { "Content-Type": "application/json" };
     } else if (apiFormat === "wattend") {
-      // Wattend doesn't have a documented groups listing endpoint
-      return new Response(
-        JSON.stringify({
-          error: "A API Wattend não suporta listagem automática de grupos. Insira o ID do grupo manualmente (formato: XXXXXXXXXX@g.us).",
-          unsupported: true,
-          groups: [],
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Wattend is based on Z-Pro/Evolution API, uses /v2/api/external/{instance_id} as prefix
+      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups?getParticipants=false`;
+      fetchHeaders = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${instance.token}`,
+      };
     } else {
       // Z-Pro / Evolution API: GET /group/fetchAllGroups/{instance}?getParticipants=false
       apiUrl = `${baseUrl}/group/fetchAllGroups/${instance.instance_id}?getParticipants=false`;
