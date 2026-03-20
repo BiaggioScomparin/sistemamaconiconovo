@@ -61,6 +61,8 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
   const { data: members, isLoading } = useLodgeMembersForMessage(lodgeId);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  const [sendMode, setSendMode] = useState<SendMode>('individual');
+  const [groupId, setGroupId] = useState('');
   const [selectedDegree, setSelectedDegree] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
