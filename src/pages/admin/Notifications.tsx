@@ -547,6 +547,9 @@ export default function AdminNotifications() {
                               {rule.message_template && (
                                 <p className="text-xs text-muted-foreground mt-1 truncate">💬 Mensagem personalizada</p>
                               )}
+                              {rule.whatsapp_group_id && (
+                                <p className="text-xs text-muted-foreground mt-1">📱 Envio para grupo</p>
+                              )}
                             </div>
                             <Badge variant={rule.is_enabled ? 'default' : 'secondary'}>
                               {rule.is_enabled ? 'Ativa' : 'Inativa'}
