@@ -271,7 +271,7 @@ export default function AdminNotifications() {
 
         {selectedLodgeId && (
           <Tabs defaultValue="whatsapp" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="whatsapp">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 WhatsApp
@@ -279,6 +279,10 @@ export default function AdminNotifications() {
               <TabsTrigger value="rules">
                 <Bell className="h-4 w-4 mr-2" />
                 Regras
+              </TabsTrigger>
+              <TabsTrigger value="group">
+                <Send className="h-4 w-4 mr-2" />
+                Comunicação em Grupo
               </TabsTrigger>
               <TabsTrigger value="logs">
                 <Clock className="h-4 w-4 mr-2" />
