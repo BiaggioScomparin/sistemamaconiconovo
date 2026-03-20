@@ -132,6 +132,36 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
       toast.error('Digite uma mensagem antes de enviar.');
       return;
     }
+
+    if (sendMode === 'group') {
+      if (!groupId.trim()) {
+        toast.error('Informe o ID do grupo do WhatsApp.');
+        return;
+      }
+      setSending(true);
+      setProgress({ total: 1, sent: 0, failed: 0, current: 'Grupo WhatsApp' });
+      try {
+        const { error } = await supabase.functions.invoke('send-whatsapp', {
+          body: {
+            lodge_id: lodgeId,
+            group_id: groupId.trim(),
+            message: message,
+            category: 'group_message',
+          },
+        });
+        if (error) throw error;
+        setProgress({ total: 1, sent: 1, failed: 0, current: 'Grupo WhatsApp' });
+        toast.success('Mensagem enviada para o grupo!');
+      } catch (err) {
+        console.error('Failed to send to group:', err);
+        setProgress({ total: 1, sent: 0, failed: 1, current: 'Grupo WhatsApp' });
+        toast.error('Falha ao enviar para o grupo.');
+      }
+      setSending(false);
+      setTimeout(() => setProgress(null), 3000);
+      return;
+    }
+
     if (recipients.length === 0) {
       toast.error('Nenhum destinatário com telefone cadastrado.');
       return;
@@ -174,7 +204,6 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
       }
 
       setProgress({ ...progressState });
-      // Small delay between messages to avoid rate limiting
       await new Promise((r) => setTimeout(r, 800));
     }
 
