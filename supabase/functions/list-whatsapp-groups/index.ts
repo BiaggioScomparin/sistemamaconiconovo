@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/chats`;
       fetchHeaders = { "Content-Type": "application/json" };
     } else if (apiFormat === "wattend") {
-      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/groups`;
+      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups`;
       fetchHeaders = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${instance.token}`,
