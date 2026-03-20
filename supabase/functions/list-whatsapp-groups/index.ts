@@ -66,9 +66,9 @@ Deno.serve(async (req) => {
     console.log(`Fetching groups (${apiFormat}) from:`, apiUrl);
 
     const response = await fetch(apiUrl, {
-      method: apiFormat === "z-pro" ? "POST" : "GET",
+      method: apiFormat === "z-pro" || apiFormat === "wattend" ? "POST" : "GET",
       headers: fetchHeaders,
-      ...(apiFormat === "z-pro" ? { body: JSON.stringify({ getParticipants: false }) } : {}),
+      ...((apiFormat === "z-pro" || apiFormat === "wattend") ? { body: JSON.stringify({ getParticipants: false }) } : {}),
     });
 
     const responseText = await response.text();
