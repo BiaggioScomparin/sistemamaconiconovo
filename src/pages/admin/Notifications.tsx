@@ -83,6 +83,7 @@ export default function AdminNotifications() {
   const [editHoursBefore, setEditHoursBefore] = useState('');
   const [editRepeatDays, setEditRepeatDays] = useState('');
   const [editTemplate, setEditTemplate] = useState('');
+  const [editGroupId, setEditGroupId] = useState('');
 
   // Auto-select first lodge
   useEffect(() => {
