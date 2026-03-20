@@ -612,6 +612,7 @@ async function processAnniversaryRule(
       }
     }
   }
+}
 
 async function processChildrenBirthdayRule(
   supabase: any, supabaseUrl: string, anonKey: string,
