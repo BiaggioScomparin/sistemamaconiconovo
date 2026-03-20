@@ -545,43 +545,71 @@ async function processAnniversaryRule(
 
   if (birthdayMembers.length === 0) return;
 
-  // For each birthday member, notify all other members with phone
+  // For each birthday member, notify all other members with phone (or send to group)
   for (const bdMember of birthdayMembers) {
     const bdDate = new Date(bdMember[dateField] + "T12:00:00");
     const years = today.getFullYear() - bdDate.getFullYear();
     const label = rule.category === "birthday" ? "aniversário natalício" : "aniversário de ordem";
+    const refId = `${rule.category}_${bdMember.id}`;
 
-    for (const recipient of membersWithPhone) {
-      const alreadySent = await checkAlreadySent(supabase, rule.id, `${rule.category}_${bdMember.id}`, todayStr, recipient.id);
+    if (rule.whatsapp_group_id) {
+      // Send one message to the group
+      const alreadySent = await checkAlreadySent(supabase, rule.id, refId, todayStr);
       if (alreadySent) continue;
 
       let msg: string;
       if (rule.message_template) {
         msg = replacePlaceholders(rule.message_template, {
-          nome: recipient.full_name,
+          nome: "",
           aniversariante: bdMember.full_name,
           anos: String(years),
           data: formatDate(todayStr),
         });
       } else {
         if (rule.category === "birthday") {
-          msg = `Olá ${recipient.full_name}! 🎂\n\nHoje é o aniversário natalício do Ir∴ *${bdMember.full_name}*, completando ${years} anos!\n\nNão esqueça de parabenizá-lo! 🎉`;
+          msg = `🎂 Hoje é o aniversário natalício do Ir∴ *${bdMember.full_name}*, completando ${years} anos!\n\nNão esqueçam de parabenizá-lo! 🎉`;
         } else {
-          msg = `Olá ${recipient.full_name}! ⭐\n\nHoje é o aniversário de ordem do Ir∴ *${bdMember.full_name}*, completando ${years} anos de iniciação maçônica!\n\nFraternais saudações! 🏛️`;
+          msg = `⭐ Hoje é o aniversário de ordem do Ir∴ *${bdMember.full_name}*, completando ${years} anos de iniciação maçônica!\n\nFraternais saudações! 🏛️`;
         }
       }
 
-      await sendWhatsApp(supabaseUrl, anonKey, {
-        lodge_id: rule.lodge_id,
-        phone: recipient.phone,
-        message: msg,
-        rule_id: rule.id,
-        profile_id: recipient.id,
-        category: rule.category,
-        reference_id: `${rule.category}_${bdMember.id}`,
-      });
-      results.push({ sent: true, category: rule.category, member: recipient.full_name, celebrant: bdMember.full_name });
-}
+      await sendGroupMessage(supabaseUrl, anonKey, rule, msg, refId);
+      results.push({ sent: true, category: rule.category, target: "group", celebrant: bdMember.full_name });
+    } else {
+      // Send individual messages
+      for (const recipient of membersWithPhone) {
+        const alreadySent = await checkAlreadySent(supabase, rule.id, refId, todayStr, recipient.id);
+        if (alreadySent) continue;
+
+        let msg: string;
+        if (rule.message_template) {
+          msg = replacePlaceholders(rule.message_template, {
+            nome: recipient.full_name,
+            aniversariante: bdMember.full_name,
+            anos: String(years),
+            data: formatDate(todayStr),
+          });
+        } else {
+          if (rule.category === "birthday") {
+            msg = `Olá ${recipient.full_name}! 🎂\n\nHoje é o aniversário natalício do Ir∴ *${bdMember.full_name}*, completando ${years} anos!\n\nNão esqueça de parabenizá-lo! 🎉`;
+          } else {
+            msg = `Olá ${recipient.full_name}! ⭐\n\nHoje é o aniversário de ordem do Ir∴ *${bdMember.full_name}*, completando ${years} anos de iniciação maçônica!\n\nFraternais saudações! 🏛️`;
+          }
+        }
+
+        await sendWhatsApp(supabaseUrl, anonKey, {
+          lodge_id: rule.lodge_id,
+          phone: recipient.phone,
+          message: msg,
+          rule_id: rule.id,
+          profile_id: recipient.id,
+          category: rule.category,
+          reference_id: refId,
+        });
+        results.push({ sent: true, category: rule.category, member: recipient.full_name, celebrant: bdMember.full_name });
+      }
+    }
+  }
 
 async function processChildrenBirthdayRule(
   supabase: any, supabaseUrl: string, anonKey: string,
