@@ -48,6 +48,7 @@ interface GroupMessagePanelProps {
 }
 
 type FilterMode = 'all' | 'degree' | 'manual';
+type SendMode = 'individual' | 'group';
 
 interface SendProgress {
   total: number;
@@ -60,6 +61,8 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
   const { data: members, isLoading } = useLodgeMembersForMessage(lodgeId);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  const [sendMode, setSendMode] = useState<SendMode>('individual');
+  const [groupId, setGroupId] = useState('');
   const [selectedDegree, setSelectedDegree] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,6 +132,36 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
       toast.error('Digite uma mensagem antes de enviar.');
       return;
     }
+
+    if (sendMode === 'group') {
+      if (!groupId.trim()) {
+        toast.error('Informe o ID do grupo do WhatsApp.');
+        return;
+      }
+      setSending(true);
+      setProgress({ total: 1, sent: 0, failed: 0, current: 'Grupo WhatsApp' });
+      try {
+        const { error } = await supabase.functions.invoke('send-whatsapp', {
+          body: {
+            lodge_id: lodgeId,
+            group_id: groupId.trim(),
+            message: message,
+            category: 'group_message',
+          },
+        });
+        if (error) throw error;
+        setProgress({ total: 1, sent: 1, failed: 0, current: 'Grupo WhatsApp' });
+        toast.success('Mensagem enviada para o grupo!');
+      } catch (err) {
+        console.error('Failed to send to group:', err);
+        setProgress({ total: 1, sent: 0, failed: 1, current: 'Grupo WhatsApp' });
+        toast.error('Falha ao enviar para o grupo.');
+      }
+      setSending(false);
+      setTimeout(() => setProgress(null), 3000);
+      return;
+    }
+
     if (recipients.length === 0) {
       toast.error('Nenhum destinatário com telefone cadastrado.');
       return;
@@ -171,7 +204,6 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
       }
 
       setProgress({ ...progressState });
-      // Small delay between messages to avoid rate limiting
       await new Promise((r) => setTimeout(r, 800));
     }
 
@@ -213,6 +245,45 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
           <CardDescription>Selecione quem receberá a mensagem</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Modo de Envio</Label>
+            <Select value={sendMode} onValueChange={(v) => setSendMode(v as SendMode)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Enviar individualmente
+                  </div>
+                </SelectItem>
+                <SelectItem value="group">
+                  <div className="flex items-center gap-2">
+                    <Send className="h-4 w-4" />
+                    Enviar para grupo WhatsApp
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {sendMode === 'group' && (
+            <div className="space-y-2">
+              <Label>ID do Grupo WhatsApp</Label>
+              <Input
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                placeholder="Ex: 120363xxxxx@g.us"
+              />
+              <p className="text-xs text-muted-foreground">
+                Obtenha o ID do grupo na API do seu provedor WhatsApp.
+              </p>
+            </div>
+          )}
+
+          {sendMode === 'individual' && (
+          <>
           <div className="space-y-2">
             <Label>Filtro de Destinatários</Label>
             <Select value={filterMode} onValueChange={(v) => { setFilterMode(v as FilterMode); setSelectedIds(new Set()); }}>
@@ -326,6 +397,8 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
               </Badge>
             )}
           </div>
+          </>
+          )}
         </CardContent>
       </Card>
 
@@ -377,7 +450,7 @@ Use variáveis: {{nome}}, {{grau}}, {{cargo}}"
 
           <Button
             onClick={handleSend}
-            disabled={sending || !message.trim() || recipients.length === 0}
+            disabled={sending || !message.trim() || (sendMode === 'individual' && recipients.length === 0) || (sendMode === 'group' && !groupId.trim())}
             className="w-full"
             size="lg"
           >
@@ -385,6 +458,11 @@ Use variáveis: {{nome}}, {{grau}}, {{cargo}}"
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Enviando...
+              </>
+            ) : sendMode === 'group' ? (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar para o Grupo
               </>
             ) : (
               <>

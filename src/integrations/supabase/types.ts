@@ -563,6 +563,7 @@ export type Database = {
           message_template: string | null
           repeat_interval_days: number | null
           updated_at: string
+          whatsapp_group_id: string | null
         }
         Insert: {
           category: string
@@ -575,6 +576,7 @@ export type Database = {
           message_template?: string | null
           repeat_interval_days?: number | null
           updated_at?: string
+          whatsapp_group_id?: string | null
         }
         Update: {
           category?: string
@@ -587,6 +589,7 @@ export type Database = {
           message_template?: string | null
           repeat_interval_days?: number | null
           updated_at?: string
+          whatsapp_group_id?: string | null
         }
         Relationships: [
           {

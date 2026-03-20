@@ -10,6 +10,7 @@ export interface NotificationRule {
   hours_before: number | null;
   repeat_interval_days: number | null;
   message_template: string | null;
+  whatsapp_group_id: string | null;
   created_at: string;
   updated_at: string;
 }

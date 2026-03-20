@@ -68,6 +68,7 @@ export default function AdminNotifications() {
   const [newHoursBefore, setNewHoursBefore] = useState('');
   const [newRepeatDays, setNewRepeatDays] = useState('7');
   const [newTemplate, setNewTemplate] = useState('');
+  const [newGroupId, setNewGroupId] = useState('');
 
   // Dialog state for cloning rules
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
@@ -82,6 +83,7 @@ export default function AdminNotifications() {
   const [editHoursBefore, setEditHoursBefore] = useState('');
   const [editRepeatDays, setEditRepeatDays] = useState('');
   const [editTemplate, setEditTemplate] = useState('');
+  const [editGroupId, setEditGroupId] = useState('');
 
   // Auto-select first lodge
   useEffect(() => {
@@ -141,11 +143,13 @@ export default function AdminNotifications() {
         hours_before: newCategory === 'event_same_day' ? parseInt(newHoursBefore) || null : null,
         repeat_interval_days: newCategory === 'payment_overdue' ? parseInt(newRepeatDays) || 7 : null,
         message_template: newTemplate || null,
+        whatsapp_group_id: newGroupId || null,
       });
       toast.success('Regra de notificação criada!');
       setAddDialogOpen(false);
       setNewCategory('');
       setNewTemplate('');
+      setNewGroupId('');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao criar regra');
     }
@@ -176,6 +180,7 @@ export default function AdminNotifications() {
     setEditHoursBefore(String(rule.hours_before ?? ''));
     setEditRepeatDays(String(rule.repeat_interval_days ?? ''));
     setEditTemplate(rule.message_template || '');
+    setEditGroupId(rule.whatsapp_group_id || '');
     setEditDialogOpen(true);
   };
 
@@ -188,6 +193,7 @@ export default function AdminNotifications() {
         hours_before: editingRule.category === 'event_same_day' ? (parseInt(editHoursBefore) || null) : editingRule.hours_before,
         repeat_interval_days: editingRule.category === 'payment_overdue' ? (parseInt(editRepeatDays) || null) : editingRule.repeat_interval_days,
         message_template: editTemplate || null,
+        whatsapp_group_id: editGroupId || null,
       });
       toast.success('Regra atualizada!');
       setEditDialogOpen(false);
@@ -218,6 +224,7 @@ export default function AdminNotifications() {
           hours_before: rule.hours_before,
           repeat_interval_days: rule.repeat_interval_days,
           message_template: rule.message_template,
+          whatsapp_group_id: rule.whatsapp_group_id || null,
         });
         created++;
       }
@@ -486,6 +493,18 @@ export default function AdminNotifications() {
                             </p>
                           </div>
 
+                          <div className="space-y-2">
+                            <Label>ID do Grupo WhatsApp (opcional)</Label>
+                            <Input
+                              value={newGroupId}
+                              onChange={(e) => setNewGroupId(e.target.value)}
+                              placeholder="Ex: 120363xxxxx@g.us"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Se preenchido, a notificação será enviada para o grupo ao invés de individualmente. Obtenha o ID do grupo na API do WhatsApp.
+                            </p>
+                          </div>
+
                           <Button onClick={handleAddRule} className="w-full" disabled={createRule.isPending}>
                             Criar Regra
                           </Button>
@@ -527,6 +546,9 @@ export default function AdminNotifications() {
                               )}
                               {rule.message_template && (
                                 <p className="text-xs text-muted-foreground mt-1 truncate">💬 Mensagem personalizada</p>
+                              )}
+                              {rule.whatsapp_group_id && (
+                                <p className="text-xs text-muted-foreground mt-1">📱 Envio para grupo</p>
                               )}
                             </div>
                             <Badge variant={rule.is_enabled ? 'default' : 'secondary'}>
@@ -649,6 +671,18 @@ export default function AdminNotifications() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Variáveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>ID do Grupo WhatsApp (opcional)</Label>
+                  <Input
+                    value={editGroupId}
+                    onChange={(e) => setEditGroupId(e.target.value)}
+                    placeholder="Ex: 120363xxxxx@g.us"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se preenchido, a notificação será enviada para o grupo ao invés de individualmente.
                   </p>
                 </div>
 
