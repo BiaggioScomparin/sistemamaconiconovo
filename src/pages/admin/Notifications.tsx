@@ -494,17 +494,12 @@ export default function AdminNotifications() {
                             </p>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label>ID do Grupo WhatsApp (opcional)</Label>
-                            <Input
-                              value={newGroupId}
-                              onChange={(e) => setNewGroupId(e.target.value)}
-                              placeholder="Ex: 120363xxxxx@g.us"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Se preenchido, a notificação será enviada para o grupo ao invés de individualmente. Obtenha o ID do grupo na API do WhatsApp.
-                            </p>
-                          </div>
+                          <WhatsAppGroupPicker
+                            lodgeId={selectedLodgeId}
+                            value={newGroupId}
+                            onChange={setNewGroupId}
+                            description="Se preenchido, a notificação será enviada para o grupo ao invés de individualmente."
+                          />
 
                           <Button onClick={handleAddRule} className="w-full" disabled={createRule.isPending}>
                             Criar Regra
