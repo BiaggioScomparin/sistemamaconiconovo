@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Sending WhatsApp (${apiFormat}) to URL:`, apiUrl, "phone:", cleanPhone);
+    console.log(`Sending WhatsApp (${apiFormat}) to URL:`, apiUrl, isGroupMessage ? "group:" : "phone:", isGroupMessage ? group_id : cleanPhone);
 
     const response = await fetch(apiUrl, {
       method: "POST",
