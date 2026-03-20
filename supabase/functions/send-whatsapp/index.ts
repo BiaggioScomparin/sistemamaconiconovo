@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
     await supabase.from("notification_logs").insert({
       lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
       category: category || "manual", reference_id: reference_id || null,
-      phone: cleanPhone, message, status: "sent",
+      phone: isGroupMessage ? `grupo:${group_id}` : cleanPhone, message, status: "sent",
     });
 
     return new Response(
