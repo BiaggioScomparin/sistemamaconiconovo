@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award, Copy, Baby, Heart, Send } from 'lucide-react';
+import { WhatsAppGroupPicker } from '@/components/admin/WhatsAppGroupPicker';
 import { GroupMessagePanel } from '@/components/admin/GroupMessagePanel';
 import { format, parseISO } from 'date-fns';
 
