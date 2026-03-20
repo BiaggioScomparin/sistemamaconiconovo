@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/chats`;
       fetchHeaders = { "Content-Type": "application/json" };
     } else if (apiFormat === "wattend") {
-      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/groups`;
+      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups`;
       fetchHeaders = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${instance.token}`,
@@ -66,9 +66,9 @@ Deno.serve(async (req) => {
     console.log(`Fetching groups (${apiFormat}) from:`, apiUrl);
 
     const response = await fetch(apiUrl, {
-      method: apiFormat === "z-pro" ? "POST" : "GET",
+      method: apiFormat === "z-pro" || apiFormat === "wattend" ? "POST" : "GET",
       headers: fetchHeaders,
-      ...(apiFormat === "z-pro" ? { body: JSON.stringify({ getParticipants: false }) } : {}),
+      ...((apiFormat === "z-pro" || apiFormat === "wattend") ? { body: JSON.stringify({ getParticipants: false }) } : {}),
     });
 
     const responseText = await response.text();
