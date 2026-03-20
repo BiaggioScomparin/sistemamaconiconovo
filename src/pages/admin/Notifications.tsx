@@ -547,6 +547,11 @@ export default function AdminNotifications() {
               </Card>
             </TabsContent>
 
+            {/* Group Message Tab */}
+            <TabsContent value="group">
+              <GroupMessagePanel lodgeId={selectedLodgeId} />
+            </TabsContent>
+
             {/* Logs Tab */}
             <TabsContent value="logs">
               <Card>
