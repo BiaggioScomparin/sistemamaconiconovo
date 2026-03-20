@@ -271,6 +271,11 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="spouse_birth_date">Data de Nascimento da Esposa</Label>
+            <Input type="date" {...register('spouse_birth_date')} id="spouse_birth_date" />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="cell_phone">Celular</Label>
             <Input 
               {...register('cell_phone')} 
