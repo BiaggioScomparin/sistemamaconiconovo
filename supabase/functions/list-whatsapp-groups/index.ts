@@ -47,74 +47,35 @@ Deno.serve(async (req) => {
 
     let apiUrl: string;
     let fetchHeaders: Record<string, string>;
+    let fetchMethod = "GET";
+    let fetchBody: string | undefined;
 
     if (apiFormat === "z-api") {
-      apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/chats`;
+      // Z-API: GET /instances/{id}/token/{token}/groups
+      apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/groups`;
       fetchHeaders = { "Content-Type": "application/json" };
     } else if (apiFormat === "wattend") {
-      // Try multiple Wattend endpoints
-      const wattendEndpoints = [
-        `${baseUrl}/v2/api/external/${instance.instance_id}/chats`,
-        `${baseUrl}/v2/api/external/${instance.instance_id}/groups`,
-        `${baseUrl}/v2/api/external/groups/${instance.instance_id}`,
-      ];
-      fetchHeaders = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${instance.token}`,
-      };
-
-      let wattendResponse: Response | null = null;
-      let wattendUrl = "";
-      for (const url of wattendEndpoints) {
-        console.log(`Trying Wattend endpoint: ${url}`);
-        const res = await fetch(url, { method: "GET", headers: fetchHeaders });
-        console.log(`Wattend ${url} -> status ${res.status}`);
-        if (res.ok) {
-          wattendResponse = res;
-          wattendUrl = url;
-          break;
-        }
-        await res.text(); // consume body
-      }
-
-      if (!wattendResponse) {
-        return new Response(
-          JSON.stringify({ 
-            error: "A API Wattend não suporta listagem de grupos automaticamente. Por favor, insira o ID do grupo manualmente (formato: XXXXXXXXXX@g.us). Você pode obter o ID do grupo nas configurações do grupo no WhatsApp.",
-            unsupported: true 
-          }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const wattendText = await wattendResponse.text();
-      let wattendData;
-      try { wattendData = JSON.parse(wattendText); } catch { wattendData = []; }
-
-      const wattendItems = Array.isArray(wattendData) ? wattendData : (wattendData?.groups || wattendData?.data || wattendData?.chats || []);
-      groups = wattendItems
-        .filter((c: any) => c.isGroup || (c.id && typeof c.id === 'string' && c.id.endsWith("@g.us")) || c.groupId)
-        .map((g: any) => ({
-          id: g.id || g.groupId || g.jid,
-          name: g.name || g.subject || g.id,
-        }));
-
+      // Wattend doesn't have a documented groups listing endpoint
       return new Response(
-        JSON.stringify({ groups }),
+        JSON.stringify({
+          error: "A API Wattend não suporta listagem automática de grupos. Insira o ID do grupo manualmente (formato: XXXXXXXXXX@g.us).",
+          unsupported: true,
+          groups: [],
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
-      // Z-Pro / CloudZAPI
-      apiUrl = `${baseUrl}/group/fetchAllGroups`;
+      // Z-Pro / Evolution API: GET /group/fetchAllGroups/{instance}?getParticipants=false
+      apiUrl = `${baseUrl}/group/fetchAllGroups/${instance.instance_id}?getParticipants=false`;
       fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
     }
 
     console.log(`Fetching groups (${apiFormat}) from:`, apiUrl);
 
     const response = await fetch(apiUrl, {
-      method: apiFormat === "z-pro" ? "POST" : "GET",
+      method: fetchMethod,
       headers: fetchHeaders,
-      ...(apiFormat === "z-pro" ? { body: JSON.stringify({ getParticipants: false }) } : {}),
+      ...(fetchBody ? { body: fetchBody } : {}),
     });
 
     const responseText = await response.text();
@@ -124,6 +85,7 @@ Deno.serve(async (req) => {
     try { rawData = JSON.parse(responseText); } catch { rawData = []; }
 
     if (!response.ok) {
+      console.error("Groups API error:", responseText.substring(0, 500));
       return new Response(
         JSON.stringify({ error: "Falha ao buscar grupos", details: rawData }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -134,19 +96,13 @@ Deno.serve(async (req) => {
     let groups: { id: string; name: string }[] = [];
 
     if (apiFormat === "z-api") {
-      // z-api /chats returns all chats; filter groups (isGroup or id ending with @g.us)
-      const items = Array.isArray(rawData) ? rawData : [];
+      // Z-API /groups returns group list
+      const items = Array.isArray(rawData) ? rawData : (rawData?.groups || []);
       groups = items
-        .filter((c: any) => c.isGroup || (c.id && c.id.endsWith("@g.us")))
+        .filter((c: any) => c.isGroup !== false && (c.id?.endsWith?.("@g.us") || c.phone?.endsWith?.("@g.us")))
         .map((c: any) => ({ id: c.id || c.phone, name: c.name || c.id }));
-    } else if (apiFormat === "wattend") {
-      const items = Array.isArray(rawData) ? rawData : (rawData?.groups || rawData?.data || []);
-      groups = items.map((g: any) => ({
-        id: g.id || g.groupId || g.jid,
-        name: g.name || g.subject || g.id,
-      }));
     } else {
-      // Z-Pro
+      // Z-Pro / Evolution API
       const items = Array.isArray(rawData) ? rawData : (rawData?.groups || rawData?.data || []);
       groups = items.map((g: any) => ({
         id: g.id || g.groupJid || g.jid,
