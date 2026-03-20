@@ -473,11 +473,11 @@ export default function AdminNotifications() {
                             <Textarea
                               value={newTemplate}
                               onChange={(e) => setNewTemplate(e.target.value)}
-                              placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}, {{aniversariante}}, {{anos}}"
+                              placeholder="Use variáveis: {{nome}}, {{mes}}, {{ano}}, {{valor}}, {{vencimento}}, {{evento}}, {{data}}, {{horario}}, {{aniversariante}}, {{anos}}, {{filho}}"
                               rows={4}
                             />
                             <p className="text-xs text-muted-foreground">
-                              Variáveis disponíveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}, {'{{aniversariante}}'}, {'{{anos}}'}
+                              Variáveis disponíveis: {'{{nome}}'}, {'{{mes}}'}, {'{{ano}}'}, {'{{valor}}'}, {'{{vencimento}}'}, {'{{evento}}'}, {'{{data}}'}, {'{{horario}}'}, {'{{quando}}'}, {'{{aniversariante}}'}, {'{{anos}}'}, {'{{filho}}'} (nome do filho/esposa)
                             </p>
                           </div>
 
