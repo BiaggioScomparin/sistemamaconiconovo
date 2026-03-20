@@ -58,7 +58,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const cleanPhone = phone.replace(/\D/g, "");
+    const isGroupMessage = !!group_id;
+    const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
     const apiFormat = instance.api_format || "z-pro";
     let baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
     // Ensure base_url has protocol
@@ -71,32 +72,56 @@ Deno.serve(async (req) => {
     let fetchBody: string;
 
     if (apiFormat === "z-api") {
-      // Z-API format: POST {base_url}/instances/{instance_id}/token/{token}/send-text
-      apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
-      fetchHeaders = { "Content-Type": "application/json" };
-      fetchBody = JSON.stringify({ phone: cleanPhone, message });
+      if (isGroupMessage) {
+        apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
+        fetchHeaders = { "Content-Type": "application/json" };
+        fetchBody = JSON.stringify({ phone: group_id, message });
+      } else {
+        apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
+        fetchHeaders = { "Content-Type": "application/json" };
+        fetchBody = JSON.stringify({ phone: cleanPhone, message });
+      }
     } else if (apiFormat === "wattend") {
-      // Wattend format: POST {base_url}/v2/api/external/{instance_id}
       apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}`;
       fetchHeaders = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${instance.token}`,
       };
-      fetchBody = JSON.stringify({
-        body: message,
-        number: cleanPhone,
-        externalKey: instance.token,
-        isClosed: false,
-      });
+      if (isGroupMessage) {
+        fetchBody = JSON.stringify({
+          body: message,
+          number: group_id,
+          externalKey: instance.token,
+          isClosed: false,
+          isGroup: true,
+        });
+      } else {
+        fetchBody = JSON.stringify({
+          body: message,
+          number: cleanPhone,
+          externalKey: instance.token,
+          isClosed: false,
+        });
+      }
     } else {
       // Z-Pro / CloudZAPI format
-      apiUrl = `${baseUrl}/message/sendText`;
-      fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
-      fetchBody = JSON.stringify({
-        numbers: [cleanPhone],
-        options: { delay: 1200, presence: "composing" },
-        textMessage: { text: message },
-      });
+      if (isGroupMessage) {
+        apiUrl = `${baseUrl}/message/sendText`;
+        fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
+        fetchBody = JSON.stringify({
+          groupId: group_id,
+          options: { delay: 1200, presence: "composing" },
+          textMessage: { text: message },
+        });
+      } else {
+        apiUrl = `${baseUrl}/message/sendText`;
+        fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
+        fetchBody = JSON.stringify({
+          numbers: [cleanPhone],
+          options: { delay: 1200, presence: "composing" },
+          textMessage: { text: message },
+        });
+      }
     }
 
     console.log(`Sending WhatsApp (${apiFormat}) to URL:`, apiUrl, "phone:", cleanPhone);
