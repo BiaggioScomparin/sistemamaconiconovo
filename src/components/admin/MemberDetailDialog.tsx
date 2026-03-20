@@ -150,6 +150,7 @@ export function MemberDetailDialog({ profile, open, onOpenChange }: MemberDetail
                   <InfoRow label="Nome da Mãe" value={profile.mother_name} />
                   <InfoRow label="Nome do Pai" value={p.father_name} />
                   <InfoRow label="Cônjuge" value={profile.spouse_name} />
+                  <InfoRow label="Nasc. Cônjuge" value={p.spouse_birth_date ? new Date(p.spouse_birth_date + 'T12:00:00').toLocaleDateString('pt-BR') : undefined} />
                   <InfoRow label="Profissão" value={p.profession} />
                   <InfoRow label="Escolaridade" value={p.education_level} />
                   <InfoRow label="Nacionalidade" value={p.nationality} />

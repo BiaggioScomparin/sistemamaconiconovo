@@ -645,12 +645,12 @@ async function processSpouseBirthdayRule(
 
   const { data: rawMembers } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, cell_phone, spouse_name, marriage_date, lodge_id")
+    .select("id, full_name, phone, cell_phone, spouse_name, spouse_birth_date, lodge_id")
     .eq("lodge_id", rule.lodge_id)
     .eq("status", "membro")
     .eq("member_status", "active")
     .not("spouse_name", "is", null)
-    .not("marriage_date", "is", null);
+    .not("spouse_birth_date", "is", null);
 
   const members = (rawMembers || [])
     .map((m: any) => ({ ...m, phone: m.phone || m.cell_phone }))
@@ -658,10 +658,9 @@ async function processSpouseBirthdayRule(
 
   if (!members || members.length === 0) return;
 
-  // Find members whose marriage_date matches today's month/day
   const matchingMembers = members.filter((m: any) => {
-    if (!m.marriage_date) return false;
-    const [, mo, d] = m.marriage_date.split("-").map(Number);
+    if (!m.spouse_birth_date) return false;
+    const [, mo, d] = m.spouse_birth_date.split("-").map(Number);
     return mo === todayMonth && d === todayDay;
   });
 
@@ -672,8 +671,8 @@ async function processSpouseBirthdayRule(
     const alreadySent = await checkAlreadySent(supabase, rule.id, refId, todayStr, member.id);
     if (alreadySent) continue;
 
-    const marriageDate = new Date(member.marriage_date + "T12:00:00");
-    const years = today.getFullYear() - marriageDate.getFullYear();
+    const spouseBd = new Date(member.spouse_birth_date + "T12:00:00");
+    const years = today.getFullYear() - spouseBd.getFullYear();
 
     let msg: string;
     if (rule.message_template) {
@@ -685,7 +684,7 @@ async function processSpouseBirthdayRule(
         data: formatDate(todayStr),
       });
     } else {
-      msg = `Olá Ir∴ ${member.full_name}! 💍\n\nHoje é o aniversário de casamento com *${member.spouse_name}*, completando ${years} anos!\n\nFelicidades ao casal! 🎉`;
+      msg = `Olá Ir∴ ${member.full_name}! 🎂\n\nHoje é o aniversário da sua esposa *${member.spouse_name}*, completando ${years} anos!\n\nFelicidades! 🎉`;
     }
 
     await sendWhatsApp(supabaseUrl, anonKey, {
