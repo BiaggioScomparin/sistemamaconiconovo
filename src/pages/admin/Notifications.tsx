@@ -68,6 +68,7 @@ export default function AdminNotifications() {
   const [newHoursBefore, setNewHoursBefore] = useState('');
   const [newRepeatDays, setNewRepeatDays] = useState('7');
   const [newTemplate, setNewTemplate] = useState('');
+  const [newGroupId, setNewGroupId] = useState('');
 
   // Dialog state for cloning rules
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
