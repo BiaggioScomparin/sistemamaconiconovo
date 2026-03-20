@@ -222,6 +222,7 @@ export default function AdminNotifications() {
           hours_before: rule.hours_before,
           repeat_interval_days: rule.repeat_interval_days,
           message_template: rule.message_template,
+          whatsapp_group_id: rule.whatsapp_group_id || null,
         });
         created++;
       }
