@@ -32,6 +32,39 @@ async function sendWhatsApp(supabaseUrl: string, anonKey: string, payload: any) 
   return res.json();
 }
 
+async function sendToGroupOrIndividual(
+  supabaseUrl: string, anonKey: string,
+  rule: any, member: any, msg: string, referenceId: string
+) {
+  if (rule.whatsapp_group_id) {
+    // Send to group - but we only send once per reference, not per member
+    return;
+  }
+  await sendWhatsApp(supabaseUrl, anonKey, {
+    lodge_id: rule.lodge_id,
+    phone: member.phone,
+    message: msg,
+    rule_id: rule.id,
+    profile_id: member.id,
+    category: rule.category,
+    reference_id: referenceId,
+  });
+}
+
+async function sendGroupMessage(
+  supabaseUrl: string, anonKey: string,
+  rule: any, msg: string, referenceId: string
+) {
+  await sendWhatsApp(supabaseUrl, anonKey, {
+    lodge_id: rule.lodge_id,
+    group_id: rule.whatsapp_group_id,
+    message: msg,
+    rule_id: rule.id,
+    category: rule.category,
+    reference_id: referenceId,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
