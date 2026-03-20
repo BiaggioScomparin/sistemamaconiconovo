@@ -270,17 +270,13 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
           </div>
 
           {sendMode === 'group' && (
-            <div className="space-y-2">
-              <Label>ID do Grupo WhatsApp</Label>
-              <Input
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                placeholder="Ex: 120363xxxxx@g.us"
-              />
-              <p className="text-xs text-muted-foreground">
-                Obtenha o ID do grupo na API do seu provedor WhatsApp.
-              </p>
-            </div>
+            <WhatsAppGroupPicker
+              lodgeId={lodgeId}
+              value={groupId}
+              onChange={setGroupId}
+              label="ID do Grupo WhatsApp"
+              description="Selecione um grupo ou digite o ID manualmente."
+            />
           )}
 
           {sendMode === 'individual' && (
