@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         .filter((c: any) => c.isGroup !== false && (c.id?.endsWith?.("@g.us") || c.phone?.endsWith?.("@g.us")))
         .map((c: any) => ({ id: c.id || c.phone, name: c.name || c.id }));
     } else {
-      // Z-Pro / Evolution API
+      // Z-Pro / Evolution API / Wattend (based on Z-Pro)
       const items = Array.isArray(rawData) ? rawData : (rawData?.groups || rawData?.data || []);
       groups = items.map((g: any) => ({
         id: g.id || g.groupJid || g.jid,
