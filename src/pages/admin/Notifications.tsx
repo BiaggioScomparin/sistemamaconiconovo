@@ -193,6 +193,7 @@ export default function AdminNotifications() {
         hours_before: editingRule.category === 'event_same_day' ? (parseInt(editHoursBefore) || null) : editingRule.hours_before,
         repeat_interval_days: editingRule.category === 'payment_overdue' ? (parseInt(editRepeatDays) || null) : editingRule.repeat_interval_days,
         message_template: editTemplate || null,
+        whatsapp_group_id: editGroupId || null,
       });
       toast.success('Regra atualizada!');
       setEditDialogOpen(false);
