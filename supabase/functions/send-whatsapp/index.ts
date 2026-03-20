@@ -8,7 +8,8 @@ const corsHeaders = {
 
 interface SendWhatsAppRequest {
   lodge_id: string;
-  phone: string;
+  phone?: string;
+  group_id?: string;
   message: string;
   rule_id?: string;
   profile_id?: string;
