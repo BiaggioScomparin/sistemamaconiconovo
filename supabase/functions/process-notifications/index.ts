@@ -356,7 +356,6 @@ async function processEventRule(
     .filter((m: any) => m.phone && m.phone.trim() !== "");
 
   if (rule.category === "event_created") {
-    // Events created today for this lodge
     const { data: events } = await supabase
       .from("events")
       .select("*")
@@ -366,27 +365,28 @@ async function processEventRule(
 
     if (events) {
       for (const event of events) {
-        for (const member of members) {
-          if (!member.phone) continue;
-          const alreadySent = await checkAlreadySent(supabase, rule.id, event.id, todayStr, member.id);
+        if (rule.whatsapp_group_id) {
+          const alreadySent = await checkAlreadySent(supabase, rule.id, event.id, todayStr);
           if (alreadySent) continue;
-
-          const msg = getEventMessage(rule, event, member);
-          await sendWhatsApp(supabaseUrl, anonKey, {
-            lodge_id: rule.lodge_id,
-            phone: member.phone,
-            message: msg,
-            rule_id: rule.id,
-            profile_id: member.id,
-            category: rule.category,
-            reference_id: event.id,
-          });
-          results.push({ sent: true, category: rule.category, member: member.full_name, event: event.title });
+          const msg = getEventMessage(rule, event, { full_name: "" });
+          await sendGroupMessage(supabaseUrl, anonKey, rule, msg, event.id);
+          results.push({ sent: true, category: rule.category, target: "group", event: event.title });
+        } else {
+          for (const member of members) {
+            if (!member.phone) continue;
+            const alreadySent = await checkAlreadySent(supabase, rule.id, event.id, todayStr, member.id);
+            if (alreadySent) continue;
+            const msg = getEventMessage(rule, event, member);
+            await sendWhatsApp(supabaseUrl, anonKey, {
+              lodge_id: rule.lodge_id, phone: member.phone, message: msg,
+              rule_id: rule.id, profile_id: member.id, category: rule.category, reference_id: event.id,
+            });
+            results.push({ sent: true, category: rule.category, member: member.full_name, event: event.title });
+          }
         }
       }
     }
   } else if (rule.category === "event_before_day") {
-    // Events happening tomorrow (1 day before)
     const targetDate = new Date(today);
     targetDate.setDate(targetDate.getDate() + 1);
     const targetDateStr = targetDate.toISOString().split("T")[0];
@@ -399,27 +399,28 @@ async function processEventRule(
 
     if (events) {
       for (const event of events) {
-        for (const member of members) {
-          if (!member.phone) continue;
-          const alreadySent = await checkAlreadySent(supabase, rule.id, event.id, todayStr, member.id);
+        if (rule.whatsapp_group_id) {
+          const alreadySent = await checkAlreadySent(supabase, rule.id, event.id, todayStr);
           if (alreadySent) continue;
-
-          const msg = getEventMessage(rule, event, member, "amanhã");
-          await sendWhatsApp(supabaseUrl, anonKey, {
-            lodge_id: rule.lodge_id,
-            phone: member.phone,
-            message: msg,
-            rule_id: rule.id,
-            profile_id: member.id,
-            category: rule.category,
-            reference_id: event.id,
-          });
-          results.push({ sent: true, category: rule.category, member: member.full_name, event: event.title });
+          const msg = getEventMessage(rule, event, { full_name: "" }, "amanhã");
+          await sendGroupMessage(supabaseUrl, anonKey, rule, msg, event.id);
+          results.push({ sent: true, category: rule.category, target: "group", event: event.title });
+        } else {
+          for (const member of members) {
+            if (!member.phone) continue;
+            const alreadySent = await checkAlreadySent(supabase, rule.id, event.id, todayStr, member.id);
+            if (alreadySent) continue;
+            const msg = getEventMessage(rule, event, member, "amanhã");
+            await sendWhatsApp(supabaseUrl, anonKey, {
+              lodge_id: rule.lodge_id, phone: member.phone, message: msg,
+              rule_id: rule.id, profile_id: member.id, category: rule.category, reference_id: event.id,
+            });
+            results.push({ sent: true, category: rule.category, member: member.full_name, event: event.title });
+          }
         }
       }
     }
   } else if (rule.category === "event_same_day") {
-    // Events happening today
     const { data: events } = await supabase
       .from("events")
       .select("*")
@@ -428,26 +429,27 @@ async function processEventRule(
 
     if (events) {
       for (const event of events) {
-        for (const member of members) {
-          if (!member.phone) continue;
+        const logKey = `${event.id}_h${rule.hours_before || 0}`;
+        const hoursLabel = rule.hours_before ? `em ${rule.hours_before} hora(s)` : "hoje";
 
-          // Build a unique key including hours_before to allow multiple same-day notifications
-          const logKey = `${event.id}_h${rule.hours_before || 0}`;
-          const alreadySent = await checkAlreadySent(supabase, rule.id, logKey, todayStr, member.id);
+        if (rule.whatsapp_group_id) {
+          const alreadySent = await checkAlreadySent(supabase, rule.id, logKey, todayStr);
           if (alreadySent) continue;
-
-          const hoursLabel = rule.hours_before ? `em ${rule.hours_before} hora(s)` : "hoje";
-          const msg = getEventMessage(rule, event, member, hoursLabel);
-          await sendWhatsApp(supabaseUrl, anonKey, {
-            lodge_id: rule.lodge_id,
-            phone: member.phone,
-            message: msg,
-            rule_id: rule.id,
-            profile_id: member.id,
-            category: rule.category,
-            reference_id: logKey,
-          });
-          results.push({ sent: true, category: rule.category, member: member.full_name, event: event.title });
+          const msg = getEventMessage(rule, event, { full_name: "" }, hoursLabel);
+          await sendGroupMessage(supabaseUrl, anonKey, rule, msg, logKey);
+          results.push({ sent: true, category: rule.category, target: "group", event: event.title });
+        } else {
+          for (const member of members) {
+            if (!member.phone) continue;
+            const alreadySent = await checkAlreadySent(supabase, rule.id, logKey, todayStr, member.id);
+            if (alreadySent) continue;
+            const msg = getEventMessage(rule, event, member, hoursLabel);
+            await sendWhatsApp(supabaseUrl, anonKey, {
+              lodge_id: rule.lodge_id, phone: member.phone, message: msg,
+              rule_id: rule.id, profile_id: member.id, category: rule.category, reference_id: logKey,
+            });
+            results.push({ sent: true, category: rule.category, member: member.full_name, event: event.title });
+          }
         }
       }
     }
