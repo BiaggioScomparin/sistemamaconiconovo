@@ -762,5 +762,3 @@ async function processSpouseBirthdayRule(
     results.push({ sent: true, category: rule.category, member: member.full_name, spouse: member.spouse_name });
   }
 }
-  }
-}
