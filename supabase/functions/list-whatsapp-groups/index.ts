@@ -6,6 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type GroupItem = { id: string; name: string };
+
+function normalizeZApiGroups(rawData: any): GroupItem[] {
+  const items = Array.isArray(rawData) ? rawData : rawData?.groups || rawData?.data || [];
+  return items
+    .filter((c: any) => c?.isGroup !== false && (c?.id?.endsWith?.("@g.us") || c?.phone?.endsWith?.("@g.us")))
+    .map((c: any) => ({ id: c.id || c.phone, name: c.name || c.subject || c.id || c.phone }));
+}
+
+function normalizeEvolutionGroups(rawData: any): GroupItem[] {
+  const items = Array.isArray(rawData) ? rawData : rawData?.groups || rawData?.data || rawData?.result || [];
+  return items
+    .filter((g: any) => !!(g?.id || g?.groupJid || g?.jid))
+    .map((g: any) => ({
+      id: g.id || g.groupJid || g.jid,
+      name: g.subject || g.name || g.id || g.groupJid || g.jid,
+    }));
+}
+
+async function parseBody(response: Response) {
+  const text = await response.text();
+  try {
+    return { text, data: JSON.parse(text) };
+  } catch {
+    return { text, data: [] };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -19,10 +47,10 @@ Deno.serve(async (req) => {
     const { lodge_id } = await req.json();
 
     if (!lodge_id) {
-      return new Response(
-        JSON.stringify({ error: "lodge_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "lodge_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { data: instance, error: instanceError } = await supabase
@@ -45,77 +73,130 @@ Deno.serve(async (req) => {
       baseUrl = `https://${baseUrl}`;
     }
 
-    let apiUrl: string;
-    let fetchHeaders: Record<string, string>;
-    let fetchMethod = "GET";
-    let fetchBody: string | undefined;
-
     if (apiFormat === "z-api") {
-      // Z-API: GET /instances/{id}/token/{token}/groups
-      apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/groups`;
-      fetchHeaders = { "Content-Type": "application/json" };
-    } else if (apiFormat === "wattend") {
-      // Wattend is based on Z-Pro/Evolution API, uses /v2/api/external/{instance_id} as prefix
-      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups?getParticipants=false`;
-      fetchHeaders = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${instance.token}`,
-      };
-    } else {
-      // Z-Pro / Evolution API: GET /group/fetchAllGroups/{instance}?getParticipants=false
-      apiUrl = `${baseUrl}/group/fetchAllGroups/${instance.instance_id}?getParticipants=false`;
-      fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
+      const apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/groups`;
+      console.log("Fetching groups (z-api) from:", apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const { text, data } = await parseBody(response);
+      if (!response.ok) {
+        return new Response(
+          JSON.stringify({ error: "Falha ao buscar grupos", details: data || text }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(JSON.stringify({ groups: normalizeZApiGroups(data) }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`Fetching groups (${apiFormat}) from:`, apiUrl);
+    if (apiFormat === "wattend") {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${instance.token}`,
+      };
 
-    const response = await fetch(apiUrl, {
-      method: fetchMethod,
-      headers: fetchHeaders,
-      ...(fetchBody ? { body: fetchBody } : {}),
-    });
+      const attempts: Array<{ url: string; method: "GET" | "POST"; body?: any }> = [
+        { url: `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups`, method: "GET" },
+        {
+          url: `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups`,
+          method: "POST",
+          body: { getParticipants: false },
+        },
+        { url: `${baseUrl}/v2/api/external/${instance.instance_id}/groups`, method: "GET" },
+        { url: `${baseUrl}/v2/api/external/${instance.instance_id}/chats`, method: "GET" },
+      ];
 
-    const responseText = await response.text();
-    console.log("Groups API response status:", response.status);
+      const attemptErrors: Array<{ url: string; method: string; status: number; body: string }> = [];
 
-    let rawData;
-    try { rawData = JSON.parse(responseText); } catch { rawData = []; }
+      for (const attempt of attempts) {
+        console.log(`Trying Wattend endpoint: ${attempt.method} ${attempt.url}`);
+        const response = await fetch(attempt.url, {
+          method: attempt.method,
+          headers,
+          ...(attempt.body ? { body: JSON.stringify(attempt.body) } : {}),
+        });
 
-    if (!response.ok) {
-      console.error("Groups API error:", responseText.substring(0, 500));
+        const { text, data } = await parseBody(response);
+
+        if (response.ok) {
+          const groups = normalizeEvolutionGroups(data);
+          console.log(`Wattend success: ${attempt.method} ${attempt.url} -> ${groups.length} groups`);
+          return new Response(JSON.stringify({ groups }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        attemptErrors.push({
+          url: attempt.url,
+          method: attempt.method,
+          status: response.status,
+          body: text.slice(0, 250),
+        });
+      }
+
       return new Response(
-        JSON.stringify({ error: "Falha ao buscar grupos", details: rawData }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          unsupported: true,
+          error:
+            "Não foi possível listar os grupos automaticamente na API Wattend com os endpoints disponíveis. Insira o ID manualmente (formato: 1203...@g.us).",
+          details: attemptErrors,
+          groups: [],
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Normalize response to a common format: { id, name }
-    let groups: { id: string; name: string }[] = [];
+    // Z-Pro / Evolution API
+    const zProAttempts: Array<{ url: string; method: "GET" | "POST"; body?: any }> = [
+      {
+        url: `${baseUrl}/group/fetchAllGroups/${instance.instance_id}?getParticipants=false`,
+        method: "GET",
+      },
+      {
+        url: `${baseUrl}/group/fetchAllGroups`,
+        method: "POST",
+        body: { getParticipants: false },
+      },
+    ];
 
-    if (apiFormat === "z-api") {
-      // Z-API /groups returns group list
-      const items = Array.isArray(rawData) ? rawData : (rawData?.groups || []);
-      groups = items
-        .filter((c: any) => c.isGroup !== false && (c.id?.endsWith?.("@g.us") || c.phone?.endsWith?.("@g.us")))
-        .map((c: any) => ({ id: c.id || c.phone, name: c.name || c.id }));
-    } else {
-      // Z-Pro / Evolution API / Wattend (based on Z-Pro)
-      const items = Array.isArray(rawData) ? rawData : (rawData?.groups || rawData?.data || []);
-      groups = items.map((g: any) => ({
-        id: g.id || g.groupJid || g.jid,
-        name: g.subject || g.name || g.id,
-      }));
+    for (const attempt of zProAttempts) {
+      console.log(`Trying Z-Pro endpoint: ${attempt.method} ${attempt.url}`);
+      const response = await fetch(attempt.url, {
+        method: attempt.method,
+        headers: { "Content-Type": "application/json", apikey: instance.token },
+        ...(attempt.body ? { body: JSON.stringify(attempt.body) } : {}),
+      });
+
+      const { text, data } = await parseBody(response);
+
+      if (response.ok) {
+        return new Response(JSON.stringify({ groups: normalizeEvolutionGroups(data) }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`Z-Pro endpoint failed: ${response.status} ${text.slice(0, 200)}`);
     }
 
     return new Response(
-      JSON.stringify({ groups }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Falha ao buscar grupos", details: "Nenhum endpoint suportado respondeu com sucesso." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error listing groups:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
