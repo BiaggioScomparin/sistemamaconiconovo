@@ -48,6 +48,7 @@ interface GroupMessagePanelProps {
 }
 
 type FilterMode = 'all' | 'degree' | 'manual';
+type SendMode = 'individual' | 'group';
 
 interface SendProgress {
   total: number;
