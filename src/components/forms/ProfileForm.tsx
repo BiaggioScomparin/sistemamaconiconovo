@@ -49,6 +49,7 @@ const profileSchema = z.object({
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
   mother_name: z.string().max(100).optional(),
   spouse_name: z.string().max(100).optional(),
+  spouse_birth_date: z.string().optional(),
   cell_phone: z.string().max(20).optional(),
   // Masonry fields
   initiation_date: z.string().optional(),
