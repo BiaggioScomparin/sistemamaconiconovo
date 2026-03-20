@@ -143,6 +143,7 @@ export default function AdminNotifications() {
         hours_before: newCategory === 'event_same_day' ? parseInt(newHoursBefore) || null : null,
         repeat_interval_days: newCategory === 'payment_overdue' ? parseInt(newRepeatDays) || 7 : null,
         message_template: newTemplate || null,
+        whatsapp_group_id: newGroupId || null,
       });
       toast.success('Regra de notificação criada!');
       setAddDialogOpen(false);
