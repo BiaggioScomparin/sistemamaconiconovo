@@ -180,6 +180,7 @@ export default function AdminNotifications() {
     setEditHoursBefore(String(rule.hours_before ?? ''));
     setEditRepeatDays(String(rule.repeat_interval_days ?? ''));
     setEditTemplate(rule.message_template || '');
+    setEditGroupId(rule.whatsapp_group_id || '');
     setEditDialogOpen(true);
   };
 
