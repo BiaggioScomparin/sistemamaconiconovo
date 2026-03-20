@@ -450,7 +450,7 @@ Use variáveis: {{nome}}, {{grau}}, {{cargo}}"
 
           <Button
             onClick={handleSend}
-            disabled={sending || !message.trim() || recipients.length === 0}
+            disabled={sending || !message.trim() || (sendMode === 'individual' && recipients.length === 0) || (sendMode === 'group' && !groupId.trim())}
             className="w-full"
             size="lg"
           >
@@ -458,6 +458,11 @@ Use variáveis: {{nome}}, {{grau}}, {{cargo}}"
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Enviando...
+              </>
+            ) : sendMode === 'group' ? (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar para o Grupo
               </>
             ) : (
               <>
