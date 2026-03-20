@@ -674,6 +674,18 @@ export default function AdminNotifications() {
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>ID do Grupo WhatsApp (opcional)</Label>
+                  <Input
+                    value={editGroupId}
+                    onChange={(e) => setEditGroupId(e.target.value)}
+                    placeholder="Ex: 120363xxxxx@g.us"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se preenchido, a notificação será enviada para o grupo ao invés de individualmente.
+                  </p>
+                </div>
+
                 <Button onClick={handleSaveEdit} className="w-full" disabled={updateRule.isPending}>
                   <Save className="h-4 w-4 mr-2" />
                   Salvar Alterações
