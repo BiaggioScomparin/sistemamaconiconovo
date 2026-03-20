@@ -28,11 +28,11 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const body: SendWhatsAppRequest = await req.json();
-    const { lodge_id, phone, message, rule_id, profile_id, category, reference_id } = body;
+    const { lodge_id, phone, group_id, message, rule_id, profile_id, category, reference_id } = body;
 
-    if (!lodge_id || !phone || !message) {
+    if (!lodge_id || (!phone && !group_id) || !message) {
       return new Response(
-        JSON.stringify({ error: "lodge_id, phone, and message are required" }),
+        JSON.stringify({ error: "lodge_id, (phone or group_id), and message are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
