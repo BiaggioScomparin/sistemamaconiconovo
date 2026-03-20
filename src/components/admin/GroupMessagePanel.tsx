@@ -246,6 +246,45 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label>Modo de Envio</Label>
+            <Select value={sendMode} onValueChange={(v) => setSendMode(v as SendMode)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Enviar individualmente
+                  </div>
+                </SelectItem>
+                <SelectItem value="group">
+                  <div className="flex items-center gap-2">
+                    <Send className="h-4 w-4" />
+                    Enviar para grupo WhatsApp
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {sendMode === 'group' && (
+            <div className="space-y-2">
+              <Label>ID do Grupo WhatsApp</Label>
+              <Input
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                placeholder="Ex: 120363xxxxx@g.us"
+              />
+              <p className="text-xs text-muted-foreground">
+                Obtenha o ID do grupo na API do seu provedor WhatsApp.
+              </p>
+            </div>
+          )}
+
+          {sendMode === 'individual' && (
+          <>
+          <div className="space-y-2">
             <Label>Filtro de Destinatários</Label>
             <Select value={filterMode} onValueChange={(v) => { setFilterMode(v as FilterMode); setSelectedIds(new Set()); }}>
               <SelectTrigger>
