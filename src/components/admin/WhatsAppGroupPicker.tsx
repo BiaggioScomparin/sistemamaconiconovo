@@ -39,14 +39,38 @@ export function WhatsAppGroupPicker({
       const { data, error } = await supabase.functions.invoke('list-whatsapp-groups', {
         body: { lodge_id: lodgeId },
       });
-      if (error) throw error;
+      if (error) {
+        // Try to parse the error response for unsupported message
+        try {
+          const errBody = JSON.parse(error.message || '{}');
+          if (errBody?.unsupported) {
+            toast.info(errBody.error || 'API não suporta listagem de grupos.');
+            setLoading(false);
+            return;
+          }
+        } catch {}
+        throw error;
+      }
+      if (data?.unsupported) {
+        toast.info(data.error || 'API não suporta listagem de grupos. Insira o ID manualmente.');
+        setLoading(false);
+        return;
+      }
       setGroups(data?.groups || []);
       if ((data?.groups || []).length === 0) {
         toast.info('Nenhum grupo encontrado na instância WhatsApp.');
       }
     } catch (err: any) {
       console.error('Failed to fetch groups:', err);
-      toast.error('Falha ao buscar grupos. Verifique a configuração da instância WhatsApp.');
+      // Check if the error contains the unsupported message
+      const errMsg = err?.context?.body ? await err.context.body.text?.() : '';
+      let parsed: any = {};
+      try { parsed = JSON.parse(errMsg); } catch {}
+      if (parsed?.unsupported) {
+        toast.info(parsed.error || 'API não suporta listagem automática de grupos.');
+      } else {
+        toast.error('Falha ao buscar grupos. Verifique a configuração da instância WhatsApp.');
+      }
     }
     setLoading(false);
   };

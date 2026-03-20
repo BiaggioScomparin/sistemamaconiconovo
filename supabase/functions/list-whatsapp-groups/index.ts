@@ -52,11 +52,57 @@ Deno.serve(async (req) => {
       apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/chats`;
       fetchHeaders = { "Content-Type": "application/json" };
     } else if (apiFormat === "wattend") {
-      apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}/group/fetchAllGroups`;
+      // Try multiple Wattend endpoints
+      const wattendEndpoints = [
+        `${baseUrl}/v2/api/external/${instance.instance_id}/chats`,
+        `${baseUrl}/v2/api/external/${instance.instance_id}/groups`,
+        `${baseUrl}/v2/api/external/groups/${instance.instance_id}`,
+      ];
       fetchHeaders = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${instance.token}`,
       };
+
+      let wattendResponse: Response | null = null;
+      let wattendUrl = "";
+      for (const url of wattendEndpoints) {
+        console.log(`Trying Wattend endpoint: ${url}`);
+        const res = await fetch(url, { method: "GET", headers: fetchHeaders });
+        console.log(`Wattend ${url} -> status ${res.status}`);
+        if (res.ok) {
+          wattendResponse = res;
+          wattendUrl = url;
+          break;
+        }
+        await res.text(); // consume body
+      }
+
+      if (!wattendResponse) {
+        return new Response(
+          JSON.stringify({ 
+            error: "A API Wattend não suporta listagem de grupos automaticamente. Por favor, insira o ID do grupo manualmente (formato: XXXXXXXXXX@g.us). Você pode obter o ID do grupo nas configurações do grupo no WhatsApp.",
+            unsupported: true 
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const wattendText = await wattendResponse.text();
+      let wattendData;
+      try { wattendData = JSON.parse(wattendText); } catch { wattendData = []; }
+
+      const wattendItems = Array.isArray(wattendData) ? wattendData : (wattendData?.groups || wattendData?.data || wattendData?.chats || []);
+      groups = wattendItems
+        .filter((c: any) => c.isGroup || (c.id && typeof c.id === 'string' && c.id.endsWith("@g.us")) || c.groupId)
+        .map((g: any) => ({
+          id: g.id || g.groupId || g.jid,
+          name: g.name || g.subject || g.id,
+        }));
+
+      return new Response(
+        JSON.stringify({ groups }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     } else {
       // Z-Pro / CloudZAPI
       apiUrl = `${baseUrl}/group/fetchAllGroups`;
@@ -66,9 +112,9 @@ Deno.serve(async (req) => {
     console.log(`Fetching groups (${apiFormat}) from:`, apiUrl);
 
     const response = await fetch(apiUrl, {
-      method: apiFormat === "z-pro" || apiFormat === "wattend" ? "POST" : "GET",
+      method: apiFormat === "z-pro" ? "POST" : "GET",
       headers: fetchHeaders,
-      ...((apiFormat === "z-pro" || apiFormat === "wattend") ? { body: JSON.stringify({ getParticipants: false }) } : {}),
+      ...(apiFormat === "z-pro" ? { body: JSON.stringify({ getParticipants: false }) } : {}),
     });
 
     const responseText = await response.text();
