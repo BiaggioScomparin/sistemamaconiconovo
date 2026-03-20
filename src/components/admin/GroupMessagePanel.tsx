@@ -397,6 +397,8 @@ export function GroupMessagePanel({ lodgeId }: GroupMessagePanelProps) {
               </Badge>
             )}
           </div>
+          </>
+          )}
         </CardContent>
       </Card>
 
