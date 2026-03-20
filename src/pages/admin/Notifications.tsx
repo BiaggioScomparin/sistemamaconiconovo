@@ -149,6 +149,7 @@ export default function AdminNotifications() {
       setAddDialogOpen(false);
       setNewCategory('');
       setNewTemplate('');
+      setNewGroupId('');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao criar regra');
     }
