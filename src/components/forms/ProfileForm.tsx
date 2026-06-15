@@ -183,7 +183,17 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   };
 
   const handleFormSubmit = async (data: ProfileFormData) => {
-    await onSubmit(data, children, photoFile);
+    // Normalize empty optional fields to null so DB date/text columns don't reject "".
+    const cleaned: Record<string, any> = { ...data };
+    const optionalFields = [
+      'mother_name', 'spouse_name', 'spouse_birth_date', 'cell_phone',
+      'initiation_date', 'cim_number', 'degree', 'cargo', 'lodge_id', 'lodge_position',
+      'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state',
+    ];
+    for (const k of optionalFields) {
+      if (cleaned[k] === '' || cleaned[k] === undefined) cleaned[k] = null;
+    }
+    await onSubmit(cleaned as ProfileFormData, children, photoFile);
   };
 
   return (
