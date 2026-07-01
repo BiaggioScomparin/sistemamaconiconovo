@@ -257,6 +257,20 @@ export default function AdminLodges() {
                     Gateway usado para processar pagamentos PIX e cartão desta loja.
                   </p>
                 </div>
+                {/* Billing toggle */}
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="billing_enabled">Cobrança financeira ativa</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Se desativada, esta loja não gera mensalidades automaticamente e o módulo financeiro fica oculto para seus membros.
+                    </p>
+                  </div>
+                  <Switch
+                    id="billing_enabled"
+                    checked={formData.billing_enabled}
+                    onCheckedChange={(v) => setFormData({ ...formData, billing_enabled: v })}
+                  />
+                </div>
                 {/* Logo Upload */}
                 <div className="space-y-2">
                   <Label>Logo da Loja</Label>
