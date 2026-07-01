@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Building2, Upload, Image } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Lodge } from '@/lib/supabase-types';
 
 export default function AdminLodges() {
@@ -26,7 +27,7 @@ export default function AdminLodges() {
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLodge, setEditingLodge] = useState<Lodge | null>(null);
-  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago' });
+  const [formData, setFormData] = useState({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago', billing_enabled: true });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -54,12 +55,13 @@ export default function AdminLodges() {
         state: lodge.state || '',
         default_payment_amount: String((lodge as any).default_payment_amount || 200),
         logo_url: logoUrl,
-        payment_gateway: (lodge as any).payment_gateway || 'mercado_pago'
+        payment_gateway: (lodge as any).payment_gateway || 'mercado_pago',
+        billing_enabled: (lodge as any).billing_enabled !== false,
       });
       setLogoPreview(logoUrl || null);
     } else {
       setEditingLodge(null);
-      setFormData({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago' });
+      setFormData({ name: '', city: '', state: '', default_payment_amount: '200', logo_url: '', payment_gateway: 'mercado_pago', billing_enabled: true });
       setLogoPreview(null);
     }
     setLogoFile(null);
@@ -124,6 +126,7 @@ export default function AdminLodges() {
           default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
           logo_url: logoUrl,
           payment_gateway: formData.payment_gateway,
+          billing_enabled: formData.billing_enabled,
         };
 
         await updateLodge.mutateAsync({ id: editingLodge.id, ...dataToSave });
@@ -136,6 +139,7 @@ export default function AdminLodges() {
           state: formData.state,
           default_payment_amount: parseFloat(formData.default_payment_amount) || 200,
           payment_gateway: formData.payment_gateway,
+          billing_enabled: formData.billing_enabled,
         };
 
         const newLodge = await createLodge.mutateAsync(dataToSave);
