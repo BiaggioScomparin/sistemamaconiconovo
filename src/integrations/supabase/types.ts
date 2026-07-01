@@ -276,6 +276,7 @@ export type Database = {
       }
       lodges: {
         Row: {
+          billing_enabled: boolean
           city: string | null
           created_at: string
           default_payment_amount: number | null
@@ -288,6 +289,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_enabled?: boolean
           city?: string | null
           created_at?: string
           default_payment_amount?: number | null
@@ -300,6 +302,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_enabled?: boolean
           city?: string | null
           created_at?: string
           default_payment_amount?: number | null
