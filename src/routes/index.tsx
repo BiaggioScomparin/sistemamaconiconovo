@@ -1,0 +1,1 @@
+export default function Index() { return <div>Analise completamente toda a aplicação antes de realizar qualquer alteração e execute uma auditoria profunda de SEGURANÇA e BANCO DE DADOS em todo o sistema.</div>; }
