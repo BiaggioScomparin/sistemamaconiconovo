@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -60,21 +61,47 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate('/login');
   };
 
-  const adminLinks = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/proposals', label: 'Propostas', icon: FileText },
-    { href: '/admin/members', label: 'Membros', icon: Users },
-    { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
-    { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
-    { href: '/admin/calendar', label: 'Calendário', icon: Calendar },
-    { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
-    { href: '/admin/library', label: 'Biblioteca', icon: BookOpen },
-    { href: '/admin/minutes', label: 'Atas', icon: ClipboardList },
-    { href: '/admin/invites', label: 'Convites', icon: Mail },
-    { href: '/admin/permissions', label: 'Permissões', icon: Shield },
-    { href: '/admin/notifications', label: 'Notificações', icon: Bell },
-    { href: '/admin/reports', label: 'Relatórios', icon: BarChart3 },
-    { href: '/admin/settings', label: 'Configurações', icon: Settings },
+  const adminCategories = [
+    {
+      title: "Visão Geral",
+      items: [
+        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/admin/reports', label: 'Relatórios', icon: BarChart3 },
+      ]
+    },
+    {
+      title: "Gestão Humana",
+      items: [
+        { href: '/admin/proposals', label: 'Propostas', icon: FileText },
+        { href: '/admin/members', label: 'Membros', icon: Users },
+        { href: '/admin/approvals', label: 'Aprovações', icon: Shield },
+      ]
+    },
+    {
+      title: "Loja & Sessões",
+      items: [
+        { href: '/admin/lodges', label: 'Lojas', icon: Building2 },
+        { href: '/admin/attendances', label: 'Presenças', icon: Calendar },
+        { href: '/admin/minutes', label: 'Atas', icon: ClipboardList },
+        { href: '/admin/calendar', label: 'Calendário', icon: Calendar },
+        { href: '/admin/invites', label: 'Convites', icon: Mail },
+      ]
+    },
+    {
+      title: "Tesouraria & Acervo",
+      items: [
+        { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
+        { href: '/admin/library', label: 'Biblioteca', icon: BookOpen },
+      ]
+    },
+    {
+      title: "Configurações",
+      items: [
+        { href: '/admin/permissions', label: 'Permissões', icon: Shield },
+        { href: '/admin/notifications', label: 'Notificações', icon: Bell },
+        { href: '/admin/settings', label: 'Configurações', icon: Settings },
+      ]
+    }
   ];
 
   // Filter member links based on permissions
@@ -204,42 +231,74 @@ export function AppLayout({ children }: AppLayoutProps) {
 
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {links.map((link) => {
-              const isActive = location.pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg font-body transition-colors",
-                    isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "hover:bg-sidebar-accent text-sidebar-foreground"
-                  )}
-                >
-                  <link.icon size={20} />
-                  {link.label}
-                </Link>
-              );
-            })}
+          <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+            {isAdminRoute && isAdmin ? (
+              adminCategories.map((cat, idx) => (
+                <div key={idx} className="space-y-1">
+                  <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                    {cat.title}
+                  </h3>
+                  <div className="space-y-1">
+                    {cat.items.map((link) => {
+                      const isActive = location.pathname === link.href;
+                      return (
+                        <Link
+                          key={link.href}
+                          to={link.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
+                              : "hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground"
+                          )}
+                        >
+                          <link.icon size={18} />
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            ) : (
+              getMemberLinks().map((link) => {
+                const isActive = location.pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg font-body transition-colors",
+                      isActive
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
+                        : "hover:bg-sidebar-accent text-sidebar-foreground"
+                    )}
+                  >
+                    <link.icon size={20} />
+                    {link.label}
+                  </Link>
+                );
+              })
+            )}
           </nav>
 
           {/* User info & logout */}
           <div className="p-4 border-t border-sidebar-border space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-sidebar-foreground truncate font-body">
+                <p className="text-sm font-medium text-sidebar-foreground truncate font-body">
                   {user?.email}
                 </p>
+                {isAdmin && (
+                  <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-semibold">
+                    <Crown size={12} />
+                    Admin
+                  </span>
+                )}
               </div>
-              {isAdmin && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-semibold shrink-0">
-                  <Crown size={12} />
-                  Admin
-                </span>
-              )}
+              <ThemeToggle />
             </div>
             <Button
               variant="destructive"

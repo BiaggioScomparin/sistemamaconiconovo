@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
-import { CreditCard, CheckCircle, Clock, AlertCircle, QrCode, Loader2 } from 'lucide-react';
+import { CreditCard, CheckCircle, Clock, AlertCircle, QrCode, Loader2, FileText, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 interface Payment {
   id: string;
@@ -203,6 +204,36 @@ export default function Payments() {
     createCardCheckoutMutation.mutate(payment);
   };
 
+  const handleDownloadReceipt = (payment: Payment) => {
+    try {
+      const doc = new jsPDF();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("RECIBO DE PAGAMENTO DE MENSALIDADE", 105, 20, { align: "center" });
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("Grande Oriente Independente do Brasil", 105, 28, { align: "center" });
+      doc.line(20, 33, 190, 33);
+      
+      doc.text(`Recebemos de: ${profile?.full_name || 'Membro'}`, 20, 48);
+      doc.text(`Referente a: Mensalidade de ${monthNames[payment.reference_month - 1]}/${payment.reference_year}`, 20, 58);
+      doc.text(`Valor Pago: R$ ${getAmount(payment).toFixed(2).replace('.', ',')}`, 20, 68);
+      doc.text(`Data do Pagamento: ${payment.paid_at ? format(parseISO(payment.paid_at), "dd/MM/yyyy 'às' HH:mm") : '-'}`, 20, 78);
+      doc.text(`Status: PAGO / CONFIRMADO`, 20, 88);
+      
+      doc.line(20, 105, 190, 105);
+      doc.setFontSize(10);
+      doc.text("Documento emitido eletronicamente pelo Sistema Maçônico", 105, 115, { align: "center" });
+      
+      doc.save(`recibo-mensalidade-${payment.reference_month}-${payment.reference_year}.pdf`);
+      toast.success('Recibo baixado com sucesso!');
+    } catch (err) {
+      console.error('Error generating PDF receipt:', err);
+      toast.error('Erro ao gerar recibo em PDF');
+    }
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -276,6 +307,16 @@ export default function Payments() {
                       <span className="text-muted-foreground">Pago em:</span>
                       <span>{format(parseISO(payment.paid_at), "dd/MM/yyyy 'às' HH:mm")}</span>
                     </div>
+                  )}
+                  {payment.status === 'paid' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full mt-3 gap-2"
+                      onClick={() => handleDownloadReceipt(payment)}
+                    >
+                      <FileText className="h-4 w-4" /> Baixar Recibo (PDF)
+                    </Button>
                   )}
                   {payment.status !== 'paid' && paymentGateway !== 'manual' && (
                     <div className="grid grid-cols-2 gap-2 mt-3">
