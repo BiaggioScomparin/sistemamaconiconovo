@@ -149,8 +149,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     return links;
   };
 
-  const links = isAdminRoute && isAdmin ? adminLinks : getMemberLinks();
-
   return (
     <div className="min-h-screen bg-background">
       {/* Fixed Admin Button - Top Right */}
