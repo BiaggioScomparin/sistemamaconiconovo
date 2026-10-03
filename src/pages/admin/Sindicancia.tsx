@@ -341,8 +341,17 @@ export default function AdminSindicancia() {
     }, 600);
   };
 
-  const handleSaveParecer = () => {
+  const handleSaveParecer = async () => {
     if (!reportData) return;
+
+    const newStatus = comissaoVote === 'DESFAVORAVEL' ? 'reprovado' : 'sindicancia_aprovada';
+
+    if (reportData.candidate.id) {
+      await supabase
+        .from('profiles')
+        .update({ status: newStatus as any })
+        .eq('id', reportData.candidate.id);
+    }
 
     const newRecord: SindicanciaRecord = {
       id: reportData.protocol,
@@ -367,7 +376,7 @@ export default function AdminSindicancia() {
 
     toast({
       title: 'Parecer Salvo com Sucesso!',
-      description: `Sindicância registrada no histórico da Comissão para ${reportData.candidate.fullName}.`
+      description: `Sindicância registrada. Status do candidato atualizado para ${newStatus === 'sindicancia_aprovada' ? 'Sindicância Aprovada (Ficha de Proposta Liberada)' : 'Reprovado'}.`
     });
 
     setActiveTab('painel');
