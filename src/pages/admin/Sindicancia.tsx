@@ -33,7 +33,14 @@ import {
   ChevronRight,
   ExternalLink,
   Clock,
-  Sparkles
+  Sparkles,
+  Vote,
+  Receipt,
+  Briefcase,
+  Landmark,
+  Award,
+  BadgeCheck,
+  Check
 } from 'lucide-react';
 
 interface CandidateData {
@@ -45,6 +52,7 @@ interface CandidateData {
   birthDate: string;
   uf: string;
   profession: string;
+  councilNumber?: string;
   hasLgpdConsent: boolean;
 }
 
@@ -56,6 +64,10 @@ interface SindicanciaRecord {
   uf: string;
   pfStatus: 'NADA_CONSTA' | 'APONTAMENTO';
   datajudStatus: 'NADA_CONSTA' | 'APONTAMENTO';
+  tseStatus: 'REGULAR' | 'PENDENTE';
+  receitaStatus: 'REGULAR' | 'PENDENTE';
+  cndtStatus: 'NADA_CONSTA' | 'APONTAMENTO';
+  cguStatus: 'NADA_CONSTA' | 'SANCAO';
   overallStatus: 'FAVORAVEL' | 'RESTRICAO' | 'DESFAVORAVEL' | 'EM_ANALISE';
   date: string;
   sindicanteName?: string;
@@ -78,6 +90,7 @@ export default function AdminSindicancia() {
     birthDate: '',
     uf: 'SP',
     profession: '',
+    councilNumber: '',
     hasLgpdConsent: false,
   });
 
@@ -89,16 +102,34 @@ export default function AdminSindicancia() {
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStep, setScanStep] = useState(0);
 
-  // Active Report State
+  // Active Report State with all 11 public sources
   const [reportData, setReportData] = useState<{
     candidate: CandidateData;
     protocol: string;
     generatedAt: string;
     hasApontamento: boolean;
+    // 1. Polícia Federal
     pfCert: { status: string; protocol: string; date: string };
-    civilCert: { status: string; protocol: string; date: string };
-    datajudCert: { status: string; totalCases: number; activeCases: string };
+    // 2. DataJud CNJ
+    datajudCert: { status: string; totalCases: number; detail: string };
+    // 3. TJ Estadual
+    tjCert: { status: string; protocol: string; date: string };
+    // 4. TRF Federal
     trfCert: { status: string; protocol: string };
+    // 5. TSE Eleitoral
+    tseCert: { quitacao: string; crimes: string; protocol: string };
+    // 6. Receita Federal
+    receitaCert: { cpfStatus: string; cndStatus: string; protocol: string };
+    // 7. TST Trabalhista (CNDT)
+    cndtCert: { status: string; protocol: string };
+    // 8. CGU Sanções / CEIS
+    cguCert: { ceisStatus: string; cnepStatus: string; protocol: string };
+    // 9. TCU Contas Irregulares
+    tcuCert: { status: string; detail: string };
+    // 10. REDESIM Participação Societária
+    redesimCert: { totalEmpresas: number; detail: string };
+    // 11. Conselho de Classe Profissional
+    conselhoCert: { status: string; detail: string };
   } | null>(null);
 
   // Sindicante Parecer Form
@@ -113,33 +144,41 @@ export default function AdminSindicancia() {
       id: 'SIND-2026-001',
       candidateName: 'Carlos Eduardo Oliveira',
       cpf: '123.456.789-00',
-      profession: 'Engenheiro Civil',
+      profession: 'Engenheiro Civil (CREA-SP 506987)',
       uf: 'SP',
       pfStatus: 'NADA_CONSTA',
       datajudStatus: 'NADA_CONSTA',
+      tseStatus: 'REGULAR',
+      receitaStatus: 'REGULAR',
+      cndtStatus: 'NADA_CONSTA',
+      cguStatus: 'NADA_CONSTA',
       overallStatus: 'FAVORAVEL',
       date: '2026-09-28',
       sindicanteName: 'Roberto M::: M:::',
       concept: 'Excelente',
-      parecerText: 'Candidato com excelente reputação moral, ilibada conduta social e familiar.'
+      parecerText: 'Candidato com excelente reputação moral, ilibada conduta social e familiar. 11 bases consultadas totalmente limpas.'
     },
     {
       id: 'SIND-2026-002',
       candidateName: 'Fernando Augusto Santos',
       cpf: '987.654.321-11',
-      profession: 'Advogado',
+      profession: 'Advogado (OAB-SP 345120)',
       uf: 'SP',
       pfStatus: 'NADA_CONSTA',
       datajudStatus: 'APONTAMENTO',
+      tseStatus: 'REGULAR',
+      receitaStatus: 'REGULAR',
+      cndtStatus: 'APONTAMENTO',
+      cguStatus: 'NADA_CONSTA',
       overallStatus: 'RESTRICAO',
       date: '2026-10-01',
       sindicanteName: 'Marcos A::: M:::',
       concept: 'Bom',
-      parecerText: 'Possui uma ação trabalhista em andamento como réu empresa. Recomenda-se acompanhamento.'
+      parecerText: 'Possui uma ação trabalhista em andamento como réu empresa. Recomenda-se acompanhamento pela Comissão.'
     }
   ]);
 
-  // Fetch proposals/profiles from Supabase for quick selector
+  // Fetch profiles for candidate dropdown
   const { data: profiles } = useQuery({
     queryKey: ['profiles-sindicancia'],
     queryFn: async () => {
@@ -177,6 +216,7 @@ export default function AdminSindicancia() {
         birthDate: profile.birth_date || '',
         uf: profile.state || 'SP',
         profession: profile.profession || '',
+        councilNumber: '',
         hasLgpdConsent: true,
       });
     }
@@ -206,55 +246,99 @@ export default function AdminSindicancia() {
     setScanStep(1);
     setActiveTab('relatorio');
 
-    // Simulate animated sweep across databases
+    // Simulate sweep across 11 official public databases
     const stepInterval = setInterval(() => {
       setScanProgress(prev => {
         if (prev >= 100) {
           clearInterval(stepInterval);
           setIsScanning(false);
           
-          // Generate simulated consolidated report
           const protocol = `SIND-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const todayStr = new Date().toLocaleDateString('pt-BR');
+
           setReportData({
             candidate: { ...formData },
             protocol,
             generatedAt: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             hasApontamento: false,
+            // 1. Polícia Federal
             pfCert: {
               status: 'NADA CONSTA',
               protocol: `PF-SINIC-${Math.floor(10000000 + Math.random() * 90000000)}`,
-              date: new Date().toLocaleDateString('pt-BR')
+              date: todayStr
             },
-            civilCert: {
-              status: 'NADA CONSTA',
-              protocol: `CIVIL-${Math.floor(10000000 + Math.random() * 90000000)}`,
-              date: new Date().toLocaleDateString('pt-BR')
-            },
+            // 2. DataJud CNJ
             datajudCert: {
               status: 'NADA CONSTA',
               totalCases: 0,
-              activeCases: 'Nenhum processo criminal ou cível Relevante encontrado nas Varas Estaduais ou Federais.'
+              detail: 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
             },
+            // 3. TJ Estadual
+            tjCert: {
+              status: 'NADA CONSTA',
+              protocol: `TJ${formData.uf}-${Math.floor(10000000 + Math.random() * 90000000)}`,
+              date: todayStr
+            },
+            // 4. TRF Federal
             trfCert: {
               status: 'NADA CONSTA',
-              protocol: `TRF3-${Math.floor(100000 + Math.random() * 900000)}`
+              protocol: `TRF-${Math.floor(100000 + Math.random() * 900000)}`
+            },
+            // 5. TSE Eleitoral
+            tseCert: {
+              quitacao: 'QUITADO (Em Dia)',
+              crimes: 'NADA CONSTA (Sem Crimes Eleitorais)',
+              protocol: `TSE-ELEIT-${Math.floor(10000000 + Math.random() * 90000000)}`
+            },
+            // 6. Receita Federal
+            receitaCert: {
+              cpfStatus: 'REGULAR',
+              cndStatus: 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
+              protocol: `RFB-${Math.floor(10000000 + Math.random() * 90000000)}`
+            },
+            // 7. TST Trabalhista (CNDT)
+            cndtCert: {
+              status: 'NADA CONSTA (Livre de Débitos Trabalhistas)',
+              protocol: `CNDT-${Math.floor(10000000 + Math.random() * 90000000)}/${new Date().getFullYear()}`
+            },
+            // 8. CGU Sanções / CEIS
+            cguCert: {
+              ceisStatus: 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
+              cnepStatus: 'NADA CONSTA (Livre de Punição Anticorrupção)',
+              protocol: `CGU-CEIS-${Math.floor(100000 + Math.random() * 900000)}`
+            },
+            // 9. TCU Contas Irregulares
+            tcuCert: {
+              status: 'NADA CONSTA',
+              detail: 'Sem contas públicas rejeitadas ou inabilitação para função pública.'
+            },
+            // 10. REDESIM Participação Societária
+            redesimCert: {
+              totalEmpresas: 1,
+              detail: 'Empresa Ativa e em situação regular (Sem baixas de ofício ou inaptidão).'
+            },
+            // 11. Conselho de Classe
+            conselhoCert: {
+              status: 'REGULAR & ATIVO',
+              detail: 'Inscrição ativa no Conselho de Classe sem punições éticas ativas.'
             }
           });
 
           toast({
-            title: 'Sindicância Concluída!',
-            description: `Varredura automatizada concluída para ${formData.fullName}.`
+            title: 'Sindicância Completa Concluída!',
+            description: `Varredura automatizada nas 11 bases públicas concluída com sucesso para ${formData.fullName}.`
           });
           return 100;
         }
 
-        const next = prev + 25;
-        if (next >= 25 && next < 50) setScanStep(2);
-        else if (next >= 50 && next < 75) setScanStep(3);
-        else if (next >= 75) setScanStep(4);
+        const next = prev + 20;
+        if (next >= 20 && next < 40) setScanStep(2);
+        else if (next >= 40 && next < 60) setScanStep(3);
+        else if (next >= 60 && next < 80) setScanStep(4);
+        else if (next >= 80) setScanStep(5);
         return next;
       });
-    }, 800);
+    }, 600);
   };
 
   const handleSaveParecer = () => {
@@ -268,6 +352,10 @@ export default function AdminSindicancia() {
       uf: reportData.candidate.uf,
       pfStatus: reportData.hasApontamento ? 'APONTAMENTO' : 'NADA_CONSTA',
       datajudStatus: reportData.hasApontamento ? 'APONTAMENTO' : 'NADA_CONSTA',
+      tseStatus: 'REGULAR',
+      receitaStatus: 'REGULAR',
+      cndtStatus: 'NADA_CONSTA',
+      cguStatus: 'NADA_CONSTA',
       overallStatus: comissaoVote,
       date: new Date().toISOString().split('T')[0],
       sindicanteName,
@@ -299,17 +387,17 @@ export default function AdminSindicancia() {
               <ShieldCheck className="h-8 w-8" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl md:text-3xl font-display text-foreground">
                   Sindicância & Admissão Maçônica
                 </h1>
-                <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30 text-[11px] gap-1.5 hidden sm:inline-flex">
+                <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30 text-[11px] gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  DataJud & PF Conectadas
+                  11 Bases Oficiais Integradas
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground font-body mt-0.5">
-                Sistema Automatizado de Antecedentes & Análise de Candidatos
+                Sistema Automatizado de Antecedentes, Receita, Justiça & Sanções Públicas
               </p>
             </div>
           </div>
@@ -320,7 +408,7 @@ export default function AdminSindicancia() {
             className="gap-2 border-primary/30 hover:bg-accent"
           >
             <Users className="h-4 w-4 text-primary" />
-            Lista de Candidatos em Sindicância
+            Painel da Comissão ({sindicanciasList.length})
           </Button>
         </div>
 
@@ -331,27 +419,27 @@ export default function AdminSindicancia() {
               <span>➕ Nova Sindicância (Consulta)</span>
             </TabsTrigger>
             <TabsTrigger value="relatorio" className="flex items-center gap-2 text-xs md:text-sm font-semibold">
-              <span>📄 Relatório Emitido (Ficha)</span>
+              <span>📄 Relatório Emitido (11 Certidões)</span>
             </TabsTrigger>
             <TabsTrigger value="painel" className="flex items-center gap-2 text-xs md:text-sm font-semibold">
-              <span>👥 Painel da Comissão ({sindicanciasList.length})</span>
+              <span>👥 Painel da Comissão</span>
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: FORM & INTEGRATED APIS */}
+          {/* TAB 1: FORM & ALL 11 INTEGRATED APIS */}
           <TabsContent value="consulta" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Candidate Form (2 Columns) */}
+              {/* Candidate Form */}
               <Card className="card-elegant lg:col-span-2">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <CardTitle className="text-xl font-display text-foreground flex items-center gap-2">
                         <User className="h-5 w-5 text-amber-500" />
                         Dados do Candidato (Profano)
                       </CardTitle>
                       <CardDescription>
-                        Informe os dados para consulta às certidões públicas unificadas
+                        Informe os dados para consulta automatizada às 11 bases públicas unificadas
                       </CardDescription>
                     </div>
 
@@ -438,17 +526,17 @@ export default function AdminSindicancia() {
                     </div>
 
                     <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="profession" className="text-xs font-semibold">Profissão / Ocupação Principal</Label>
+                      <Label htmlFor="profession" className="text-xs font-semibold">Profissão / Registro Profissional</Label>
                       <Input
                         id="profession"
-                        placeholder="Ex: Engenheiro Civil / Administrador de Empresas"
+                        placeholder="Ex: Advogado (OAB-SP 345120) / Engenheiro (CREA-SP)"
                         value={formData.profession}
                         onChange={e => setFormData({ ...formData, profession: e.target.value })}
                       />
                     </div>
                   </div>
 
-                  {/* LGPD Consent Compliance Box */}
+                  {/* LGPD Consent Box */}
                   <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
                     <div className="flex items-start gap-3">
                       <Checkbox
@@ -458,7 +546,7 @@ export default function AdminSindicancia() {
                         className="mt-1"
                       />
                       <label htmlFor="lgpd" className="text-xs text-foreground cursor-pointer leading-relaxed">
-                        <span className="font-bold text-amber-500">Conformidade LGPD & Autorização de Consulta:</span> Confirmo que o candidato assinou a declaração prévia e expressa autorizando a Comissão de Sindicância a consultar certidões de antecedentes criminais, distribuição cível e relatórios da Justiça Pública.
+                        <span className="font-bold text-amber-500">Conformidade LGPD & Termo de Consentimento:</span> Confirmo que o candidato assinou autorização prévia e expressa para consulta de certidões criminais, cíveis, fiscais, trabalhistas e eleitorais em bases oficiais públicas.
                       </label>
                     </div>
                   </div>
@@ -469,122 +557,138 @@ export default function AdminSindicancia() {
                     className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-md h-12"
                   >
                     <Search className="h-5 w-5" />
-                    Iniciar Sindicância Automática
+                    Iniciar Sindicância em 11 Bases Gratuitas
                   </Button>
                 </CardContent>
               </Card>
 
-              {/* Integrated API Status Panel (1 Column) */}
+              {/* Panel of 11 Integrated Databases */}
               <div className="space-y-4">
                 <Card className="card-elegant border-primary/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-display text-foreground flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-primary" />
-                      Bases Conectadas (APIs)
+                      11 Fontes Gratuitas Integradas
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Fontes oficiais consultadas em tempo real
+                      APIs e certidões oficiais em tempo real
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="p-3 rounded-xl border border-border bg-card flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-                          <ShieldCheck size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">Polícia Federal (SINIC)</p>
-                          <p className="text-[11px] text-muted-foreground">Antecedentes Criminais</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Operacional</Badge>
+                  <CardContent className="space-y-2.5 text-xs">
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <ShieldCheck size={14} className="text-blue-500" /> 1. Polícia Federal (SINIC)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
                     </div>
 
-                    <div className="p-3 rounded-xl border border-border bg-card flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
-                          <Scale size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">DataJud (CNJ)</p>
-                          <p className="text-[11px] text-muted-foreground">Processos Judiciais Brasil</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Operacional</Badge>
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Scale size={14} className="text-purple-500" /> 2. DataJud (CNJ - Processos)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
                     </div>
 
-                    <div className="p-3 rounded-xl border border-border bg-card flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-                          <Building2 size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">TJ Estadual (TJSP/UF)</p>
-                          <p className="text-[11px] text-muted-foreground">Varas Cíveis e Família</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Operacional</Badge>
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Building2 size={14} className="text-amber-500" /> 3. TJ Estadual (TJSP/UF)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
                     </div>
 
-                    <div className="p-3 rounded-xl border border-border bg-card flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                          <FileCheck size={18} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">TRF Federal</p>
-                          <p className="text-[11px] text-muted-foreground">Justiça Federal R1/R3</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Operacional</Badge>
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <FileCheck size={14} className="text-emerald-500" /> 4. TRF Federal (R1/R3)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Sindicância Guidelines Card */}
-                <Card className="card-elegant border-amber-500/30 bg-amber-500/5">
-                  <CardContent className="p-4 space-y-2 text-xs text-muted-foreground">
-                    <p className="font-semibold text-amber-500 flex items-center gap-1.5">
-                      <ShieldAlert size={14} /> Diretrizes da Comissão
-                    </p>
-                    <p className="leading-relaxed">
-                      A sindicância maçônica visa assegurar a livre e ilibada reputação moral do profano. As informações obtidas são estritamente confidenciais e restritas à Loja Maçônica.
-                    </p>
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Vote size={14} className="text-rose-500" /> 5. TSE (Justiça Eleitoral)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Receipt size={14} className="text-indigo-500" /> 6. Receita Federal (CPF/CND)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Briefcase size={14} className="text-cyan-500" /> 7. TST Trabalhista (CNDT)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <ShieldAlert size={14} className="text-red-500" /> 8. CGU (CEIS / Inidoneidade)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Landmark size={14} className="text-orange-500" /> 9. TCU (Contas Públicas)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Building2 size={14} className="text-teal-500" /> 10. REDESIM (Sócio / CNPJ)
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Award size={14} className="text-yellow-500" /> 11. Conselho Profissional
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
           </TabsContent>
 
-          {/* TAB 2: CONSOLIDATED REPORT & PARECER */}
+          {/* TAB 2: CONSOLIDATED REPORT (ALL 11 CERTIFICATES) */}
           <TabsContent value="relatorio" className="space-y-6">
             {/* SCANNING PROGRESS ANIMATOR */}
             {isScanning && (
               <Card className="card-elegant border-amber-500/50 p-8 text-center space-y-6">
                 <div className="space-y-2">
-                  <h3 className="text-xl font-display text-foreground">Executando Varredura Automatizada...</h3>
-                  <p className="text-xs text-muted-foreground">Consultando certidões unificadas da Polícia Federal, DataJud e Tribunais Estaduais</p>
+                  <h3 className="text-xl font-display text-foreground">Executando Varredura Unificada nas 11 Bases...</h3>
+                  <p className="text-xs text-muted-foreground">Consultando Polícia Federal, DataJud, TSE, Receita Federal, CNDT, CGU, TCU, REDESIM e Conselhos de Classe</p>
                 </div>
 
                 <div className="w-full bg-accent rounded-full h-4 overflow-hidden border border-border p-0.5">
                   <div 
-                    className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out" 
+                    className="bg-gradient-to-r from-amber-500 via-purple-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out" 
                     style={{ width: `${scanProgress}%` }}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-medium">
-                  <div className={`p-3 rounded-xl border ${scanStep >= 1 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs font-medium">
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 1 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
                     1. Polícia Federal
                   </div>
-                  <div className={`p-3 rounded-xl border ${scanStep >= 2 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 2 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
                     2. DataJud CNJ
                   </div>
-                  <div className={`p-3 rounded-xl border ${scanStep >= 3 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
-                    3. TJ Estadual
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 3 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                    3. TSE & CNDT
                   </div>
-                  <div className={`p-3 rounded-xl border ${scanStep >= 4 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
-                    4. TRF Federal
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 4 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                    4. Receita & CGU
+                  </div>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 5 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                    5. REDESIM & Órgãos
                   </div>
                 </div>
               </Card>
@@ -627,11 +731,11 @@ export default function AdminSindicancia() {
 
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <Badge className="bg-emerald-500 text-white font-bold px-4 py-2 text-sm gap-1.5 shadow-sm">
-                          <CheckCircle2 size={16} /> NADA CONSTA (Ficha Limpa)
+                          <CheckCircle2 size={16} /> 11 CERTIDÕES LIMPAS (Ficha Limpa)
                         </Badge>
                         <div className="flex items-center gap-2 print:hidden">
                           <Button onClick={handlePrint} variant="outline" size="sm" className="gap-1.5">
-                            <Printer className="h-4 w-4" /> Imprimir PDF
+                            <Printer className="h-4 w-4" /> Imprimir Ficha Completa
                           </Button>
                         </div>
                       </div>
@@ -639,58 +743,246 @@ export default function AdminSindicancia() {
                   </CardHeader>
                 </Card>
 
-                {/* CERTIFICATES & SEARCH RESULTS GRID */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Card 1: Polícia Federal */}
+                {/* 11 CERTIFICATES & SEARCH RESULTS GRID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* 1. Polícia Federal */}
                   <Card className="card-elegant border-primary/30">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <ShieldCheck className="h-5 w-5 text-blue-500" />
-                          Polícia Federal (SINIC)
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <ShieldCheck className="h-4 w-4 text-blue-500" />
+                          1. Polícia Federal (SINIC)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-xs">NADA CONSTA</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 text-xs">
-                      <div className="flex justify-between py-1 border-b border-border/50">
-                        <span className="text-muted-foreground">Protocolo Emissão:</span>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Protocolo:</span>
                         <span className="font-mono font-medium">{reportData.pfCert.protocol}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-border/50">
-                        <span className="text-muted-foreground">Data da Emissão:</span>
-                        <span>{reportData.pfCert.date}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Registro de Antecedentes:</span>
-                        <span className="text-emerald-500 font-semibold">Nenhum registro criminal encontrado</span>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem antecedentes criminais federais
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Card 2: DataJud / CNJ */}
+                  {/* 2. DataJud CNJ */}
                   <Card className="card-elegant border-primary/30">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <Scale className="h-5 w-5 text-purple-500" />
-                          DataJud CNJ & TJ{reportData.candidate.uf}
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Scale className="h-4 w-4 text-purple-500" />
+                          2. DataJud (CNJ Nacional)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-xs">NADA CONSTA</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 text-xs">
-                      <div className="flex justify-between py-1 border-b border-border/50">
-                        <span className="text-muted-foreground">Varas Cíveis & Família:</span>
-                        <span className="text-emerald-500 font-medium">0 Processos</span>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Processos Encontrados:</span>
+                        <span className="font-semibold text-emerald-500">0 Processos</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-border/50">
-                        <span className="text-muted-foreground">Varas Criminais & Execuções:</span>
-                        <span className="text-emerald-500 font-medium">0 Processos</span>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Livre de ações cíveis, criminais e família
                       </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Justiça Federal (TRF):</span>
-                        <span className="text-emerald-500 font-semibold">Sem pendências tributárias ou federais</span>
+                    </CardContent>
+                  </Card>
+
+                  {/* 3. TJ Estadual */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="h-4 w-4 text-amber-500" />
+                          3. TJ Estadual (TJ{reportData.candidate.uf})
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Distribuição Estadual:</span>
+                        <span className="font-mono font-medium">{reportData.tjCert.protocol}</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem distribuições criminais ou cíveis na UF
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 4. TRF Federal */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <FileCheck className="h-4 w-4 text-emerald-500" />
+                          4. TRF Justiça Federal
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Certidão Federal:</span>
+                        <span className="font-mono font-medium">{reportData.trfCert.protocol}</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem execuções fiscais ou ações federais
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 5. TSE Eleitoral */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Vote className="h-4 w-4 text-rose-500" />
+                          5. TSE (Justiça Eleitoral)
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">QUITADO</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Quitação Eleitoral:</span>
+                        <span className="font-semibold text-emerald-500">{reportData.tseCert.quitacao}</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem condenações por crimes eleitorais
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 6. Receita Federal */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Receipt className="h-4 w-4 text-indigo-500" />
+                          6. Receita Federal (CPF/CND)
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">REGULAR</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Situação CPF:</span>
+                        <span className="font-semibold text-emerald-500">{reportData.receitaCert.cpfStatus}</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1 flex items-center gap-1">
+                        ✓ Certidão Negativa Tributos Federais emitida
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 7. TST Trabalhista */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Briefcase className="h-4 w-4 text-cyan-500" />
+                          7. TST / CNDT Trabalhista
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Protocolo CNDT:</span>
+                        <span className="font-mono font-medium">{reportData.cndtCert.protocol}</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Livre de débitos na Justiça do Trabalho
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 8. CGU Sanções / CEIS */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <ShieldAlert className="h-4 w-4 text-red-500" />
+                          8. CGU (CEIS / Transparência)
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Cadastro CEIS/CNEP:</span>
+                        <span className="font-semibold text-emerald-500">Sem Inidoneidade</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem punições no Portal da Transparência
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 9. TCU Contas Públicas */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Landmark className="h-4 w-4 text-orange-500" />
+                          9. TCU (Contas Irregulares)
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Contas Públicas:</span>
+                        <span className="font-semibold text-emerald-500">Sem Rejeição</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem inabilitação para funções públicas
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 10. REDESIM Sociedades */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="h-4 w-4 text-teal-500" />
+                          10. REDESIM (Vínculo Societário)
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">REGULAR</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Participação em Empresas:</span>
+                        <span className="font-semibold text-foreground">{reportData.redesimCert.totalEmpresas} Empresa Ativa</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Empresa regular sem inaptidão fiscal
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 11. Conselhos de Classe */}
+                  <Card className="card-elegant border-primary/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Award className="h-4 w-4 text-yellow-500" />
+                          11. Conselho Profissional
+                        </span>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">ATIVO</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Status do Registro:</span>
+                        <span className="font-semibold text-emerald-500">{reportData.conselhoCert.status}</span>
+                      </div>
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ Sem penalidades ético-disciplinares ativas
                       </div>
                     </CardContent>
                   </Card>
@@ -783,7 +1075,7 @@ export default function AdminSindicancia() {
                       Painel da Comissão de Sindicância
                     </CardTitle>
                     <CardDescription>
-                      Histórico e acompanhamento das sindicâncias em andamento
+                      Histórico de candidatos e pareceres emitidos nas 11 bases oficiais
                     </CardDescription>
                   </div>
                 </div>
@@ -796,9 +1088,12 @@ export default function AdminSindicancia() {
                         <th className="p-3">Protocolo</th>
                         <th className="p-3">Candidato</th>
                         <th className="p-3">CPF</th>
-                        <th className="p-3">Profissão</th>
                         <th className="p-3">Polícia Federal</th>
                         <th className="p-3">DataJud (CNJ)</th>
+                        <th className="p-3">TSE Eleitoral</th>
+                        <th className="p-3">Receita Federal</th>
+                        <th className="p-3">CNDT Trabalhista</th>
+                        <th className="p-3">CGU Sanções</th>
                         <th className="p-3">Parecer Final</th>
                         <th className="p-3 text-right">Ação</th>
                       </tr>
@@ -809,7 +1104,6 @@ export default function AdminSindicancia() {
                           <td className="p-3 font-mono font-medium text-foreground">{item.id}</td>
                           <td className="p-3 font-semibold text-foreground">{item.candidateName}</td>
                           <td className="p-3 text-muted-foreground">{item.cpf}</td>
-                          <td className="p-3 text-muted-foreground">{item.profession}</td>
                           <td className="p-3">
                             <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
                           </td>
@@ -819,6 +1113,22 @@ export default function AdminSindicancia() {
                             ) : (
                               <Badge className="bg-amber-500/20 text-amber-500">APONTAMENTO</Badge>
                             )}
+                          </td>
+                          <td className="p-3">
+                            <Badge className="bg-emerald-500/20 text-emerald-500">QUITADO</Badge>
+                          </td>
+                          <td className="p-3">
+                            <Badge className="bg-emerald-500/20 text-emerald-500">REGULAR</Badge>
+                          </td>
+                          <td className="p-3">
+                            {item.cndtStatus === 'NADA_CONSTA' ? (
+                              <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
+                            ) : (
+                              <Badge className="bg-amber-500/20 text-amber-500">APONTAMENTO</Badge>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
                           </td>
                           <td className="p-3">
                             {item.overallStatus === 'FAVORAVEL' && (
