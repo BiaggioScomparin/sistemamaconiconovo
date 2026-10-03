@@ -149,6 +149,22 @@ export function AppLayout({ children }: AppLayoutProps) {
     return links;
   };
 
+  const mobileAdminLinks = [
+    { href: '/dashboard', label: 'Início', icon: LayoutDashboard },
+    { href: '/admin/members', label: 'Membros', icon: Users },
+    { href: '/admin/proposals', label: 'Propostas', icon: FileText },
+    { href: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
+  ];
+
+  const mobileMemberLinks = [
+    { href: '/member/inicial', label: 'Início', icon: Home },
+    { href: '/member/card', label: 'Carteira', icon: CreditCard },
+    { href: '/member/attendance', label: 'Presenças', icon: Calendar },
+    { href: '/member/profile', label: 'Perfil', icon: User },
+  ];
+
+  const currentMobileLinks = isAdminRoute && isAdmin ? mobileAdminLinks : mobileMemberLinks;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Fixed Admin Button - Top Right */}
@@ -225,8 +241,6 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Link>
             )}
           </div>
-
-
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
@@ -319,11 +333,33 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main content */}
-      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
+      <main className="lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-0 lg:pb-0">
         <div className="p-6 lg:p-8">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar/95 backdrop-blur-md border-t border-sidebar-border h-16 flex items-center justify-around px-2 shadow-2xl">
+        {currentMobileLinks.map((link) => {
+          const isActive = location.pathname === link.href;
+          return (
+            <Link
+              key={link.href}
+              to={link.href}
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-full py-1 text-xs font-medium transition-colors",
+                isActive
+                  ? "text-sidebar-primary font-bold"
+                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              )}
+            >
+              <link.icon className={cn("h-5 w-5 mb-0.5", isActive && "scale-110 transition-transform")} />
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

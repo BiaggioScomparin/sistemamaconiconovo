@@ -394,6 +394,16 @@ export default function AdminProposals() {
     </Card>
   );
 
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+
+  const kanbanColumns = [
+    { key: 'proposta', title: 'Proposta', icon: FileText, color: 'border-blue-500/50 bg-blue-500/5' },
+    { key: 'sindicancia', title: 'Sindicância', icon: SearchIcon, color: 'border-yellow-500/50 bg-yellow-500/5' },
+    { key: 'sindicancia_aprovada', title: 'Sind. Aprovada', icon: UserCheck, color: 'border-orange-500/50 bg-orange-500/5' },
+    { key: 'aguardando_iniciacao', title: 'Aguard. Iniciação', icon: Calendar, color: 'border-purple-500/50 bg-purple-500/5' },
+    { key: 'membro', title: 'Iniciado / Membro', icon: UserCheck, color: 'border-emerald-500/50 bg-emerald-500/5' },
+  ];
+
   const tabCounts = {
     proposta: filterProfiles('proposta').length,
     sindicancia: filterProfiles('sindicancia').length,
@@ -406,13 +416,125 @@ export default function AdminProposals() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-display text-foreground">Gestão de Propostas</h1>
-          <p className="text-muted-foreground font-body mt-1">
-            Gerencie propostas de filiação e altere status dos candidatos
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display text-foreground">Gestão de Propostas</h1>
+            <p className="text-muted-foreground font-body mt-1">
+              Acompanhe e gerencie o fluxo de candidatos à iniciação
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1 p-1 bg-accent/40 rounded-xl border border-border">
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="gap-2 text-xs font-semibold"
+            >
+              <Kanban className="h-4 w-4" />
+              Quadro Kanban
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="gap-2 text-xs font-semibold"
+            >
+              <List className="h-4 w-4" />
+              Lista por Abas
+            </Button>
+          </div>
         </div>
 
+        {/* KANBAN BOARD VIEW */}
+        {viewMode === 'kanban' && (
+          <div className="overflow-x-auto pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-[1000px]">
+              {kanbanColumns.map((col) => {
+                const candidates = filterProfiles(col.key);
+                return (
+                  <div key={col.key} className={`rounded-xl border p-3 flex flex-col space-y-3 ${col.color} min-h-[500px]`}>
+                    {/* Column Header */}
+                    <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                      <div className="flex items-center gap-2 font-display text-sm text-foreground">
+                        <col.icon size={16} className="text-primary" />
+                        <span>{col.title}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {candidates.length}
+                      </Badge>
+                    </div>
+
+                    {/* Cards Container */}
+                    <div className="flex-1 space-y-3 overflow-y-auto">
+                      {candidates.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">
+                          Nenhum candidato
+                        </p>
+                      ) : (
+                        candidates.map((candidate) => (
+                          <Card key={candidate.id} className="card-elegant hover:shadow-md transition-shadow">
+                            <CardContent className="p-3 space-y-2">
+                              <div className="flex items-start gap-2.5">
+                                <Avatar className="h-9 w-9 border border-border">
+                                  <AvatarImage src={candidate.photo_url || undefined} />
+                                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+                                    {candidate.full_name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-xs font-semibold text-foreground truncate">
+                                    {candidate.full_name}
+                                  </h4>
+                                  <p className="text-[11px] text-muted-foreground truncate">
+                                    {candidate.city ? `${candidate.city}${candidate.state ? `/${candidate.state}` : ''}` : 'Oriente não inf.'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
+                                <span>{formatDate(candidate.proposal_date || candidate.created_at)}</span>
+                                {candidate.profession && <span className="truncate max-w-[90px]">{candidate.profession}</span>}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 pt-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setViewProfile(candidate);
+                                    fetchChildren(candidate.id);
+                                  }}
+                                  className="h-7 px-2 text-[11px] flex-1 gap-1"
+                                >
+                                  <Eye className="h-3 w-3" /> Ver
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedProfile(candidate);
+                                    setNewStatus('');
+                                    setSelectedLodge(candidate.lodge_id || '');
+                                  }}
+                                  className="h-7 px-2 text-[11px] flex-1 gap-1"
+                                >
+                                  Avançar
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* LIST BY TABS VIEW */}
+        {viewMode === 'list' && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="proposta" className="flex gap-2 text-xs">
@@ -467,6 +589,7 @@ export default function AdminProposals() {
             </TabsContent>
           ))}
         </Tabs>
+        )}
       </div>
 
       {/* Change Status Dialog */}
