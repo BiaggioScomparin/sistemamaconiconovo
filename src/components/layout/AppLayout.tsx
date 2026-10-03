@@ -16,6 +16,7 @@ import {
   FileText,
   Calendar,
   Shield,
+  ShieldCheck,
   Crown,
   DollarSign,
   Settings,
@@ -73,6 +74,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       title: "Gestão Humana",
       items: [
         { href: '/admin/proposals', label: 'Propostas', icon: FileText },
+        { href: '/admin/sindicancia', label: 'Sindicância & Antecedentes', icon: ShieldCheck },
         { href: '/admin/members', label: 'Membros', icon: Users },
         { href: '/admin/approvals', label: 'Aprovações', icon: Shield },
       ]

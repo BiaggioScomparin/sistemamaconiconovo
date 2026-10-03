@@ -19,6 +19,7 @@ import AdminLodges from "./pages/admin/Lodges";
 import AdminMembers from "./pages/admin/Members";
 import AdminApprovals from "./pages/admin/Approvals";
 import AdminProposals from "./pages/admin/Proposals";
+import AdminSindicancia from "./pages/admin/Sindicancia";
 import AdminAttendances from "./pages/admin/Attendances";
 import AdminPermissions from "./pages/admin/Permissions";
 import AdminFinanceiro from "./pages/admin/Financeiro";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/admin/members" element={<ProtectedAdminRoute><AdminMembers /></ProtectedAdminRoute>} />
             <Route path="/admin/approvals" element={<ProtectedAdminRoute><AdminApprovals /></ProtectedAdminRoute>} />
             <Route path="/admin/proposals" element={<ProtectedAdminRoute><AdminProposals /></ProtectedAdminRoute>} />
+            <Route path="/admin/sindicancia" element={<ProtectedAdminRoute><AdminSindicancia /></ProtectedAdminRoute>} />
             <Route path="/admin/attendances" element={<ProtectedAttendanceRoute><AdminAttendances /></ProtectedAttendanceRoute>} />
             <Route path="/admin/permissions" element={<ProtectedAdminRoute><AdminPermissions /></ProtectedAdminRoute>} />
             <Route path="/admin/financeiro" element={<ProtectedAdminRoute><AdminFinanceiro /></ProtectedAdminRoute>} />
