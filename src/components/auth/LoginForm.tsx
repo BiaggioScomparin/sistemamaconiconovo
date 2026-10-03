@@ -24,9 +24,10 @@ export function LoginForm() {
     const { error } = await signIn(email, password);
 
     if (error) {
+      console.error('Supabase Login Error:', error);
       toast({
         title: 'Erro ao entrar',
-        description: 'E-mail ou senha incorretos.',
+        description: error.message || 'E-mail ou senha incorretos.',
         variant: 'destructive',
       });
       setLoading(false);
