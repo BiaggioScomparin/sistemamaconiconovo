@@ -26,7 +26,9 @@ import {
   Phone,
   CreditCard,
   Eye,
-  Printer
+  Printer,
+  Kanban,
+  List
 } from 'lucide-react';
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
 import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
