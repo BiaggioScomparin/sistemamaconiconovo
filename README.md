@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+# 🏛️ Sistema Maçônico — Gestão de Lojas Maçônicas
 
-## Project info
+Sistema web moderno e completo para gestão de Lojas Maçônicas, cobrindo cadastro de membros, controle de presenças/frequência, atas de reuniões, propostas/votações, tesouraria/financeiro, biblioteca digital, onboarding e validação por QR Code.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## 🛠️ Tecnologias Utilizadas
 
-There are several ways of editing your application.
+* **Frontend:** React 18 + TypeScript + Vite
+* **Estilização:** Tailwind CSS + Radix UI (shadcn/ui) + Lucide Icons
+* **Gerenciamento de Estado & Cache:** TanStack Query v5 (React Query)
+* **Backend & Banco de Dados:** Supabase (PostgreSQL, Row Level Security, Storage, Auth)
+* **Outros:** React Hook Form + Zod, Recharts, jsPDF, QRCode, date-fns
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 🚀 Como Executar o Projeto Localmente
 
-Changes made via Lovable will be committed automatically to this repo.
+### 1. Pré-requisitos
+* Node.js 18+ e npm / pnpm / yarn
 
-**Use your preferred IDE**
+### 2. Instalação
+```bash
+# Clone o repositório
+git clone https://github.com/BiaggioScomparin/sistemamaconico.git
+cd sistemamaconico
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Instale as dependências
+npm install
 ```
 
-**Edit a file directly in GitHub**
+### 3. Configuração de Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto com base no `.env.example`:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sua-chave-publica-anon-key
+```
 
-**Use GitHub Codespaces**
+### 4. Servidor de Desenvolvimento
+```bash
+npm run dev
+```
+Acesse a aplicação em `http://localhost:8080`.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🗄️ Banco de Dados (Supabase)
 
-This project is built with:
+Todas as tabelas, funções, enums e políticas RLS estão versionadas na pasta `supabase/migrations/`. 
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Para aplicar a estrutura em um novo projeto Supabase:
+```bash
+npx supabase db push
+```
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 📦 Build para Produção
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+# Gerar a versão otimizada de produção
+npm run build
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Testar o preview da build localmente
+npm run preview
+```

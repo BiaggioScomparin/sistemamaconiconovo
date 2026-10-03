@@ -40,10 +40,20 @@ import ProposalStatus from "./pages/member/ProposalStatus";
 import ValidateMember from "./pages/ValidateMember";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+import ErrorBoundary from "@/components/ErrorBoundary";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -89,6 +99,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
