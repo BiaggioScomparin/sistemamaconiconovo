@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, CheckCircle, Plus, Trash2, ShieldCheck, FileText, Lock, Sparkles, CheckCircle2, Clock } from 'lucide-react';
+import { Loader2, Search, CheckCircle, Plus, Trash2, ShieldCheck, FileText, Lock, Sparkles, CheckCircle2, Clock, User } from 'lucide-react';
 import { validateImageFile, getValidatedFileName } from '@/lib/fileValidation';
 import ProposalAuthGate from '@/components/proposal/ProposalAuthGate';
 
