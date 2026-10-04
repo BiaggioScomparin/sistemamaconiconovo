@@ -322,10 +322,12 @@ export default function Financeiro() {
               <p className="text-muted-foreground">Gerencie as mensalidades dos membros</p>
             </div>
           </div>
-          <Button onClick={() => setShowGenerateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Gerar Mensalidades
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setShowGenerateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Gerar Mensalidades
+            </Button>
+          )}
         </div>
 
         {/* Stats Cards - Only for Admin */}
