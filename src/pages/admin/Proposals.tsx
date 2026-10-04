@@ -108,6 +108,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   pending: { label: 'Proposta', color: 'bg-blue-500', icon: FileText },
   sindicancia: { label: 'Sindicância', color: 'bg-yellow-500', icon: SearchIcon },
   sindicancia_aprovada: { label: 'Sindicância Aprovada', color: 'bg-orange-500', icon: UserCheck },
+  proposta_completa: { label: 'Ficha Completa Preenchida', color: 'bg-emerald-600', icon: UserCheck },
   aguardando_iniciacao: { label: 'Aguardando Iniciação', color: 'bg-purple-500', icon: Calendar },
   reprovado: { label: 'Reprovado', color: 'bg-red-500', icon: UserX },
   rejected: { label: 'Reprovado', color: 'bg-red-500', icon: UserX },
@@ -208,7 +209,7 @@ export default function AdminProposals() {
     const statusMap: Record<string, string[]> = {
       proposta: ['proposta', 'pending'],
       sindicancia: ['sindicancia'],
-      sindicancia_aprovada: ['sindicancia_aprovada'],
+      sindicancia_aprovada: ['sindicancia_aprovada', 'proposta_completa'],
       aguardando_iniciacao: ['aguardando_iniciacao'],
       reprovado: ['reprovado', 'rejected'],
       membro: ['membro', 'approved'],

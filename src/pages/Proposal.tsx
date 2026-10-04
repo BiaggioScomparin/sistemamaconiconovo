@@ -489,44 +489,63 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
       identity_number: profile?.identity_number || '',
       identity_issuer: profile?.identity_issuer || 'SSP',
       cell_phone: profile?.cell_phone || '',
+      phone: profile?.phone || '',
+      naturality: profile?.naturality || '',
+      nationality: profile?.nationality || 'Brasileiro',
+      father_name: profile?.father_name || '',
+      mother_name: profile?.mother_name || '',
+      education_level: profile?.education_level || 'Superior Completo',
+      civil_status: profile?.civil_status || 'Casado',
+      marriage_date: profile?.marriage_date || '',
+      spouse_name: profile?.spouse_name || '',
+      spouse_profession: profile?.spouse_profession || '',
+      cep: profile?.cep || '',
+      street: profile?.street || '',
+      number: profile?.number || '',
+      complement: profile?.complement || '',
+      neighborhood: profile?.neighborhood || '',
       city: profile?.city || '',
       state: profile?.state || 'SP',
+      residence_time: profile?.residence_time || '',
       profession: profile?.profession || '',
-      nationality: profile?.nationality || 'Brasileiro',
-      believes_supreme_being: true,
+      employer: profile?.employer || '',
+      employer_phone: profile?.employer_phone || '',
+      monthly_income: profile?.monthly_income || '',
+      voter_title: profile?.voter_title || '',
+      voter_zone: profile?.voter_zone || '',
+      voter_city: profile?.voter_city || '',
+      expectation_masonry: profile?.expectation_masonry || '',
+      opinion_masonry: profile?.opinion_masonry || '',
+      opinion_family: profile?.opinion_family || '',
+      opinion_freedom: profile?.opinion_freedom || '',
+      opinion_equality: profile?.opinion_equality || '',
+      opinion_fraternity: profile?.opinion_fraternity || '',
+      sponsor_name: profile?.sponsor_name || '',
+      believes_supreme_being: profile?.believes_supreme_being ?? true,
+      informed_financial_values: profile?.informed_financial_values ?? true,
+      can_afford_financial: profile?.can_afford_financial ?? true,
+      agrees_investigation_fee: profile?.agrees_investigation_fee ?? true,
+      aware_no_refund: profile?.aware_no_refund ?? true,
     },
   });
 
   const cepValue = watch('cep');
-  const workCepValue = watch('work_cep');
 
-  const handleCEPSearch = async (type: 'home' | 'work') => {
-    const cep = type === 'home' ? cepValue : workCepValue;
-    if (!cep) return;
-
-    if (type === 'home') setFetchingCEP(true);
-    else setFetchingWorkCEP(true);
-
+  const handleCEPSearch = async () => {
+    if (!cepValue) return;
+    setFetchingCEP(true);
     try {
-      const address = await fetchAddressByCEP(cep);
+      const address = await fetchAddressByCEP(cepValue);
       if (address) {
-        if (type === 'home') {
-          setValue('street', address.logradouro);
-          setValue('neighborhood', address.bairro);
-          setValue('city', address.localidade);
-          setValue('state', address.uf);
-        } else {
-          setValue('work_street', address.logradouro);
-          setValue('work_neighborhood', address.bairro);
-          setValue('work_city', address.localidade);
-          setValue('work_state', address.uf);
-        }
+        setValue('street', address.logradouro);
+        setValue('neighborhood', address.bairro);
+        setValue('city', address.localidade);
+        setValue('state', address.uf);
       }
     } catch (error) {
       console.error('CEP search error:', error);
     } finally {
-      if (type === 'home') setFetchingCEP(false);
-      else setFetchingWorkCEP(false);
+      setFetchingCEP(false);
     }
   };
 
@@ -543,6 +562,22 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
       reader.onloadend = () => setPhotoPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAddChild = () => {
+    setChildren(prev => [...prev, { name: '', birth_date: '' }]);
+  };
+
+  const handleRemoveChild = (index: number) => {
+    setChildren(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleChildChange = (index: number, field: 'name' | 'birth_date', value: string) => {
+    setChildren(prev => {
+      const updated = [...prev];
+      updated[index][field] = value;
+      return updated;
+    });
   };
 
   const onSubmitFullProposal = async (data: ProposalFormData) => {
@@ -568,9 +603,20 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
 
       await supabase.from('profiles').update(updateData as any).eq('id', profile.id);
 
+      // Insert children if any
+      const validChildren = children.filter(c => c.name.trim() !== '');
+      if (validChildren.length > 0) {
+        const childrenPayload = validChildren.map(c => ({
+          profile_id: profile.id,
+          name: c.name,
+          birth_date: c.birth_date,
+        }));
+        await supabase.from('children').insert(childrenPayload);
+      }
+
       toast({
-        title: 'Ficha de Proposta Finalizada!',
-        description: 'Sua proposta completa foi enviada à secretaria da Loja Maçônica.',
+        title: 'Ficha de Proposta Finalizada com Sucesso!',
+        description: 'Sua proposta completa foi registrada e enviada para a Secretaria da Loja.',
       });
 
       onComplete();
@@ -589,26 +635,28 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-6 w-6 text-emerald-500" />
             <h1 className="text-2xl font-display text-foreground">
-              🎉 Sindicância Aprovada! Preencha sua Ficha de Proposta
+              🎉 Sindicância Aprovada! Preencha sua Ficha de Proposta Complete
             </h1>
           </div>
           <p className="text-sm text-muted-foreground font-body">
-            Sua verificação de antecedentes foi aprovada com louvor pela Comissão. Complete abaixo suas informações familiares, profissionais e filosóficas.
+            Sua verificação preliminar foi aprovada com louvor. Preencha abaixo os dados da sua Ficha de Proposta Maçônica.
           </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmitFullProposal)} className="space-y-6">
-          {/* Dados Pessoais */}
+          {/* 1. Dados Pessoais & Filiação */}
           <Card className="card-elegant">
             <CardHeader>
-              <CardTitle className="text-lg font-display">1. Dados Pessoais & Foto</CardTitle>
+              <CardTitle className="text-lg font-display text-foreground flex items-center gap-2">
+                <User className="h-5 w-5 text-amber-500" /> 1. Dados Pessoais & Filiação
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 {photoPreview ? (
-                  <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover border-2 border-primary" />
+                  <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover border-2 border-amber-500" />
                 ) : (
-                  <div className="w-24 h-24 rounded-full bg-accent flex items-center justify-center text-xs text-muted-foreground">Sem Foto</div>
+                  <div className="w-24 h-24 rounded-full bg-accent flex items-center justify-center text-xs text-muted-foreground border border-border">Sem Foto</div>
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="photo" className="text-xs font-semibold">Foto 3x4 do Candidato</Label>
@@ -616,31 +664,128 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Nome Completo</Label>
-                  <Input {...register('full_name')} />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-xs font-semibold">Nome Completo *</Label>
+                  <Input {...register('full_name')} required />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">CPF</Label>
-                  <Input {...register('cpf')} />
+                  <Label className="text-xs font-semibold">CPF *</Label>
+                  <Input {...register('cpf')} required />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Naturalidade</Label>
-                  <Input {...register('naturality')} placeholder="Cidade onde nasceu" />
+                  <Label className="text-xs font-semibold">Data de Nascimento *</Label>
+                  <Input type="date" {...register('birth_date')} required />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">RG e Órgão Emissor</Label>
+                  <div className="flex gap-2">
+                    <Input {...register('identity_number')} placeholder="00.000.000-0" />
+                    <Input {...register('identity_issuer')} placeholder="SSP" className="w-20" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Naturalidade (Cidade onde nasceu)</Label>
+                  <Input {...register('naturality')} placeholder="Ex: São Paulo - SP" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">Nacionalidade</Label>
                   <Input {...register('nationality')} />
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Telefone Celular / WhatsApp *</Label>
+                  <Input {...register('cell_phone')} required placeholder="(11) 99999-9999" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Grau de Escolaridade</Label>
+                  <Select value={watch('education_level')} onValueChange={val => setValue('education_level', val)}>
+                    <SelectTrigger><SelectValue placeholder="Escolaridade" /></SelectTrigger>
+                    <SelectContent>
+                      {['Ensino Médio', 'Ensino Superior Incompleto', 'Superior Completo', 'Pós-Graduação / Especialização', 'Mestrado / Doutorado'].map(ed => (
+                        <SelectItem key={ed} value={ed}>{ed}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-xs font-semibold">Nome do Pai</Label>
+                  <Input {...register('father_name')} placeholder="Nome completo do pai" />
+                </div>
+                <div className="space-y-2 sm:col-span-1">
+                  <Label className="text-xs font-semibold">Nome da Mãe</Label>
+                  <Input {...register('mother_name')} placeholder="Nome completo da mãe" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Endereço Residencial */}
+          {/* 2. Estado Civil, Esposa & Família */}
           <Card className="card-elegant">
             <CardHeader>
-              <CardTitle className="text-lg font-display">2. Endereço Residencial</CardTitle>
+              <CardTitle className="text-lg font-display text-foreground flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-500" /> 2. Estado Civil, Esposa & Filhos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Estado Civil</Label>
+                  <Select value={watch('civil_status')} onValueChange={val => setValue('civil_status', val)}>
+                    <SelectTrigger><SelectValue placeholder="Estado Civil" /></SelectTrigger>
+                    <SelectContent>
+                      {['Solteiro', 'Casado', 'União Estável', 'Divorciado', 'Viúvo'].map(cs => (
+                        <SelectItem key={cs} value={cs}>{cs}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Data de Casamento (se aplicável)</Label>
+                  <Input type="date" {...register('marriage_date')} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Profissão da Esposa/Companheira</Label>
+                  <Input {...register('spouse_profession')} placeholder="Ex: Professora / Médica" />
+                </div>
+                <div className="space-y-2 sm:col-span-3">
+                  <Label className="text-xs font-semibold">Nome Completo da Esposa/Companheira</Label>
+                  <Input {...register('spouse_name')} placeholder="Nome da esposa ou companheira" />
+                </div>
+              </div>
+
+              {/* Dependente / Filhos */}
+              <div className="pt-2 border-t border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-foreground">Filhos / Dependentes</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddChild} className="h-8 text-xs gap-1">
+                    <Plus size={14} /> Adicionar Filho(a)
+                  </Button>
+                </div>
+                {children.map((child, idx) => (
+                  <div key={idx} className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-[11px]">Nome do Filho(a)</Label>
+                      <Input value={child.name} onChange={e => handleChildChange(idx, 'name', e.target.value)} placeholder="Nome completo" />
+                    </div>
+                    <div className="w-36 space-y-1">
+                      <Label className="text-[11px]">Data Nasc.</Label>
+                      <Input type="date" value={child.birth_date} onChange={e => handleChildChange(idx, 'birth_date', e.target.value)} />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveChild(idx)} className="text-destructive h-9 w-9">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3. Endereço Residencial */}
+          <Card className="card-elegant">
+            <CardHeader>
+              <CardTitle className="text-lg font-display text-foreground flex items-center gap-2">
+                <FileText className="h-5 w-5 text-amber-500" /> 3. Endereço Residencial
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -648,8 +793,8 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
                   <Label className="text-xs font-semibold">CEP</Label>
                   <div className="flex gap-2">
                     <Input {...register('cep')} placeholder="00000-000" />
-                    <Button type="button" variant="outline" onClick={() => handleCEPSearch('home')}>
-                      <Search size={14} />
+                    <Button type="button" variant="outline" onClick={handleCEPSearch} disabled={fetchingCEP}>
+                      {fetchingCEP ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={14} />}
                     </Button>
                   </div>
                 </div>
@@ -662,43 +807,158 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
                   <Input {...register('number')} />
                 </div>
                 <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Complemento</Label>
+                  <Input {...register('complement')} placeholder="Apto / Bloco" />
+                </div>
+                <div className="space-y-2">
                   <Label className="text-xs font-semibold">Bairro</Label>
                   <Input {...register('neighborhood')} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Cidade / UF</Label>
+                  <Label className="text-xs font-semibold">Cidade</Label>
                   <Input {...register('city')} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Estado (UF)</Label>
+                  <Input {...register('state')} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Tempo de Residência no Endereço</Label>
+                  <Input {...register('residence_time')} placeholder="Ex: 5 anos" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Questionário Filosófico */}
+          {/* 4. Profissão & Renda */}
           <Card className="card-elegant">
             <CardHeader>
-              <CardTitle className="text-lg font-display">3. Questões Filosóficas & Expectativas</CardTitle>
+              <CardTitle className="text-lg font-display text-foreground flex items-center gap-2">
+                <Lock className="h-5 w-5 text-amber-500" /> 4. Profissão, Ocupação & Renda
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">O que você busca na Maçonaria?</Label>
-                <Textarea rows={3} {...register('expectation_masonry')} placeholder="Descreva suas motivações pessoais..." />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">Qual a opinião da sua família sobre sua iniciação?</Label>
-                <Textarea rows={2} {...register('opinion_family')} placeholder="Sua esposa e filhos apoiam a decisão?" />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">Nome do Irmão Padrinho / Apresentador</Label>
-                <Input {...register('sponsor_name')} placeholder="Nome do Mestre Maçom que o indicou" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-xs font-semibold">Profissão / Ocupação Principal *</Label>
+                  <Input {...register('profession')} required placeholder="Ex: Administrador de Empresas / Engenheiro" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Empresa / Empregador</Label>
+                  <Input {...register('employer')} placeholder="Nome da empresa ou autônomo" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Telefone Comercial / Trabalho</Label>
+                  <Input {...register('employer_phone')} placeholder="(11) 3333-3333" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Renda Mensal Aproximada</Label>
+                  <Input {...register('monthly_income')} placeholder="Ex: R$ 8.000,00" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Button type="submit" disabled={loading} size="lg" className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12">
+          {/* 5. Dados Eleitorais */}
+          <Card className="card-elegant">
+            <CardHeader>
+              <CardTitle className="text-lg font-display text-foreground flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-amber-500" /> 5. Documentação Eleitoral
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Título de Eleitor</Label>
+                  <Input {...register('voter_title')} placeholder="0000 0000 0000" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Zona / Seção</Label>
+                  <Input {...register('voter_zone')} placeholder="Zona 000 / Seção 000" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Município Eleitoral</Label>
+                  <Input {...register('voter_city')} placeholder="Cidade onde vota" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 6. Questões Filosóficas & Expectativas */}
+          <Card className="card-elegant">
+            <CardHeader>
+              <CardTitle className="text-lg font-display text-foreground flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-500" /> 6. Princípios, Família & Expectativas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">O que você busca ao solicitar ingresso na Maçonaria? *</Label>
+                <Textarea rows={3} {...register('expectation_masonry')} required placeholder="Descreva suas motivações pessoais e filosóficas..." />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Qual a sua visão geral sobre a Instituição Maçônica?</Label>
+                <Textarea rows={2} {...register('opinion_masonry')} placeholder="Seu conhecimento prévio sobre a Ordem..." />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Qual a opinião da sua família (esposa/filhos) sobre sua iniciação?</Label>
+                <Textarea rows={2} {...register('opinion_family')} placeholder="Sua família apoia expressamente a sua decisão?" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Conceito de Liberdade</Label>
+                  <Textarea rows={2} {...register('opinion_freedom')} placeholder="O que é Liberdade para você?" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Conceito de Igualdade</Label>
+                  <Textarea rows={2} {...register('opinion_equality')} placeholder="O que é Igualdade para você?" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Conceito de Fraternidade</Label>
+                  <Textarea rows={2} {...register('opinion_fraternity')} placeholder="O que é Fraternidade para você?" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Nome do Irmão Padrinho / Apresentador</Label>
+                <Input {...register('sponsor_name')} placeholder="Nome do Mestre Maçom que o apresentou" />
+              </div>
+
+              {/* Compromisso Financeiro & Supremo Criador */}
+              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="supreme_being"
+                    checked={watch('believes_supreme_being')}
+                    onCheckedChange={checked => setValue('believes_supreme_being', !!checked)}
+                    className="mt-1"
+                  />
+                  <label htmlFor="supreme_being" className="text-xs text-foreground cursor-pointer leading-relaxed">
+                    <span className="font-bold text-amber-500">Crença num Supremo Criador:</span> Declaro formalmente que creio num Princípio Criador / Deus (Grande Arquiteto do Universo).
+                  </label>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="fin_values"
+                    checked={watch('informed_financial_values')}
+                    onCheckedChange={checked => setValue('informed_financial_values', !!checked)}
+                    className="mt-1"
+                  />
+                  <label htmlFor="fin_values" className="text-xs text-foreground cursor-pointer leading-relaxed">
+                    <span className="font-bold text-amber-500">Compromisso Financeiro:</span> Fui devidamente informado sobre os valores das mensalidades e taxas de iniciação e declaro que disponho de subsistência honrosa sem prejuízo ao sustento de minha família.
+                  </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button type="submit" disabled={loading} size="lg" className="w-full gap-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold h-12 shadow-lg">
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-            Finalizar & Enviar Proposta Completa
+            Finalizar & Enviar Proposta Completa para a Loja
           </Button>
         </form>
       </div>
