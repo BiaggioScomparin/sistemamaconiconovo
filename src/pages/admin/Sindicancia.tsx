@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useQuery } from '@tanstack/react-query';
@@ -203,6 +203,17 @@ export default function AdminSindicancia() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const [searchParams] = useSearchParams();
+  const candidateIdParam = searchParams.get('candidateId');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Auto-select candidate from URL query param if present
+  useEffect(() => {
+    if (candidateIdParam && profiles && profiles.length > 0) {
+      handleProfileSelect(candidateIdParam);
+    }
+  }, [candidateIdParam, profiles]);
+
   const handleProfileSelect = (id: string) => {
     setSelectedProfileId(id);
     const profile = profiles?.find(p => p.id === id);
@@ -219,6 +230,48 @@ export default function AdminSindicancia() {
         councilNumber: '',
         hasLgpdConsent: true,
       });
+    }
+  };
+
+  const handleSaveProfileChanges = async () => {
+    if (!formData.id) {
+      toast({
+        title: 'Selecione um Candidato',
+        description: 'Selecione um candidato para salvar as alterações.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.fullName,
+          cpf: formData.cpf,
+          birth_date: formData.birthDate,
+          state: formData.uf,
+          profession: formData.profession,
+          identity_number: formData.rg,
+          identity_issuer: formData.rgIssuer,
+        } as any)
+        .eq('id', formData.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Dados do Candidato Salvos!',
+        description: 'As alterações foram registradas com sucesso no perfil.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao Salvar Dados',
+        description: error.message || 'Ocorreu um erro ao atualizar os dados.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -560,14 +613,26 @@ export default function AdminSindicancia() {
                     </div>
                   </div>
 
-                  <Button
-                    onClick={handleStartSindicancia}
-                    size="lg"
-                    className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-md h-12"
-                  >
-                    <Search className="h-5 w-5" />
-                    Iniciar Sindicância em 11 Bases Gratuitas
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSaveProfileChanges}
+                      disabled={savingProfile || !formData.id}
+                      className="gap-2 border-amber-500/50 hover:bg-amber-500/10 text-amber-500 font-semibold h-12"
+                    >
+                      <Save className="h-4 w-4" />
+                      {savingProfile ? 'Salvando...' : 'Salvar Alterações nos Dados'}
+                    </Button>
+                    <Button
+                      onClick={handleStartSindicancia}
+                      size="lg"
+                      className="flex-1 gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-md h-12 text-sm"
+                    >
+                      <Search className="h-5 w-5" />
+                      Conferir & Iniciar Varredura (11 Bases)
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 

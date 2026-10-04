@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,7 +28,8 @@ import {
   Eye,
   Printer,
   Kanban,
-  List
+  List,
+  ShieldCheck
 } from 'lucide-react';
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
 import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
@@ -131,6 +132,7 @@ export default function AdminProposals() {
   const { data: lodges } = useLodges();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
@@ -382,6 +384,14 @@ export default function AdminProposals() {
             <Printer className="mr-2 h-4 w-4" />
             {generatingPDF === profile.id ? 'Gerando...' : 'Imprimir Edital'}
           </Button>
+          {profile.status === 'sindicancia' && (
+            <Button
+              onClick={() => navigate(`/admin/sindicancia?candidateId=${profile.id}`)}
+              className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-bold"
+            >
+              <ShieldCheck className="h-4 w-4" /> Analisar Sindicância
+            </Button>
+          )}
           <Button
             onClick={() => {
               setSelectedProfile(profile);
@@ -523,6 +533,16 @@ export default function AdminProposals() {
                                   Avançar
                                 </Button>
                               </div>
+
+                              {col.key === 'sindicancia' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/sindicancia?candidateId=${candidate.id}`)}
+                                  className="h-7 px-2 text-[11px] w-full gap-1 bg-amber-500 hover:bg-amber-600 text-black font-bold mt-1"
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" /> Analisar Sindicância
+                                </Button>
+                              )}
                             </CardContent>
                           </Card>
                         ))
