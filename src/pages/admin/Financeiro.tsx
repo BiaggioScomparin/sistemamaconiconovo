@@ -303,6 +303,50 @@ export default function Financeiro() {
     return matchesSearch && matchesStatus && matchesLodge;
   });
 
+  const { data: lodgeMembers } = useQuery({
+    queryKey: ['approved-profiles-with-details', effectiveLodgeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('profiles')
+        .select('id, full_name, cim_number, degree, lodge_position, lodge_id, lodges(name)')
+        .in('status', ['approved', 'membro'])
+        .order('full_name');
+
+      if (effectiveLodgeId !== 'all') {
+        query = query.eq('lodge_id', effectiveLodgeId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const memberStatusList = useMemo(() => {
+    if (!lodgeMembers) return [];
+
+    return lodgeMembers.map(member => {
+      const payment = payments?.find(p => p.profile_id === member.id);
+      return {
+        member,
+        payment: payment || null,
+      };
+    }).filter(item => {
+      const matchesSearch = item.member.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.member.cim_number?.includes(searchTerm));
+      
+      const now = new Date();
+      const actualStatus = item.payment 
+        ? (now > parseISO(item.payment.due_date) && item.payment.status === 'pending' ? 'overdue' : item.payment.status)
+        : 'none';
+
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'none' ? !item.payment : actualStatus === statusFilter);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [lodgeMembers, payments, searchTerm, statusFilter]);
+
   const stats = {
     total: payments?.length || 0,
     paid: payments?.filter(p => p.status === 'paid').length || 0,
@@ -319,7 +363,7 @@ export default function Financeiro() {
             <DollarSign className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-3xl font-bold">Financeiro</h1>
-              <p className="text-muted-foreground">Gerencie as mensalidades dos membros</p>
+              <p className="text-muted-foreground">Gerencie as mensalidades dos membros da Loja</p>
             </div>
           </div>
           {isAdmin && (
@@ -424,10 +468,11 @@ export default function Financeiro() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="all">Todos os Status</SelectItem>
                   <SelectItem value="paid">Pagos</SelectItem>
                   <SelectItem value="pending">Pendentes</SelectItem>
                   <SelectItem value="overdue">Em Atraso</SelectItem>
+                  <SelectItem value="none">Sem Lançamento</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={monthFilter} onValueChange={setMonthFilter}>
@@ -463,43 +508,74 @@ export default function Financeiro() {
         {/* Lodge Financial Report */}
         <LodgeFinancialReport monthFilter={monthFilter} yearFilter={yearFilter} lodgeIdFilter={effectiveLodgeId} />
 
-        {/* Payments Table */}
+        {/* Members & Payments Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Mensalidades</CardTitle>
-            <CardDescription>Lista de todas as mensalidades</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Membros da Loja e Status das Mensalidades
+            </CardTitle>
+            <CardDescription>
+              Lista de membros e a situação de pagamento da mensalidade no período selecionado.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <p className="text-center py-8 text-muted-foreground">Carregando...</p>
-            ) : filteredPayments && filteredPayments.length > 0 ? (
+            {isLoading || membersLoading ? (
+              <p className="text-center py-8 text-muted-foreground">Carregando membros...</p>
+            ) : memberStatusList && memberStatusList.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Membro</TableHead>
-                    <TableHead>Loja</TableHead>
+                    <TableHead>Grau / Cargo</TableHead>
                     <TableHead>CIM</TableHead>
+                    <TableHead>Loja</TableHead>
                     <TableHead>Referência</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Status da Mensalidade</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">{payment.profiles.full_name}</TableCell>
-                      <TableCell>{payment.profiles.lodges?.name || '-'}</TableCell>
-                      <TableCell>{payment.profiles.cim_number || '-'}</TableCell>
-                      <TableCell>
-                        {monthNames[payment.reference_month - 1]} {payment.reference_year}
+                  {memberStatusList.map(({ member, payment }) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          {member.full_name}
+                        </div>
                       </TableCell>
-                      <TableCell>R$ {Number(payment.amount).toFixed(2).replace('.', ',')}</TableCell>
-                      <TableCell>{format(parseISO(payment.due_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{getStatusBadge(payment.status, payment.due_date)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {[member.degree, member.lodge_position].filter(Boolean).join(' • ') || '-'}
+                      </TableCell>
+                      <TableCell>{member.cim_number || '-'}</TableCell>
+                      <TableCell>{member.lodges?.name || '-'}</TableCell>
+                      <TableCell>
+                        {payment ? (
+                          `${monthNames[payment.reference_month - 1]} ${payment.reference_year}`
+                        ) : monthFilter !== 'all' ? (
+                          `${monthNames[parseInt(monthFilter) - 1]} ${yearFilter}`
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {payment ? `R$ ${Number(payment.amount).toFixed(2).replace('.', ',')}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {payment ? format(parseISO(payment.due_date), 'dd/MM/yyyy') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {payment ? (
+                          getStatusBadge(payment.status, payment.due_date)
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Sem Lançamento
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="space-x-2">
-                        {payment.status !== 'paid' && (
+                        {payment && payment.status !== 'paid' && (
                           <>
                             {payment.pix_qr_code ? (
                               <Button
@@ -537,13 +613,15 @@ export default function Financeiro() {
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Confirmar
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setPaymentToDelete(payment)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setPaymentToDelete(payment)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </>
                         )}
                       </TableCell>
@@ -552,7 +630,7 @@ export default function Financeiro() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-center py-8 text-muted-foreground">Nenhuma mensalidade encontrada</p>
+              <p className="text-center py-8 text-muted-foreground">Nenhum membro encontrado</p>
             )}
           </CardContent>
         </Card>
