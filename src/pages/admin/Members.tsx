@@ -69,11 +69,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { generateBatchCardsPDF } from '@/lib/generateBatchCards';
+import { generateSogliaBatchCardsPDF } from '@/lib/generateSogliaBatchCards';
 import { downloadMembersTemplate } from '@/lib/excelMembersTemplate';
 import { CreateMemberDialog } from '@/components/admin/CreateMemberDialog';
 import { ImportMembersDialog } from '@/components/admin/ImportMembersDialog';
 import { MemberDetailDialog } from '@/components/admin/MemberDetailDialog';
 import logoGoib from '@/assets/logo-goib.png';
+import logoSoglia from '@/assets/logo-soglia.png';
 
 interface MemberFilters {
   search: string;
@@ -108,6 +110,7 @@ export default function AdminMembers() {
   // Batch card generation state
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [cardDialogOpen, setCardDialogOpen] = useState(false);
+  const [batchCardType, setBatchCardType] = useState<'soglia' | 'goib'>('soglia');
   const [generatingCards, setGeneratingCards] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
   
@@ -440,16 +443,26 @@ export default function AdminMembers() {
         };
       });
 
-      await generateBatchCardsPDF(
-        membersData,
-        logoGoib,
-        window.location.origin,
-        (current, total) => setGenerationProgress({ current, total })
-      );
+      if (batchCardType === 'soglia') {
+        await generateSogliaBatchCardsPDF(
+          membersData,
+          logoGoib,
+          logoSoglia,
+          window.location.origin,
+          (current, total) => setGenerationProgress({ current, total })
+        );
+      } else {
+        await generateBatchCardsPDF(
+          membersData,
+          logoGoib,
+          window.location.origin,
+          (current, total) => setGenerationProgress({ current, total })
+        );
+      }
 
       toast({ 
         title: 'Carteirinhas geradas!', 
-        description: `PDF com ${selectedProfiles.length} carteirinha(s) foi baixado com sucesso.` 
+        description: `PDF com ${selectedProfiles.length} carteirinha(s) (${batchCardType === 'soglia' ? 'SOGLIA Internacional' : 'GOIB Nacional'}) foi baixado com sucesso.` 
       });
       setCardDialogOpen(false);
       setSelectedMembers(new Set());
@@ -1297,6 +1310,42 @@ export default function AdminMembers() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Model Selector */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Modelo da Carteirinha:</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant={batchCardType === 'soglia' ? 'secondary' : 'outline'}
+                      onClick={() => setBatchCardType('soglia')}
+                      className={`justify-start gap-2 h-auto py-3 px-4 border ${
+                        batchCardType === 'soglia' ? 'border-amber-500/50 bg-amber-500/10' : ''
+                      }`}
+                    >
+                      <img src={logoSoglia} alt="SOGLIA" className="h-5 w-5 object-contain" />
+                      <div className="text-left">
+                        <p className="font-semibold text-xs">SOGLIA Internacional</p>
+                        <p className="text-[10px] text-muted-foreground">Padrão em Inglês com selo SOGLIA</p>
+                      </div>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant={batchCardType === 'goib' ? 'secondary' : 'outline'}
+                      onClick={() => setBatchCardType('goib')}
+                      className={`justify-start gap-2 h-auto py-3 px-4 border ${
+                        batchCardType === 'goib' ? 'border-primary/50 bg-primary/10' : ''
+                      }`}
+                    >
+                      <img src={logoGoib} alt="GOIB" className="h-5 w-5 object-contain" />
+                      <div className="text-left">
+                        <p className="font-semibold text-xs">GOIB Nacional</p>
+                        <p className="text-[10px] text-muted-foreground">Padrão em Português GOIB</p>
+                      </div>
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="bg-muted p-4 rounded-lg">
                   <p className="font-medium mb-2">
                     {selectedMembers.size} membro(s) selecionado(s):
