@@ -134,12 +134,16 @@ export default function Financeiro() {
   });
 
   const { data: approvedProfiles } = useQuery({
-    queryKey: ['approved-profiles-for-payments', effectiveLodgeId],
+    queryKey: ['approved-profiles-for-payments', effectiveLodgeId, isAdmin],
     queryFn: async () => {
       let query = supabase
         .from('profiles')
         .select('id, full_name, lodge_id')
         .in('status', ['approved', 'membro']);
+
+      if (!isAdmin) {
+        query = query.or('member_status.eq.active,member_status.is.null');
+      }
 
       if (effectiveLodgeId !== 'all') {
         query = query.eq('lodge_id', effectiveLodgeId);
@@ -304,13 +308,17 @@ export default function Financeiro() {
   });
 
   const { data: lodgeMembers, isLoading: membersLoading } = useQuery({
-    queryKey: ['approved-profiles-with-details', effectiveLodgeId],
+    queryKey: ['approved-profiles-with-details', effectiveLodgeId, isAdmin],
     queryFn: async () => {
       let query = supabase
         .from('profiles')
-        .select('id, full_name, cim_number, degree, lodge_position, lodge_id, lodges(name)')
+        .select('id, full_name, cim_number, degree, lodge_position, lodge_id, member_status, lodges(name)')
         .in('status', ['approved', 'membro'])
         .order('full_name');
+
+      if (!isAdmin) {
+        query = query.or('member_status.eq.active,member_status.is.null');
+      }
 
       if (effectiveLodgeId !== 'all') {
         query = query.eq('lodge_id', effectiveLodgeId);
