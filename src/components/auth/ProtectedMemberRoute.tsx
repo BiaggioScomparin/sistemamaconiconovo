@@ -27,9 +27,9 @@ export function ProtectedMemberRoute({ children }: ProtectedMemberRouteProps) {
     return <>{children}</>;
   }
 
-  // Se não tem perfil ou o status não for 'membro', redireciona para a página de status
+  // Se não tem perfil ou o status não for 'membro', redireciona para preencher/acompanhar a proposta
   if (!profile || (profile.status as string) !== 'membro') {
-    return <Navigate to="/status" replace />;
+    return <Navigate to="/proposta" replace />;
   }
 
   return <>{children}</>;

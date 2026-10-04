@@ -61,8 +61,17 @@ export default function ProposalStatus() {
     return <Navigate to="/login" replace />;
   }
 
-  // Se não tem perfil, redireciona para preencher proposta
-  if (!profile) {
+  // Se não tem perfil ou não preencheu os dados essenciais para sindicância, redireciona para preencher a proposta
+  const hasStage1Details = Boolean(
+    profile &&
+    profile.cpf &&
+    profile.cpf.trim() !== '' &&
+    profile.full_name &&
+    profile.full_name.trim() !== '' &&
+    profile.full_name !== profile.email
+  );
+
+  if (!profile || !hasStage1Details) {
     return <Navigate to="/proposta" replace />;
   }
 

@@ -63,7 +63,7 @@ export function LoginForm() {
         if (profileData?.status === 'membro') {
           navigate('/member/inicial');
         } else {
-          navigate('/status');
+          navigate('/proposta');
         }
       }
     } else {
