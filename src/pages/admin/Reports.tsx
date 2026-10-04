@@ -1,5 +1,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useDashboardReports } from '@/hooks/useDashboardReports';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, MapPin, Calendar, TrendingUp, DollarSign, GraduationCap } from 'lucide-react';
 import {
@@ -17,7 +19,9 @@ const DEGREE_COLORS: Record<string, string> = {
 };
 
 export default function Reports() {
-  const { data, isLoading } = useDashboardReports();
+  const { isAdmin } = useAuth();
+  const { data: profile } = useProfile();
+  const { data, isLoading } = useDashboardReports(isAdmin ? undefined : profile?.lodge_id || undefined);
 
   if (isLoading) {
     return (

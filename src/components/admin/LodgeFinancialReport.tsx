@@ -24,18 +24,24 @@ interface LodgeReportData {
 interface Props {
   monthFilter: string;
   yearFilter: string;
+  lodgeIdFilter?: string;
 }
 
-export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
+export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }: Props) {
   const { data: reportData, isLoading } = useQuery({
-    queryKey: ['lodge-financial-report', monthFilter, yearFilter],
+    queryKey: ['lodge-financial-report', monthFilter, yearFilter, lodgeIdFilter],
     queryFn: async () => {
       // Fetch lodges with their default payment amounts
-      const { data: lodges, error: lodgesError } = await supabase
+      let lodgesQuery = supabase
         .from('lodges')
         .select('id, name, city, state, default_payment_amount, payment_gateway')
         .order('name');
 
+      if (lodgeIdFilter && lodgeIdFilter !== 'all') {
+        lodgesQuery = lodgesQuery.eq('id', lodgeIdFilter);
+      }
+
+      const { data: lodges, error: lodgesError } = await lodgesQuery;
       if (lodgesError) throw lodgesError;
 
       // Fetch all payments with profiles (including lodge info)
@@ -83,27 +89,29 @@ export function LodgeFinancialReport({ monthFilter, yearFilter }: Props) {
         };
       });
 
-      // Add "Sem Loja" for members without a lodge
-      const noLodgePayments = payments?.filter(p => !p.profiles.lodge_id) || [];
-      if (noLodgePayments.length > 0) {
-        const paid = noLodgePayments.filter(p => p.status === 'paid');
-        const pending = noLodgePayments.filter(p => p.status === 'pending' && now <= parseISO(p.due_date));
-        const overdue = noLodgePayments.filter(p => p.status === 'pending' && now > parseISO(p.due_date));
+      // Add "Sem Loja" only if no specific lodge filter is active
+      if (!lodgeIdFilter || lodgeIdFilter === 'all') {
+        const noLodgePayments = payments?.filter(p => !p.profiles.lodge_id) || [];
+        if (noLodgePayments.length > 0) {
+          const paid = noLodgePayments.filter(p => p.status === 'paid');
+          const pending = noLodgePayments.filter(p => p.status === 'pending' && now <= parseISO(p.due_date));
+          const overdue = noLodgePayments.filter(p => p.status === 'pending' && now > parseISO(p.due_date));
 
-        lodgeStats.push({
-          id: 'no-lodge',
-          name: 'Sem Loja',
-          city: null,
-          state: null,
-          default_payment_amount: 200,
-          payment_gateway: 'manual',
-          paid_count: paid.length,
-          pending_count: pending.length,
-          overdue_count: overdue.length,
-          total_paid: paid.reduce((sum, p) => sum + Number(p.amount), 0),
-          total_pending: pending.reduce((sum, p) => sum + Number(p.amount), 0),
-          total_overdue: overdue.reduce((sum, p) => sum + Number(p.amount) + 50, 0),
-        });
+          lodgeStats.push({
+            id: 'no-lodge',
+            name: 'Sem Loja',
+            city: null,
+            state: null,
+            default_payment_amount: 200,
+            payment_gateway: 'manual',
+            paid_count: paid.length,
+            pending_count: pending.length,
+            overdue_count: overdue.length,
+            total_paid: paid.reduce((sum, p) => sum + Number(p.amount), 0),
+            total_pending: pending.reduce((sum, p) => sum + Number(p.amount), 0),
+            total_overdue: overdue.reduce((sum, p) => sum + Number(p.amount) + 50, 0),
+          });
+        }
       }
 
       return lodgeStats;

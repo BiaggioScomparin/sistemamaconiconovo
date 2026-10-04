@@ -2,13 +2,13 @@ import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { isVeneravelMestre, isChanceler } from '@/lib/roleUtils';
+import { isVeneravelMestre, isTesoureiro } from '@/lib/roleUtils';
 
-interface ProtectedAttendanceRouteProps {
+interface ProtectedFinanceRouteProps {
   children: ReactNode;
 }
 
-export function ProtectedAttendanceRoute({ children }: ProtectedAttendanceRouteProps) {
+export function ProtectedFinanceRoute({ children }: ProtectedFinanceRouteProps) {
   const { user, loading, isAdmin } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
 
@@ -20,6 +20,7 @@ export function ProtectedAttendanceRoute({ children }: ProtectedAttendanceRouteP
     );
   }
 
+  // Not logged in - redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -29,10 +30,10 @@ export function ProtectedAttendanceRoute({ children }: ProtectedAttendanceRouteP
     return <>{children}</>;
   }
 
-  // Venerável Mestre or Chanceler can access
-  const hasAllowedPosition = isVeneravelMestre(profile?.lodge_position) || isChanceler(profile?.lodge_position);
+  // Venerável Mestre or Tesoureiro can access
+  const canAccess = isVeneravelMestre(profile?.lodge_position) || isTesoureiro(profile?.lodge_position);
 
-  if (!hasAllowedPosition) {
+  if (!canAccess) {
     return <Navigate to="/member/inicial" replace />;
   }
 

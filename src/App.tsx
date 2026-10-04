@@ -9,6 +9,8 @@ import { ProtectedMinutesRoute } from "@/components/auth/ProtectedMinutesRoute";
 import { ProtectedMemberRoute } from "@/components/auth/ProtectedMemberRoute";
 import { ProtectedInvitesRoute } from "@/components/auth/ProtectedInvitesRoute";
 import { ProtectedAttendanceRoute } from "@/components/auth/ProtectedAttendanceRoute";
+import { ProtectedFinanceRoute } from "@/components/auth/ProtectedFinanceRoute";
+import { ProtectedReportsRoute } from "@/components/auth/ProtectedReportsRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -76,14 +78,14 @@ const App = () => (
             <Route path="/admin/sindicancia" element={<ProtectedAdminRoute><AdminSindicancia /></ProtectedAdminRoute>} />
             <Route path="/admin/attendances" element={<ProtectedAttendanceRoute><AdminAttendances /></ProtectedAttendanceRoute>} />
             <Route path="/admin/permissions" element={<ProtectedAdminRoute><AdminPermissions /></ProtectedAdminRoute>} />
-            <Route path="/admin/financeiro" element={<ProtectedAdminRoute><AdminFinanceiro /></ProtectedAdminRoute>} />
+            <Route path="/admin/financeiro" element={<ProtectedFinanceRoute><AdminFinanceiro /></ProtectedFinanceRoute>} />
             <Route path="/admin/calendar" element={<ProtectedAdminRoute><AdminCalendar /></ProtectedAdminRoute>} />
             <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
             <Route path="/admin/library" element={<ProtectedAdminRoute><AdminLibrary /></ProtectedAdminRoute>} />
             <Route path="/admin/minutes" element={<ProtectedMinutesRoute><AdminMinutes /></ProtectedMinutesRoute>} />
             <Route path="/admin/invites" element={<ProtectedInvitesRoute><AdminInvites /></ProtectedInvitesRoute>} />
             <Route path="/admin/notifications" element={<ProtectedAdminRoute><AdminNotifications /></ProtectedAdminRoute>} />
-            <Route path="/admin/reports" element={<ProtectedAdminRoute><AdminReports /></ProtectedAdminRoute>} />
+            <Route path="/admin/reports" element={<ProtectedReportsRoute><AdminReports /></ProtectedReportsRoute>} />
             {/* Member routes - Protected by status */}
             <Route path="/member/inicial" element={<ProtectedMemberRoute><MemberInicial /></ProtectedMemberRoute>} />
             <Route path="/member/card" element={<ProtectedMemberRoute><MemberCard /></ProtectedMemberRoute>} />

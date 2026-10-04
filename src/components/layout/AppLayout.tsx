@@ -31,6 +31,8 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
+import { isVeneravelMestre, isTesoureiro, isChanceler } from '@/lib/roleUtils';
+
 interface AppLayoutProps {
   children: ReactNode;
 }
@@ -45,14 +47,17 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   // Check if user can access minutes (Venerável Mestre, Orador, Secretário)
   const canAccessMinutes = profile?.lodge_position && 
-    ['veneravel_mestre', 'orador', 'secretario'].includes(profile.lodge_position);
+    ['veneravel_mestre', 'orador', 'secretario'].includes(profile.lodge_position.toLowerCase());
 
-  // Check if user can access invites (only Venerável Mestre)
-  const canAccessInvites = profile?.lodge_position === 'veneravel_mestre';
+  // Check role-based permissions
+  const isVeneravel = isVeneravelMestre(profile?.lodge_position);
+  const isTes = isTesoureiro(profile?.lodge_position);
+  const isCha = isChanceler(profile?.lodge_position);
 
-  // Check if user can access attendance management (Chanceler)
-  const canAccessAttendances = profile?.lodge_position && 
-    ['chanceler', 'Chanceler'].includes(profile.lodge_position);
+  const canAccessInvites = isVeneravel;
+  const canAccessAttendances = isVeneravel || isCha;
+  const canAccessFinance = isVeneravel || isTes;
+  const canAccessReports = isVeneravel;
 
   // Check if current route is an admin route
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
@@ -138,14 +143,24 @@ export function AppLayout({ children }: AppLayoutProps) {
       links.push({ href: '/admin/minutes', label: 'Atas', icon: ClipboardList });
     }
     
-    // Invites visible only for Venerável Mestre
+    // Invites visible for Venerável Mestre
     if (canAccessInvites) {
       links.push({ href: '/admin/invites', label: 'Convites', icon: Mail });
     }
 
-    // Attendance management visible for Chanceler
+    // Attendance management visible for Venerável Mestre and Chanceler
     if (canAccessAttendances) {
-      links.push({ href: '/admin/attendances', label: 'Presenças', icon: ClipboardList });
+      links.push({ href: '/admin/attendances', label: 'Gestão de Presenças', icon: ClipboardList });
+    }
+
+    // Finance management visible for Venerável Mestre and Tesoureiro
+    if (canAccessFinance) {
+      links.push({ href: '/admin/financeiro', label: 'Gestão Financeira', icon: DollarSign });
+    }
+
+    // Reports visible for Venerável Mestre
+    if (canAccessReports) {
+      links.push({ href: '/admin/reports', label: 'Relatórios da Loja', icon: BarChart3 });
     }
     
     return links;

@@ -34,19 +34,31 @@ interface MonthlyGrowth {
   count: number;
 }
 
-export function useDashboardReports() {
+export function useDashboardReports(lodgeId?: string) {
   return useQuery({
-    queryKey: ['dashboard-reports'],
+    queryKey: ['dashboard-reports', lodgeId || 'all'],
     queryFn: async () => {
       // 1. Lodges x Member count
-      const { data: profiles } = await supabase
+      let profilesQuery = supabase
         .from('profiles')
-        .select('lodge_id, birth_date, city, state, degree, member_status, lodge_position, civil_status, created_at')
+        .select('id, lodge_id, birth_date, city, state, degree, member_status, lodge_position, civil_status, created_at')
         .in('status', ['approved', 'membro']);
 
-      const { data: lodges } = await supabase
+      if (lodgeId) {
+        profilesQuery = profilesQuery.eq('lodge_id', lodgeId);
+      }
+
+      const { data: profiles } = await profilesQuery;
+
+      let lodgesQuery = supabase
         .from('lodges')
         .select('id, name');
+
+      if (lodgeId) {
+        lodgesQuery = lodgesQuery.eq('id', lodgeId);
+      }
+
+      const { data: lodges } = await lodgesQuery;
 
       const lodgeMap = new Map(lodges?.map(l => [l.id, l.name]) || []);
 
@@ -147,11 +159,17 @@ export function useDashboardReports() {
       // 9. Financial stats (current month)
       const currentMonth = now.getMonth() + 1;
       const currentYear = now.getFullYear();
-      const { data: payments } = await supabase
+      let paymentsQuery = supabase
         .from('monthly_payments')
-        .select('status, amount')
+        .select('status, amount, profiles!inner(lodge_id)')
         .eq('reference_month', currentMonth)
         .eq('reference_year', currentYear);
+
+      if (lodgeId) {
+        paymentsQuery = paymentsQuery.eq('profiles.lodge_id', lodgeId);
+      }
+
+      const { data: payments } = await paymentsQuery;
 
       const paymentStats: PaymentStats = {
         paid: 0,

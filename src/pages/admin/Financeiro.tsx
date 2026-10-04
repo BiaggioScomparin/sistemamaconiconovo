@@ -37,7 +37,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { Label } from '@/components/ui/label';
-import { LodgeFinancialReport } from '@/components/admin/LodgeFinancialReport';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 
 interface PaymentWithProfile {
   id: string;
@@ -81,6 +82,10 @@ const getStatusBadge = (status: string, dueDate: string) => {
 
 export default function Financeiro() {
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
+  const { data: profile } = useProfile();
+  const userLodgeId = profile?.lodge_id;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
@@ -95,8 +100,10 @@ export default function Financeiro() {
   const [generatingPixId, setGeneratingPixId] = useState<string | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<PaymentWithProfile | null>(null);
 
+  const effectiveLodgeId = isAdmin ? lodgeFilter : (userLodgeId || 'all');
+
   const { data: payments, isLoading } = useQuery({
-    queryKey: ['admin-payments', statusFilter, monthFilter, yearFilter],
+    queryKey: ['admin-payments', statusFilter, monthFilter, yearFilter, effectiveLodgeId],
     queryFn: async () => {
       let query = supabase
         .from('monthly_payments')
@@ -106,6 +113,10 @@ export default function Financeiro() {
         `)
         .order('reference_year', { ascending: false })
         .order('reference_month', { ascending: false });
+
+      if (effectiveLodgeId !== 'all') {
+        query = query.eq('profiles.lodge_id', effectiveLodgeId);
+      }
 
       if (yearFilter !== 'all') {
         query = query.eq('reference_year', parseInt(yearFilter));
@@ -122,13 +133,18 @@ export default function Financeiro() {
   });
 
   const { data: approvedProfiles } = useQuery({
-    queryKey: ['approved-profiles-for-payments'],
+    queryKey: ['approved-profiles-for-payments', effectiveLodgeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('id, full_name, lodge_id')
         .in('status', ['approved', 'membro']);
 
+      if (effectiveLodgeId !== 'all') {
+        query = query.eq('lodge_id', effectiveLodgeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -381,19 +397,21 @@ export default function Financeiro() {
                   className="pl-10"
                 />
               </div>
-              <Select value={lodgeFilter} onValueChange={setLodgeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Loja" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Lojas</SelectItem>
-                  {lodges?.map((lodge) => (
-                    <SelectItem key={lodge.id} value={lodge.id}>
-                      {lodge.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isAdmin && (
+                <Select value={lodgeFilter} onValueChange={setLodgeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Loja" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as Lojas</SelectItem>
+                    {lodges?.map((lodge) => (
+                      <SelectItem key={lodge.id} value={lodge.id}>
+                        {lodge.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
@@ -436,7 +454,7 @@ export default function Financeiro() {
         </Card>
 
         {/* Lodge Financial Report */}
-        <LodgeFinancialReport monthFilter={monthFilter} yearFilter={yearFilter} />
+        <LodgeFinancialReport monthFilter={monthFilter} yearFilter={yearFilter} lodgeIdFilter={effectiveLodgeId} />
 
         {/* Payments Table */}
         <Card>
