@@ -404,6 +404,34 @@ export default function AdminSindicancia() {
         .from('profiles')
         .update({ status: newStatus as any })
         .eq('id', reportData.candidate.id);
+
+      // Enviar notificação WhatsApp via Whaticket
+      try {
+        const { data: candProfile } = await supabase
+          .from('profiles')
+          .select('phone, cell_phone, lodge_id')
+          .eq('id', reportData.candidate.id)
+          .maybeSingle();
+
+        const phone = candProfile?.cell_phone || candProfile?.phone;
+        if (phone) {
+          const msg = newStatus === 'sindicancia_aprovada'
+            ? `Olá, ${reportData.candidate.fullName}! Parabéns! Sua Sindicância foi Aprovada pela Comissão do GOIB. Acesse https://sistemamaconiconovo.vercel.app/proposta para preencher a Ficha de Proposta Completa.`
+            : `Olá, ${reportData.candidate.fullName}. Houve uma atualização no status da sua proposta junto ao GOIB. Entre em contato com a secretaria da Loja.`;
+
+          await supabase.functions.invoke('send-whatsapp', {
+            body: {
+              lodge_id: candProfile?.lodge_id || 'default',
+              phone,
+              message: msg,
+              profile_id: reportData.candidate.id,
+              category: 'sindicancia_result',
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('Erro ao notificar WhatsApp:', err);
+      }
     }
 
     const newRecord: SindicanciaRecord = {

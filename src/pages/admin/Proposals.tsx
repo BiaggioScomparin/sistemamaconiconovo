@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useLodges } from '@/hooks/useLodges';
 import { 
@@ -29,7 +31,9 @@ import {
   Printer,
   Kanban,
   List,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
 import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
@@ -145,6 +149,36 @@ export default function AdminProposals() {
   const [editalDialogOpen, setEditalDialogOpen] = useState(false);
   const [editalProfile, setEditalProfile] = useState<Profile | null>(null);
   const [viewProfileChildren, setViewProfileChildren] = useState<{ name: string; birth_date: string }[]>([]);
+
+  // WhatsApp notification states
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
+  const [customWhatsappMsg, setCustomWhatsappMsg] = useState('');
+
+  const getWhatsAppTemplate = (status: string, profile: Profile | null, dateStr?: string) => {
+    if (!profile) return '';
+    const name = profile.full_name || 'Candidato';
+    switch (status) {
+      case 'sindicancia':
+        return `Olá, ${name}! Sua proposta para o GOIB avançou para a etapa de Sindicância & Verificação Preliminar. A comissão iniciou a análise do seu cadastro.`;
+      case 'sindicancia_aprovada':
+        return `Olá, ${name}! Parabéns! Sua Sindicância foi Aprovada pela Comissão. Acesse o sistema em https://sistemamaconiconovo.vercel.app/proposta para preencher a Ficha de Proposta Completa.`;
+      case 'aguardando_iniciacao':
+        return `Olá, ${name}! Sua proposta foi aprovada e sua Iniciação foi agendada${dateStr ? ` para a data ${dateStr}` : ''}. Em breve a secretaria entrará em contato com mais detalhes.`;
+      case 'membro':
+        return `Olá, ${name}! Seja muito bem-vindo ao GOIB! Seu acesso como Membro foi liberado no sistema.`;
+      case 'reprovado':
+        return `Olá, ${name}. Houve uma atualização no status da sua proposta junto ao GOIB. Entre em contato com a secretaria da Loja para mais informações.`;
+      default:
+        return `Olá, ${name}! O status da sua proposta para o GOIB foi atualizado para "${STATUS_CONFIG[status]?.label || status}".`;
+    }
+  };
+
+  const handleSelectStatus = (status: string) => {
+    setNewStatus(status);
+    if (selectedProfile) {
+      setCustomWhatsappMsg(getWhatsAppTemplate(status, selectedProfile, initiationDate));
+    }
+  };
 
   // Fetch children when viewing a profile
   const fetchChildren = async (profileId: string) => {
@@ -263,6 +297,34 @@ export default function AdminProposals() {
         });
       }
 
+      // Enviar notificação WhatsApp via Whaticket se opção estiver ativa
+      if (notifyWhatsApp && selectedProfile && (selectedProfile.cell_phone || selectedProfile.phone)) {
+        try {
+          const candidatePhone = selectedProfile.cell_phone || selectedProfile.phone;
+          const targetLodge = selectedProfile.lodge_id || selectedLodge || lodges?.[0]?.id || '';
+          const messageToSend = customWhatsappMsg.trim() || getWhatsAppTemplate(newStatus, selectedProfile, initiationDate);
+
+          if (targetLodge && candidatePhone) {
+            await supabase.functions.invoke('send-whatsapp', {
+              body: {
+                lodge_id: targetLodge,
+                phone: candidatePhone,
+                message: messageToSend,
+                profile_id: selectedProfile.id,
+                category: 'kanban_status_change',
+              },
+            });
+
+            toast({
+              title: 'WhatsApp Enviado!',
+              description: `Notificação enviada via Whaticket para ${candidatePhone}.`,
+            });
+          }
+        } catch (wErr: any) {
+          console.warn('Erro ao enviar WhatsApp:', wErr);
+        }
+      }
+
       // Invalidar e aguardar refresh antes de fechar o dialog
       await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
       
@@ -273,6 +335,7 @@ export default function AdminProposals() {
       setNewStatus('');
       setSelectedLodge('');
       setInitiationDate('');
+      setCustomWhatsappMsg('');
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
@@ -632,7 +695,7 @@ export default function AdminProposals() {
 
             <div className="space-y-2">
               <Label>Novo Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
+              <Select value={newStatus} onValueChange={handleSelectStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o novo status" />
                 </SelectTrigger>
@@ -645,6 +708,40 @@ export default function AdminProposals() {
                   <SelectItem value="membro">Membro</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* WhatsApp Notification Box */}
+            <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-emerald-500" />
+                  <Label htmlFor="notifyWp" className="text-xs font-bold text-foreground cursor-pointer">
+                    Notificar Candidato via WhatsApp (Whaticket)
+                  </Label>
+                </div>
+                <Checkbox
+                  id="notifyWp"
+                  checked={notifyWhatsApp}
+                  onCheckedChange={(checked) => setNotifyWhatsApp(!!checked)}
+                />
+              </div>
+
+              {notifyWhatsApp && (
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-[11px] text-muted-foreground">Mensagem Automática (Editável):</Label>
+                  <Textarea
+                    rows={3}
+                    value={customWhatsappMsg}
+                    onChange={(e) => setCustomWhatsappMsg(e.target.value)}
+                    placeholder="Digite a mensagem para o candidato..."
+                    className="text-xs border-emerald-500/30 focus:border-emerald-500"
+                  />
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Send size={10} className="text-emerald-500" />
+                    Destinatário: {selectedProfile?.cell_phone || selectedProfile?.phone || 'Sem telefone cadastrado'}
+                  </p>
+                </div>
+              )}
             </div>
 
             {newStatus === 'aguardando_iniciacao' && (
