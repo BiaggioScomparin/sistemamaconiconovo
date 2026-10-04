@@ -132,8 +132,18 @@ function ProposalFlowManager() {
     return <Stage2FullProposalForm profile={profile} onComplete={refetch} />;
   }
 
-  // 2. If profile exists with status === 'sindicancia' or 'pending' -> Render WAITING SCREEN for Sindicância
-  if (profile && (profile.status === 'sindicancia' || profile.status === 'pending')) {
+  // Check if candidate has actually completed Stage 1 essential data (CPF & valid full_name)
+  const hasSubmittedStage1 = Boolean(
+    profile && 
+    profile.cpf && 
+    profile.cpf.trim() !== '' && 
+    profile.full_name && 
+    profile.full_name.trim() !== '' && 
+    profile.full_name !== profile.email
+  );
+
+  // 2. If profile exists with status === 'sindicancia' or 'pending' AND has submitted Stage 1 -> Render WAITING SCREEN
+  if (profile && (profile.status === 'sindicancia' || profile.status === 'pending') && hasSubmittedStage1) {
     return <SindicanciaWaitingScreen profile={profile} />;
   }
 
@@ -142,7 +152,7 @@ function ProposalFlowManager() {
     return <ProposalCompletedScreen profile={profile} />;
   }
 
-  // 4. Default for NEW Candidate -> Render STAGE 1 (Sindicância Initial Data Form)
+  // 4. Default for NEW Candidate or incomplete Stage 1 -> Render STAGE 1 (Sindicância Initial Data Form)
   return <Stage1SindicanciaForm profile={profile} onComplete={refetch} />;
 }
 
@@ -156,12 +166,12 @@ function Stage1SindicanciaForm({ profile, onComplete }: { profile: any; onComple
   const [lgpdConsent, setLgpdConsent] = useState(false);
 
   const [formData, setFormData] = useState({
-    full_name: profile?.full_name || '',
+    full_name: profile?.full_name && profile.full_name !== profile.email ? profile.full_name : '',
     email: profile?.email || user?.email || '',
     cpf: profile?.cpf || '',
     identity_number: profile?.identity_number || '',
     identity_issuer: profile?.identity_issuer || 'SSP',
-    birth_date: profile?.birth_date || '',
+    birth_date: profile?.birth_date && profile.birth_date !== '1990-01-01' ? profile.birth_date : '',
     state: profile?.state || 'SP',
     city: profile?.city || '',
     profession: profile?.profession || '',
