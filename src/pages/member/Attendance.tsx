@@ -19,6 +19,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
+import { isVeneravelMestre, isChanceler } from '@/lib/roleUtils';
+
 const Attendance = () => {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -131,8 +133,8 @@ const Attendance = () => {
   }
 
   // Check if user has any attendance permission
-  const canViewAttendance = permissions?.can_view_attendance;
-  const canRegisterAttendance = permissions?.can_register_attendance;
+  const canViewAttendance = permissions?.can_view_attendance || isChanceler(profile?.lodge_position) || isVeneravelMestre(profile?.lodge_position);
+  const canRegisterAttendance = permissions?.can_register_attendance || isChanceler(profile?.lodge_position) || isVeneravelMestre(profile?.lodge_position);
 
   if (!canViewAttendance && !canRegisterAttendance) {
     return (
