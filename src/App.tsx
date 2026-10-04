@@ -96,6 +96,7 @@ const App = () => (
             <Route path="/member/library" element={<ProtectedMemberRoute><MemberLibrary /></ProtectedMemberRoute>} />
             {/* Public validation route */}
             <Route path="/validar/:profileId" element={<ValidateMember />} />
+            <Route path="/validar/*" element={<ValidateMember />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
