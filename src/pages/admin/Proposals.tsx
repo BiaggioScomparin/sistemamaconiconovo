@@ -231,11 +231,11 @@ export default function AdminProposals() {
       return;
     }
 
-    // If changing to 'aguardando_iniciacao', need to select a date
-    if (newStatus === 'aguardando_iniciacao' && !initiationDate) {
+    // If changing to 'aguardando_iniciacao', need to select date and lodge
+    if (newStatus === 'aguardando_iniciacao' && (!initiationDate || !selectedLodge)) {
       toast({ 
         title: 'Erro', 
-        description: 'Informe a data prevista para a iniciação.', 
+        description: 'Informe a Loja Maçônica e a data prevista para a iniciação.', 
         variant: 'destructive' 
       });
       return;
@@ -277,9 +277,12 @@ export default function AdminProposals() {
         
         const updatePayload: Record<string, any> = { status: newStatus };
         
-        // If aguardando_iniciacao, also save the initiation date
+        // If aguardando_iniciacao, also save initiation date and selected lodge
         if (newStatus === 'aguardando_iniciacao') {
           updatePayload.initiation_scheduled_date = initiationDate;
+          if (selectedLodge) {
+            updatePayload.lodge_id = selectedLodge;
+          }
         }
         
         const { data: updateData, error } = await supabase
@@ -746,17 +749,35 @@ export default function AdminProposals() {
             </div>
 
             {newStatus === 'aguardando_iniciacao' && (
-              <div className="space-y-2">
-                <Label>Data Prevista para Iniciação *</Label>
-                <input
-                  type="date"
-                  value={initiationDate}
-                  onChange={(e) => setInitiationDate(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Esta data será exibida para o candidato acompanhar.
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Loja Maçônica de Iniciação *</Label>
+                  <Select value={selectedLodge} onValueChange={setSelectedLodge}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a Loja onde será realizada a iniciação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lodges?.map((lodge) => (
+                        <SelectItem key={lodge.id} value={lodge.id}>
+                          {lodge.name} {lodge.city ? `(${lodge.city}/${lodge.state})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Data Prevista para Iniciação *</Label>
+                  <input
+                    type="date"
+                    value={initiationDate}
+                    onChange={(e) => setInitiationDate(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Esta data e o endereço do Templo da Loja selecionada serão exibidos para o candidato.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -795,7 +816,12 @@ export default function AdminProposals() {
             </Button>
             <Button
               onClick={handleStatusChange}
-              disabled={updating || !newStatus || (newStatus === 'membro' && !selectedProfile?.email) || (newStatus === 'aguardando_iniciacao' && !initiationDate)}
+              disabled={
+                updating || 
+                !newStatus || 
+                (newStatus === 'membro' && (!selectedProfile?.email || !selectedLodge)) || 
+                (newStatus === 'aguardando_iniciacao' && (!initiationDate || !selectedLodge))
+              }
             >
               {updating ? 'Atualizando...' : 'Confirmar'}
             </Button>
