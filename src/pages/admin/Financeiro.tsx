@@ -103,6 +103,43 @@ export default function Financeiro() {
 
   const effectiveLodgeId = isAdmin ? lodgeFilter : (userLodgeId || 'all');
 
+  // Ensure test payment of R$ 200 for Alcivaneido Alves for Month 10/2026
+  useQuery({
+    queryKey: ['ensure-alcivaneido-payment'],
+    queryFn: async () => {
+      const { data: member } = await supabase
+        .from('profiles')
+        .select('id, full_name, lodge_id')
+        .ilike('full_name', '%Alcivaneido%')
+        .maybeSingle();
+
+      if (member) {
+        const { data: existing } = await supabase
+          .from('monthly_payments')
+          .select('id')
+          .eq('profile_id', member.id)
+          .eq('reference_month', 10)
+          .eq('reference_year', 2026)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from('monthly_payments').insert({
+            profile_id: member.id,
+            reference_month: 10,
+            reference_year: 2026,
+            amount: 200,
+            due_date: '2026-10-10',
+            status: 'pending',
+          });
+          queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+          queryClient.invalidateQueries({ queryKey: ['approved-profiles-with-details'] });
+          queryClient.invalidateQueries({ queryKey: ['lodge-financial-report'] });
+        }
+      }
+      return true;
+    },
+  });
+
   const { data: payments, isLoading } = useQuery({
     queryKey: ['admin-payments', statusFilter, monthFilter, yearFilter, effectiveLodgeId],
     queryFn: async () => {
