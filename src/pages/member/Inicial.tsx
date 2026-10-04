@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { QRCodeSVG } from 'qrcode.react';
-import { Building2, Users, Crown, User, Cake, Calendar, Clock, Award, CreditCard, DollarSign, BookOpen, QrCode, ArrowRight, CheckCircle2, Shield } from 'lucide-react';
+import { Building2, Users, Crown, User, Cake, Calendar, Clock, Award, CreditCard, DollarSign, BookOpen, QrCode, ArrowRight, CheckCircle2, Shield, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { canMemberConfirmAttendance } from '@/lib/attendanceUtils';
 
 const LODGE_POSITIONS = [
   { value: 'veneravel_mestre', label: 'Venerável Mestre' },
@@ -35,7 +36,7 @@ const LODGE_POSITIONS = [
 ];
 
 export default function Inicial() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: lodgeMembers = [], isLoading: membersLoading } = useLodgeMembers(profile?.lodge_id || undefined);
   const { data: events = [], isLoading: eventsLoading } = useEvents(profile?.lodge_id || undefined);
@@ -169,47 +170,71 @@ export default function Inicial() {
         )}
 
         {/* HIGHLIGHT: NEXT SESSION BANNER */}
-        {nextSession && (
-          <Card className="card-elegant border-primary/40 bg-card overflow-hidden relative shadow-lg">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                <div className="space-y-2 flex-1">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">
-                    <Clock size={14} /> Próxima Sessão Agendada
+        {nextSession && (() => {
+          const timeCheck = canMemberConfirmAttendance(
+            nextSession.event_date,
+            (nextSession as any).start_time || nextSession.event_time || '20:00',
+            profile?.lodge_position,
+            isAdmin
+          );
+
+          return (
+            <Card className="card-elegant border-primary/40 bg-card overflow-hidden relative shadow-lg">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div className="space-y-2 flex-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">
+                      <Clock size={14} /> Próxima Sessão Agendada
+                    </div>
+                    <h2 className="text-2xl font-display text-foreground">
+                      {nextSession.title}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-1">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        {format(new Date(nextSession.event_date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                      </span>
+                      {((nextSession as any).start_time || nextSession.event_time) && (
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {((nextSession as any).start_time || nextSession.event_time || '').substring(0, 5)} h
+                        </span>
+                      )}
+                      {lodge?.name && (
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {lodge.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-display text-foreground">
-                    {nextSession.title}
-                  </h2>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-1">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      {format(new Date(nextSession.event_date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                    </span>
-                    {nextSession.start_time && (
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        {nextSession.start_time.substring(0, 5)} h
-                      </span>
-                    )}
-                    {lodge?.name && (
-                      <span className="flex items-center gap-1.5">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {lodge.name}
-                      </span>
+
+                  <div className="flex flex-col items-end gap-1.5 w-full md:w-auto">
+                    {timeCheck.allowed ? (
+                      <Link to="/member/attendance" className="w-full md:w-auto">
+                        <Button size="lg" className="w-full md:w-auto gap-2 bg-yellow-500 hover:bg-yellow-600 text-black font-bold shadow-md">
+                          <CheckCircle2 className="h-5 w-5" />
+                          Confirmar Presença
+                        </Button>
+                      </Link>
+                    ) : (
+                      <div className="flex flex-col items-center md:items-end gap-1 w-full">
+                        <Button size="lg" disabled variant="outline" className="w-full md:w-auto gap-2 opacity-80 cursor-not-allowed">
+                          <Clock className="h-5 w-5 text-muted-foreground" />
+                          Confirmação Indisponível
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center md:text-right max-w-xs">
+                          {timeCheck.reason}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
-                <Link to="/member/attendance">
-                  <Button size="lg" className="w-full md:w-auto gap-2 bg-yellow-500 hover:bg-yellow-600 text-black font-bold shadow-md">
-                    <CheckCircle2 className="h-5 w-5" />
-                    Confirmar Presença
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* TOP WIDGETS: LODGE INFO & DIGITAL CARD PREVIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

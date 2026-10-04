@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useLodges } from '@/hooks/useLodges';
+import { useEvents } from '@/hooks/useEvents';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -14,15 +15,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock, Lock, Users } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Lock, Users, AlertCircle, ShieldAlert } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
 import { isVeneravelMestre, isChanceler } from '@/lib/roleUtils';
+import { canMemberConfirmAttendance } from '@/lib/attendanceUtils';
 
 const Attendance = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: lodges } = useLodges();
   const { data: permissions, isLoading: permissionsLoading } = useUserPermissions();
@@ -35,6 +37,24 @@ const Attendance = () => {
   
   // Today's date for daily view (fixed, not selectable)
   const todayDate = format(new Date(), 'yyyy-MM-dd');
+
+  // Fetch events for matching session start time
+  const { data: events } = useEvents(lodgeId || profile?.lodge_id || undefined);
+
+  // Match event by selected date
+  const matchedEvent = useMemo(() => {
+    if (!events || !sessionDate) return null;
+    return events.find(e => e.event_date === sessionDate);
+  }, [events, sessionDate]);
+
+  // Check if current user is exempt (Chanceler, Venerável Mestre or Admin)
+  const isExemptRole = isAdmin || isChanceler(profile?.lodge_position) || isVeneravelMestre(profile?.lodge_position);
+
+  // Check time restriction
+  const timeCheck = useMemo(() => {
+    const sessionTime = (matchedEvent as any)?.start_time || matchedEvent?.event_time || '20:00';
+    return canMemberConfirmAttendance(sessionDate, sessionTime, profile?.lodge_position, isAdmin);
+  }, [sessionDate, matchedEvent, profile?.lodge_position, isAdmin]);
 
   const { data: attendances, refetch: refetchAttendances } = useQuery({
     queryKey: ['my-attendances', profile?.id],
@@ -75,6 +95,16 @@ const Attendance = () => {
       toast({
         title: 'Erro',
         description: 'Preencha todos os campos obrigatórios.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate 1-hour before session rule for regular members
+    if (!timeCheck.allowed) {
+      toast({
+        title: 'Confirmação Indisponível',
+        description: timeCheck.reason,
         variant: 'destructive',
       });
       return;
@@ -237,25 +267,39 @@ const Attendance = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Tipo de Sessão</Label>
-                  <RadioGroup
-                    value={sessionType}
-                    onValueChange={(value) => setSessionType(value as 'magna' | 'ordinaria')}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="ordinaria" id="ordinaria" />
-                      <Label htmlFor="ordinaria" className="cursor-pointer">Ordinária</Label>
+                {!isExemptRole && (
+                  <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+                    timeCheck.allowed 
+                      ? 'bg-blue-500/10 border-blue-200 text-blue-800 dark:text-blue-300' 
+                      : 'bg-amber-500/10 border-amber-200 text-amber-800 dark:text-amber-300'
+                  }`}>
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      {timeCheck.allowed ? (
+                        <span>
+                          <strong>Aviso:</strong> A confirmação de presença por membros só é permitida no próprio dia da sessão até 1 hora antes do início.
+                        </span>
+                      ) : (
+                        <span>
+                          <strong>Confirmação indisponível:</strong> {timeCheck.reason}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="magna" id="magna" />
-                      <Label htmlFor="magna" className="cursor-pointer">Magna</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                  </div>
+                )}
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isExemptRole && (
+                  <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 shrink-0" />
+                    <span>Como Chanceler / Oficial da Loja, você possui permissão para registrar presenças sem restrição de horário.</span>
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isSubmitting || (!isExemptRole && !timeCheck.allowed)}
+                >
                   {isSubmitting ? 'Registrando...' : 'Registrar Presença'}
                 </Button>
               </form>
