@@ -83,9 +83,7 @@ export async function generateBatchCardsPDF(
       onProgress?.(i + 1, members.length);
 
       const lodge = member.lodges;
-      const lodgeInfo = lodge 
-        ? `${lodge.name}${lodge.city ? ` - ${lodge.city}` : ''}${lodge.state ? `/${lodge.state}` : ''}`
-        : '-';
+      const lodgeInfo = lodge ? lodge.name : '-';
       const orienteInfo = lodge?.city && lodge?.state 
         ? `${lodge.city} - ${lodge.state}` 
         : '-';

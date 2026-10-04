@@ -72,9 +72,7 @@ export function MemberCard({ profile }: MemberCardProps) {
 
   // Access lodge data - Supabase returns as 'lodges' from the join
   const lodge = (profile as any).lodges;
-  const lodgeInfo = lodge 
-    ? `${lodge.name}${lodge.city ? ` - ${lodge.city}` : ''}${lodge.state ? `/${lodge.state}` : ''}`
-    : '-';
+  const lodgeInfo = lodge ? lodge.name : '-';
 
   const orienteInfo = lodge?.city && lodge?.state 
     ? `${lodge.city} - ${lodge.state}` 
