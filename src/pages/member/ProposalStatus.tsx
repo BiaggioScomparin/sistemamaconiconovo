@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle2, XCircle, FileText, LogOut } from 'lucide-react';
 import logoGoib from '@/assets/logo-goib.png';
+import AguardandoIniciacaoScreen from '@/components/proposal/AguardandoIniciacaoScreen';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode; description: string }> = {
   proposta: {
@@ -78,6 +79,11 @@ export default function ProposalStatus() {
   // Se for membro, redireciona para área de membro
   if ((profile.status as string) === 'membro') {
     return <Navigate to="/member/inicial" replace />;
+  }
+
+  // Se estiver aguardando iniciação, exibe a tela dedicada com data, local e orientações
+  if ((profile.status as string) === 'aguardando_iniciacao') {
+    return <AguardandoIniciacaoScreen profile={profile} />;
   }
 
   const status = profile.status || 'proposta';

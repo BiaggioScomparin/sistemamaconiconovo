@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Search, CheckCircle, Plus, Trash2, ShieldCheck, FileText, Lock, Sparkles, CheckCircle2, Clock, User } from 'lucide-react';
 import { validateImageFile, getValidatedFileName } from '@/lib/fileValidation';
 import ProposalAuthGate from '@/components/proposal/ProposalAuthGate';
+import AguardandoIniciacaoScreen from '@/components/proposal/AguardandoIniciacaoScreen';
 
 // Formatting utilities
 const formatCPF = (value: string): string => {
@@ -153,8 +154,13 @@ function ProposalFlowManager() {
     return <SindicanciaWaitingScreen profile={profile} />;
   }
 
-  // 3. If proposal is already complete or candidate approved -> Render COMPLETION SCREEN
-  if (profile && ['proposta_completa', 'aguardando_iniciacao', 'membro', 'approved'].includes(profile.status)) {
+  // 3. If candidate is awaiting initiation -> Render dedicated AguardandoIniciacaoScreen
+  if (profile && profile.status === 'aguardando_iniciacao') {
+    return <AguardandoIniciacaoScreen profile={profile} />;
+  }
+
+  // 4. If proposal is already complete -> Render COMPLETION SCREEN
+  if (profile && ['proposta_completa', 'membro', 'approved'].includes(profile.status)) {
     return <ProposalCompletedScreen profile={profile} onEdit={() => setIsEditing(true)} />;
   }
 
