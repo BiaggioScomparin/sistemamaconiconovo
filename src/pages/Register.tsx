@@ -24,7 +24,7 @@ export default function Register() {
   }
 
   if (user) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/proposta" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,9 +64,9 @@ export default function Register() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary mb-4">
             <span className="font-display text-4xl text-secondary">∴</span>
           </div>
-          <h1 className="text-3xl font-display text-foreground">Criar Conta</h1>
+          <h1 className="text-3xl font-display text-foreground">Cadastro de Membro</h1>
           <p className="text-muted-foreground font-body mt-2">
-            Comece a gerenciar sua loja maçônica
+            Grande Oriente Independente do Brasil (GOIB)
           </p>
         </div>
 

@@ -39,8 +39,8 @@ export default function Index() {
               <Button variant="ghost" asChild>
                 <Link to="/login">Entrar</Link>
               </Button>
-              <Button asChild>
-                <Link to="/register">Começar Grátis</Link>
+              <Button asChild className="bg-primary text-primary-foreground font-semibold">
+                <Link to="/register">Cadastrar-se / Filiação</Link>
               </Button>
             </div>
           </div>
