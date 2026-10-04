@@ -102,6 +102,7 @@ export default function Proposal() {
 
 function ProposalFlowManager() {
   const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch candidate profile status
   const { data: profile, isLoading, refetch } = useQuery({
@@ -124,6 +125,11 @@ function ProposalFlowManager() {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // If user requested to edit their proposal
+  if (isEditing && profile) {
+    return <Stage2FullProposalForm profile={profile} onComplete={() => { setIsEditing(false); refetch(); }} />;
   }
 
   // STATUS FLOW ROUTING:
@@ -149,7 +155,7 @@ function ProposalFlowManager() {
 
   // 3. If proposal is already complete or candidate approved -> Render COMPLETION SCREEN
   if (profile && ['proposta_completa', 'aguardando_iniciacao', 'membro', 'approved'].includes(profile.status)) {
-    return <ProposalCompletedScreen profile={profile} />;
+    return <ProposalCompletedScreen profile={profile} onEdit={() => setIsEditing(true)} />;
   }
 
   // 4. Default for NEW Candidate or incomplete Stage 1 -> Render STAGE 1 (Sindicância Initial Data Form)
@@ -969,7 +975,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
 /* ====================================================================
    TELA DE CONCLUSÃO DE PROPOSTA
    ==================================================================== */
-function ProposalCompletedScreen({ profile }: { profile: any }) {
+function ProposalCompletedScreen({ profile, onEdit }: { profile: any; onEdit?: () => void }) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="max-w-xl w-full card-elegant border-emerald-500/40 text-center p-8 space-y-6">
@@ -988,6 +994,12 @@ function ProposalCompletedScreen({ profile }: { profile: any }) {
             Sua Ficha de Proposta Maçônica completa foi recebida pela Secretaria da Loja. Você será notificado sobre a data marcada para a sua Iniciação!
           </p>
         </div>
+
+        {onEdit && (
+          <Button variant="outline" onClick={onEdit} className="gap-2 text-xs w-full">
+            <FileText size={14} /> Revisualizar / Editar Minha Ficha de Proposta
+          </Button>
+        )}
       </Card>
     </div>
   );
