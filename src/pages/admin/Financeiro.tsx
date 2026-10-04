@@ -89,7 +89,7 @@ export default function Financeiro() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>((new Date().getMonth() + 1).toString());
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
   const [lodgeFilter, setLodgeFilter] = useState<string>('all');
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
