@@ -303,7 +303,7 @@ export default function Financeiro() {
     return matchesSearch && matchesStatus && matchesLodge;
   });
 
-  const { data: lodgeMembers } = useQuery({
+  const { data: lodgeMembers, isLoading: membersLoading } = useQuery({
     queryKey: ['approved-profiles-with-details', effectiveLodgeId],
     queryFn: async () => {
       let query = supabase
