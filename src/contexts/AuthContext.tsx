@@ -98,13 +98,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
     });
+
+    // If user created, automatically sign in seamlessly
+    if (data?.user) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!signInError) return { error: null };
+    }
+
+    // Fallback if mailer error occurs
+    if (error && (error.message.includes('confirmation email') || error.message.includes('email'))) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!signInError) return { error: null };
+    }
+
     return { error };
   };
 
