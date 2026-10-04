@@ -390,7 +390,7 @@ export default function Payments() {
       </div>
 
       {/* Dialog PIX QR Code */}
-      <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
+      <Dialog open={!!selectedPayment && ((profile as any)?.lodges?.payment_gateway || (profile as any)?.lodge?.payment_gateway || paymentGateway) !== 'manual'} onOpenChange={() => setSelectedPayment(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>QR Code PIX</DialogTitle>

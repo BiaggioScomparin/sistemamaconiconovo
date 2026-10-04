@@ -29,6 +29,7 @@ const LODGE_POSITIONS = [
   { value: 'orador', label: 'Orador' },
   { value: 'secretario', label: 'Secretário' },
   { value: 'tesoureiro', label: 'Tesoureiro' },
+  { value: 'chanceler', label: 'Chanceler' },
   { value: 'mestre_cerimonias', label: 'Mestre de Cerimônias' },
   { value: 'primeiro_diacono', label: '1º Diácono' },
   { value: 'segundo_diacono', label: '2º Diácono' },

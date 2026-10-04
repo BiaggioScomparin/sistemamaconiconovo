@@ -40,6 +40,7 @@ import { Label } from '@/components/ui/label';
 import { LodgeFinancialReport } from '@/components/admin/LodgeFinancialReport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { isVeneravelMestre, isTesoureiro } from '@/lib/roleUtils';
 
 interface PaymentWithProfile {
   id: string;
@@ -58,6 +59,7 @@ interface PaymentWithProfile {
     lodge_id: string | null;
     lodges: {
       name: string;
+      payment_gateway?: string;
     } | null;
   };
 }
@@ -147,7 +149,7 @@ export default function Financeiro() {
         .from('monthly_payments')
         .select(`
           *,
-          profiles!inner(full_name, cim_number, lodge_id, lodges(name))
+          profiles!inner(full_name, cim_number, lodge_id, lodges(name, payment_gateway))
         `)
         .order('reference_year', { ascending: false })
         .order('reference_month', { ascending: false });
@@ -349,7 +351,7 @@ export default function Financeiro() {
     queryFn: async () => {
       let query = supabase
         .from('profiles')
-        .select('id, full_name, cim_number, degree, lodge_position, lodge_id, member_status, lodges(name)')
+        .select('id, full_name, cim_number, degree, lodge_position, lodge_id, member_status, lodges(name, payment_gateway)')
         .in('status', ['approved', 'membro'])
         .order('full_name');
 
@@ -392,6 +394,20 @@ export default function Financeiro() {
     });
   }, [lodgeMembers, payments, searchTerm, statusFilter]);
 
+  const getLodgeGateway = (lodgeId?: string | null, embeddedGateway?: string | null, memberLodgeId?: string | null) => {
+    if (embeddedGateway) return embeddedGateway;
+    const targetLodgeId = lodgeId || memberLodgeId || (effectiveLodgeId !== 'all' ? effectiveLodgeId : userLodgeId);
+    if (targetLodgeId && targetLodgeId !== 'all') {
+      const lodge = lodges?.find(l => l.id === targetLodgeId);
+      if (lodge?.payment_gateway) return lodge.payment_gateway;
+    }
+    return 'mercado_pago';
+  };
+
+  const isVeneravel = isVeneravelMestre(profile?.lodge_position);
+  const isTes = isTesoureiro(profile?.lodge_position);
+  const canGeneratePayments = isAdmin || isVeneravel || isTes;
+
   const stats = {
     total: payments?.length || 0,
     paid: payments?.filter(p => p.status === 'paid').length || 0,
@@ -411,8 +427,13 @@ export default function Financeiro() {
               <p className="text-muted-foreground">Gerencie as mensalidades dos membros da Loja</p>
             </div>
           </div>
-          {isAdmin && (
-            <Button onClick={() => setShowGenerateDialog(true)}>
+          {canGeneratePayments && (
+            <Button onClick={() => {
+              if (!isAdmin && userLodgeId) {
+                handleLodgeChange(userLodgeId);
+              }
+              setShowGenerateDialog(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Gerar Mensalidades
             </Button>
@@ -622,32 +643,34 @@ export default function Financeiro() {
                       <TableCell className="space-x-2">
                         {payment && payment.status !== 'paid' && (
                           <>
-                            {payment.pix_qr_code ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setSelectedPaymentForQR(payment)}
-                              >
-                                <QrCode className="h-4 w-4 mr-1" />
-                                Ver QR
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setGeneratingPixId(payment.id);
-                                  generatePixMutation.mutate(payment);
-                                }}
-                                disabled={generatingPixId === payment.id}
-                              >
-                                {generatingPixId === payment.id ? (
-                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                ) : (
+                            {((member as any)?.lodges?.payment_gateway || getLodgeGateway(payment.profiles?.lodge_id, payment.profiles?.lodges?.payment_gateway, member.lodge_id)) !== 'manual' && (
+                              payment.pix_qr_code ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setSelectedPaymentForQR(payment)}
+                                >
                                   <QrCode className="h-4 w-4 mr-1" />
-                                )}
-                                Gerar PIX
-                              </Button>
+                                  Ver QR
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setGeneratingPixId(payment.id);
+                                    generatePixMutation.mutate(payment);
+                                  }}
+                                  disabled={generatingPixId === payment.id}
+                                >
+                                  {generatingPixId === payment.id ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <QrCode className="h-4 w-4 mr-1" />
+                                  )}
+                                  Gerar PIX
+                                </Button>
+                              )
                             )}
                             <Button
                               size="sm"
@@ -772,7 +795,7 @@ export default function Financeiro() {
       </Dialog>
 
       {/* QR Code Dialog */}
-      <Dialog open={!!selectedPaymentForQR} onOpenChange={() => setSelectedPaymentForQR(null)}>
+      <Dialog open={!!selectedPaymentForQR && getLodgeGateway(selectedPaymentForQR?.profiles?.lodge_id, selectedPaymentForQR?.profiles?.lodges?.payment_gateway) !== 'manual'} onOpenChange={() => setSelectedPaymentForQR(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>QR Code PIX</DialogTitle>
