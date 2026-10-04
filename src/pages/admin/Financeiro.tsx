@@ -37,6 +37,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { Label } from '@/components/ui/label';
+import { LodgeFinancialReport } from '@/components/admin/LodgeFinancialReport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 
