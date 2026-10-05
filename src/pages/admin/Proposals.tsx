@@ -576,7 +576,7 @@ export default function AdminProposals() {
                                 {candidate.profession && <span className="truncate max-w-[90px]">{candidate.profession}</span>}
                               </div>
 
-                              <div className="flex items-center gap-1.5 pt-1">
+                              <div className="flex items-center gap-1 pt-1">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -584,9 +584,21 @@ export default function AdminProposals() {
                                     setViewProfile(candidate);
                                     fetchChildren(candidate.id);
                                   }}
-                                  className="h-7 px-2 text-[11px] flex-1 gap-1"
+                                  className="h-7 px-1.5 text-[11px] flex-1 gap-1"
                                 >
                                   <Eye className="h-3 w-3" /> Ver
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditalProfile(candidate);
+                                    setEditalDialogOpen(true);
+                                  }}
+                                  disabled={generatingPDF === candidate.id}
+                                  className="h-7 px-1.5 text-[11px] flex-1 gap-1 border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                                >
+                                  <Printer className="h-3 w-3" /> Edital
                                 </Button>
                                 <Button
                                   size="sm"
@@ -595,7 +607,7 @@ export default function AdminProposals() {
                                     setNewStatus('');
                                     setSelectedLodge(candidate.lodge_id || '');
                                   }}
-                                  className="h-7 px-2 text-[11px] flex-1 gap-1"
+                                  className="h-7 px-1.5 text-[11px] flex-1 gap-1"
                                 >
                                   Avançar
                                 </Button>
@@ -1120,13 +1132,27 @@ export default function AdminProposals() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => {
               setViewProfile(null);
               setViewProfileChildren([]);
             }}>
               Fechar
             </Button>
+            {viewProfile && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditalProfile(viewProfile);
+                  setEditalDialogOpen(true);
+                }}
+                disabled={generatingPDF === viewProfile.id}
+                className="border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Imprimir Edital
+              </Button>
+            )}
             <Button onClick={() => {
               setViewProfile(null);
               setViewProfileChildren([]);
