@@ -120,14 +120,14 @@ export async function generateEditalPDF(
     if (logoData) break;
   }
 
-  // Draw GOIB Logo centered or top-left
+  // Draw GOIB Logo
   const logoWidth = 26;
   const logoHeight = 26;
   if (logoData) {
     doc.addImage(logoData, 'PNG', margin, y, logoWidth, logoHeight);
   }
 
-  // Header Title Text
+  // Header Text Positioning
   const textLeftMargin = logoData ? margin + logoWidth + 4 : margin;
   const textHeaderWidth = logoData ? pageWidth - margin * 2 - logoWidth - 4 : pageWidth - margin * 2;
   const textCenterX = textLeftMargin + textHeaderWidth / 2;
@@ -137,30 +137,47 @@ export async function generateEditalPDF(
   doc.setFontSize(14);
   doc.text('GRANDE ORIENTE INDEPENDENTE DO BRASIL', textCenterX, y + 6, { align: 'center' });
 
-  // Lodge Info Subheader Lines
-  doc.setFontSize(10.5);
-  const lodgeName = lodge?.name || 'Lealdade e Justiça';
+  // Clean Lodge Name (remove prefix A.R.L.S. and duplicate lodge numbers if present)
+  let rawLodgeName = lodge?.name || 'Lealdade e Justiça';
+  let cleanLodgeName = rawLodgeName
+    .replace(/^(A[∴\.]?R[∴\.]?L[∴\.]?S[∴\.]?)\s*/i, '')
+    .replace(/\s*(N[ºo]?\s*)?\d+$/i, '')
+    .trim();
+  if (!cleanLodgeName) cleanLodgeName = 'Lealdade e Justiça';
+
   const lodgeNum = config?.lodgeNumber ? `Nº ${config.lodgeNumber}` : 'Nº 001';
-  const orienteCity = lodge?.city || config?.oriente || 'São Paulo';
-  doc.text(`A∴R∴L∴S∴  ${lodgeName}    ${lodgeNum}  Oriente de ${orienteCity}`, textCenterX, y + 13, { align: 'center' });
+
+  // Oriente City
+  let orienteCity = config?.oriente || lodge?.city || 'São Paulo';
+  if (orienteCity.toLowerCase().startsWith('rua') || orienteCity.toLowerCase().startsWith('av')) {
+    orienteCity = 'São Paulo';
+  }
+
+  // Use clean A.R.L.S. ASCII representation to avoid jsPDF multibyte font tracking corruption
+  doc.setFontSize(10.5);
+  const line1Text = `A.R.L.S.  ${cleanLodgeName}    ${lodgeNum}  Oriente de ${orienteCity}`;
+  doc.text(line1Text, textCenterX, y + 13, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(textColor[0], textColor[1], textColor[2]);
 
   const lodgeAddressStr = config?.endereco || 
-    [lodge?.street, lodge?.number, lodge?.neighborhood].filter(Boolean).join(', ') || 
+    [lodge?.street, lodge?.number, lodge?.neighborhood].filter(Boolean).join(' ') || 
     'Rua Paru 175 - TUCURUVI-SP';
-  const stateStr = lodge?.state || config?.oriente || 'SP';
-  doc.text(`Endereço: ${lodgeAddressStr}  UF ${stateStr}`, textCenterX, y + 19, { align: 'center' });
+  const stateStr = lodge?.state || 'SP';
+  const line2Text = `Endereço: ${lodgeAddressStr}  UF ${stateStr}`;
+  doc.text(line2Text, textCenterX, y + 19, { align: 'center' });
 
   const sessaoHora = config?.sessaoHora || '20:00';
-  const rito = config?.rito || 'R∴E∴A';
-  doc.text(`Sessões as ${sessaoHora}H            RITO ${rito}`, textCenterX, y + 25, { align: 'center' });
+  const ritoRaw = config?.rito || 'R.E.A';
+  const ritoClean = ritoRaw.replace(/R[∴\.]E[∴\.]A/i, 'R.E.A');
+  const line3Text = `Sessões as ${sessaoHora}H            RITO ${ritoClean}`;
+  doc.text(line3Text, textCenterX, y + 25, { align: 'center' });
 
   y += 32;
 
-  // Border separator
+  // Border separator line
   doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.4);
   doc.line(margin, y, pageWidth - margin, y);
@@ -175,7 +192,7 @@ export async function generateEditalPDF(
 
   y += 7;
 
-  // Declaration Subtitle
+  // Announcement Text
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(textColor[0], textColor[1], textColor[2]);

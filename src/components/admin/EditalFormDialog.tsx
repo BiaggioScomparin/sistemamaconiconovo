@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Printer } from 'lucide-react';
 
-const BRAZILIAN_STATES = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-  'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-  'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
-];
-
-const RITOS = ['REEA', 'MODERNO', 'YORK', 'BRASILEIRO'];
+const RITOS = ['R.E.A', 'REEA', 'MODERNO', 'YORK', 'BRASILEIRO'];
 
 const TIME_OPTIONS = [
   '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'
@@ -48,12 +42,24 @@ export function EditalFormDialog({
   isGenerating,
 }: EditalFormDialogProps) {
   const [formData, setFormData] = useState<EditalFormData>({
-    oriente: lodgeState || '',
-    endereco: '',
+    oriente: lodgeCity || 'São Paulo',
+    endereco: 'Rua Paru 175 - TUCURUVI-SP',
     sessaoHora: '20:00',
-    rito: 'REEA',
-    lodgeNumber: '',
+    rito: 'R.E.A',
+    lodgeNumber: '001',
   });
+
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        oriente: (lodgeCity && !lodgeCity.toLowerCase().startsWith('rua') ? lodgeCity : '') || 'São Paulo',
+        endereco: 'Rua Paru 175 - TUCURUVI-SP',
+        sessaoHora: '20:00',
+        rito: 'R.E.A',
+        lodgeNumber: '001',
+      });
+    }
+  }, [open, lodgeCity]);
 
   const handleSubmit = () => {
     onGenerate(formData);
@@ -65,7 +71,7 @@ export function EditalFormDialog({
         <DialogHeader>
           <DialogTitle className="font-display">Gerar Edital</DialogTitle>
           <DialogDescription>
-            Preencha os dados para gerar o edital de {profileName}
+            Preencha os dados da Loja para gerar o edital de {profileName}
           </DialogDescription>
         </DialogHeader>
 
@@ -77,27 +83,18 @@ export function EditalFormDialog({
                 id="lodgeNumber"
                 value={formData.lodgeNumber}
                 onChange={(e) => setFormData(prev => ({ ...prev, lodgeNumber: e.target.value }))}
-                placeholder="Ex: 1234"
+                placeholder="Ex: 001"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="oriente">Oriente (Estado)</Label>
-              <Select
+              <Label htmlFor="oriente">Oriente (Cidade)</Label>
+              <Input
+                id="oriente"
                 value={formData.oriente}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, oriente: value }))}
-              >
-                <SelectTrigger id="oriente">
-                  <SelectValue placeholder="Selecione o estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BRAZILIAN_STATES.map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {state}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => setFormData(prev => ({ ...prev, oriente: e.target.value }))}
+                placeholder="Ex: São Paulo"
+              />
             </div>
           </div>
 
@@ -107,7 +104,7 @@ export function EditalFormDialog({
               id="endereco"
               value={formData.endereco}
               onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
-              placeholder="Ex: Rua Paru, 175 - Tucuruvi"
+              placeholder="Ex: Rua Paru 175 - TUCURUVI-SP"
             />
           </div>
 
@@ -124,7 +121,7 @@ export function EditalFormDialog({
                 <SelectContent>
                   {TIME_OPTIONS.map((time) => (
                     <SelectItem key={time} value={time}>
-                      {time}
+                      {time}H
                     </SelectItem>
                   ))}
                 </SelectContent>
