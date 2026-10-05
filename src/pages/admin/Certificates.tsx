@@ -16,9 +16,8 @@ import {
   Sparkles, 
   QrCode as QrIcon, 
   Search, 
-  Check, 
-  Sliders,
-  CheckCircle2
+  CheckCircle2,
+  Sliders
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
@@ -41,11 +40,13 @@ export default function Certificates() {
   const { toast } = useToast();
   const certificateRef = useRef<HTMLDivElement>(null);
 
-  // Form state - Dynamic values replacing (NOME DO IRMÃO), (data do Evento), (nome da Loja)
+  // Form state - Dynamic values
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
+  const [degreeType, setDegreeType] = useState<'mestre' | 'companheiro' | 'aprendiz'>('mestre');
   const [memberName, setMemberName] = useState<string>('CRISTIANO RODRIGUES RIBEIRO');
   const [eventDate, setEventDate] = useState<string>('31/08/2026');
   const [lodgeName, setLodgeName] = useState<string>('A.R.L.S Lealdade e Justiça Nº 001');
+  const [ritoText, setRitoText] = useState<string>('REAA');
 
   // Controls
   const [showQRCode, setShowQRCode] = useState<boolean>(true);
@@ -84,10 +85,20 @@ export default function Certificates() {
   const handleSelectMember = (member: Profile) => {
     setSelectedMemberId(member.id);
 
-    // 1. Automatic Name (Uppercase, no parentheses)
+    // 1. Automatic Name (Uppercase)
     setMemberName(member.full_name.toUpperCase());
 
-    // 2. Automatic Date (Formatted DD/MM/AAAA, no parentheses)
+    // 2. Automatic Degree Detection
+    const currentDegree = (member.degree || '').toLowerCase();
+    if (currentDegree.includes('mestre')) {
+      setDegreeType('mestre');
+    } else if (currentDegree.includes('companheiro')) {
+      setDegreeType('companheiro');
+    } else {
+      setDegreeType('aprendiz');
+    }
+
+    // 3. Automatic Date (Formatted DD/MM/AAAA)
     if (member.initiation_date) {
       try {
         const dateObj = new Date(member.initiation_date);
@@ -102,7 +113,7 @@ export default function Certificates() {
       setEventDate('31/08/2026');
     }
 
-    // 3. Automatic Lodge Name (Formatted A.R.L.S ..., no parentheses)
+    // 4. Automatic Lodge Name (Formatted A.R.L.S ...)
     if (member.lodges) {
       setLodgeName(`A.R.L.S ${member.lodges.name} Nº ${member.lodges.number || '001'}`);
     } else {
@@ -134,14 +145,14 @@ export default function Certificates() {
       });
 
       const link = document.createElement('a');
-      const filename = `Certificado_Mestre_${memberName.replace(/\s+/g, '_')}.png`;
+      const filename = `Certificado_${degreeType.toUpperCase()}_${memberName.replace(/\s+/g, '_')}.png`;
       link.download = filename;
       link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
 
       toast({
         title: 'Certificado baixado!',
-        description: 'A imagem HD foi salva com sucesso.',
+        description: 'A imagem HD foi salva com sucesso sem fundo branco.',
       });
     } catch (error: any) {
       console.error('Error exporting PNG:', error);
@@ -182,7 +193,7 @@ export default function Certificates() {
       });
 
       pdf.addImage(imgData, 'PNG', 0, 0, 297, 210);
-      const filename = `Certificado_Mestre_${memberName.replace(/\s+/g, '_')}.pdf`;
+      const filename = `Certificado_${degreeType.toUpperCase()}_${memberName.replace(/\s+/g, '_')}.pdf`;
       pdf.save(filename);
 
       toast({
@@ -203,6 +214,11 @@ export default function Certificates() {
 
   const validationUrl = `${window.location.origin}/validar/${selectedMemberId || 'cert'}`;
 
+  // Grau dynamic texts
+  const grauTitle = degreeType === 'mestre' ? 'MESTRE MAÇOM' : degreeType === 'companheiro' ? 'COMPANHEIRO MAÇOM' : 'APRENDIZ MAÇOM';
+  const grauAction = degreeType === 'mestre' ? 'exaltado' : degreeType === 'companheiro' ? 'elevado' : 'iniciado';
+  const grauNumber = degreeType === 'mestre' ? 'grau 3 Mestre Maçom' : degreeType === 'companheiro' ? 'grau 2 Companheiro Maçom' : 'grau 1 Aprendiz Maçom';
+
   return (
     <AppLayout>
       <div className="container mx-auto py-6 space-y-6 max-w-7xl px-3 sm:px-6">
@@ -213,9 +229,9 @@ export default function Certificates() {
               <Award className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Gerador de Certificados Mestre Maçom</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Gerador de Certificados Maçônicos</h1>
               <p className="text-sm text-muted-foreground">
-                Selecione o irmão cadastrado para preenchimento automático instantâneo (sem parênteses)
+                Emissão automática com fundo 100% transparente sobre o modelo oficial GOIB / SOGLIA
               </p>
             </div>
           </div>
@@ -249,10 +265,10 @@ export default function Certificates() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" />
-                  1. Buscar Irmão Cadastrado
+                  1. Selecionar Irmão Cadastrado
                 </CardTitle>
                 <CardDescription>
-                  Clique no nome do membro para preencher todos os dados automaticamente
+                  Clique no nome do irmão para carregar os dados instantaneamente
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -301,22 +317,53 @@ export default function Certificates() {
               </CardContent>
             </Card>
 
-            {/* Dynamic Fields Inspector */}
+            {/* Customization Inspector */}
             <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Sliders className="h-4 w-4 text-primary" />
-                  2. Campos Substituídos no Modelo
+                  2. Dados do Certificado
                 </CardTitle>
                 <CardDescription>
-                  Estes valores substituem as áreas de (parênteses) no modelo oficial:
+                  Ajustes finos dos textos sobrepostos
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-xs">
+                {/* Degree Selector */}
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Grau do Certificado</Label>
+                  <div className="grid grid-cols-3 gap-1">
+                    <Button
+                      size="sm"
+                      variant={degreeType === 'mestre' ? 'default' : 'outline'}
+                      className={`h-8 text-xs ${degreeType === 'mestre' ? 'bg-amber-600' : ''}`}
+                      onClick={() => setDegreeType('mestre')}
+                    >
+                      Mestre
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={degreeType === 'companheiro' ? 'default' : 'outline'}
+                      className="h-8 text-xs"
+                      onClick={() => setDegreeType('companheiro')}
+                    >
+                      Companheiro
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={degreeType === 'aprendiz' ? 'default' : 'outline'}
+                      className="h-8 text-xs"
+                      onClick={() => setDegreeType('aprendiz')}
+                    >
+                      Aprendiz
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Field 1: Nome do Irmão */}
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                    Substitui (NOME DO IRMÃO)
+                    Nome do Irmão (Caixa Alta)
                   </Label>
                   <Input
                     value={memberName}
@@ -326,27 +373,30 @@ export default function Certificates() {
                   />
                 </div>
 
-                {/* Field 2: Data do Evento */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-foreground">
-                    Substitui (data do Evento)
-                  </Label>
-                  <Input
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    placeholder="31/08/2026"
-                  />
+                {/* Field 2: Rito & Data */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Rito</Label>
+                    <Input
+                      value={ritoText}
+                      onChange={(e) => setRitoText(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Data do Evento</Label>
+                    <Input
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 {/* Field 3: Nome da Loja */}
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-foreground">
-                    Substitui (nome da Loja)
-                  </Label>
+                  <Label className="text-xs font-medium">Nome da Loja e Número</Label>
                   <Input
                     value={lodgeName}
                     onChange={(e) => setLodgeName(e.target.value)}
-                    placeholder="A.R.L.S Lealdade e Justiça Nº 001"
                   />
                 </div>
 
@@ -373,9 +423,9 @@ export default function Certificates() {
               <CardHeader className="py-3 px-4 bg-muted/40 border-b flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-amber-500" />
-                  <CardTitle className="text-sm font-semibold">Pré-visualização do Certificado Final</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Pré-visualização em Fundo Transparente</CardTitle>
                 </div>
-                <span className="text-[11px] text-muted-foreground font-mono">Alta Definição • Sem Parênteses</span>
+                <span className="text-[11px] text-muted-foreground font-mono">Modelo Limpo HD • Sem Caixas Brancas</span>
               </CardHeader>
 
               <CardContent className="p-3 sm:p-6 flex items-center justify-center overflow-x-auto">
@@ -388,55 +438,64 @@ export default function Certificates() {
                       fontFamily: "'Playfair Display', 'Cinzel', 'Times New Roman', Georgia, serif",
                     }}
                   >
-                    {/* Background Official Template Image with Signatures */}
+                    {/* Clean Background Template Image */}
                     <img
                       src="/certificate_mestre_template.png"
-                      alt="Certificado Mestre Maçom Modelo Base"
+                      alt="Certificado Modelo Limpo"
                       className="absolute inset-0 w-full h-full object-fill pointer-events-none"
                     />
 
-                    {/* OVERLAY DYNAMIC FIELD 1: NOME DO IRMÃO (Replaces (NOME DO IRMÃO)) */}
-                    <div 
-                      className="absolute left-1/2 -translate-x-1/2 top-[39.5%] w-[75%] text-center z-10 flex items-center justify-center"
-                    >
-                      {/* Masking Patch Box to erase underlying placeholder text */}
-                      <div className="absolute inset-0 bg-[#fefdfb] shadow-sm rounded-md opacity-98" />
+                    {/* DYNAMIC TRANSPARENT TEXT OVERLAYS */}
+                    <div className="absolute inset-0 flex flex-col justify-between p-[6%] text-center z-10">
                       
-                      <h2 
-                        className="relative z-10 text-[3.2vw] lg:text-[32px] font-bold tracking-[0.08em] px-4 py-1 leading-none uppercase"
-                        style={{ 
-                          color: '#b38738',
-                          fontFamily: "'Times New Roman', Times, Georgia, serif"
-                        }}
-                      >
-                        {memberName || 'CRISTIANO RODRIGUES RIBEIRO'}
-                      </h2>
-                    </div>
-
-                    {/* OVERLAY DYNAMIC FIELD 2 & 3: Line 2 (Replaces (data do Evento) and (nome da Loja)) */}
-                    <div 
-                      className="absolute left-1/2 -translate-x-1/2 top-[56.8%] w-[82%] text-center z-10 flex items-center justify-center"
-                    >
-                      {/* Masking Patch Box to erase underlying placeholder line */}
-                      <div className="absolute inset-0 bg-[#fefdfb] shadow-sm rounded-md opacity-98" />
-
-                      <p className="relative z-10 text-[1.4vw] lg:text-[14px] font-sans text-slate-800 leading-snug py-1 font-normal tracking-tight">
-                        <span className="font-semibold text-slate-900">{eventDate || '31/08/2026'}</span> E.:V e Membro efetivo da{' '}
-                        <span className="font-semibold text-slate-900">{lodgeName || 'A.R.L.S Lealdade e Justiça Nº 001'}</span>
-                      </p>
-                    </div>
-
-                    {/* Optional Public QR Code Stamp at Bottom Center */}
-                    {showQRCode && (
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-[3%] z-20 flex flex-col items-center">
-                        <div className="p-1 bg-white rounded border border-amber-500/40 shadow-sm">
-                          <QRCodeSVG value={validationUrl} size={38} level="M" />
-                        </div>
-                        <span className="text-[7.5px] font-mono text-slate-500 mt-0.5 uppercase tracking-tighter bg-white/80 px-1 rounded">
-                          Autenticidade GOIB
-                        </span>
+                      {/* Sub-header Block: MESTRE MAÇOM & Certifico... */}
+                      <div className="pt-[23.5%] space-y-1">
+                        <p 
+                          className="text-[1.85vw] lg:text-[18.5px] tracking-[0.25em] font-serif text-slate-800 uppercase font-semibold leading-none"
+                          style={{ fontFamily: "'Cinzel', 'Times New Roman', Georgia, serif" }}
+                        >
+                          {grauTitle}
+                        </p>
+                        <p className="text-[1.4vw] lg:text-[14px] font-sans text-slate-600 italic tracking-wide pt-1">
+                          Certifico que o Ir.'.
+                        </p>
                       </div>
-                    )}
+
+                      {/* Member Name Block (100% Transparent Background over Watermark) */}
+                      <div className="my-auto py-[1%]">
+                        <h2 
+                          className="text-[3.2vw] lg:text-[32px] font-bold tracking-[0.08em] px-4 leading-tight uppercase bg-transparent"
+                          style={{ 
+                            color: '#b38738',
+                            fontFamily: "'Times New Roman', Times, Georgia, serif",
+                            textShadow: '0.3px 0.3px 0.5px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          {memberName || 'NOME DO IRMÃO'}
+                        </h2>
+                      </div>
+
+                      {/* Body Text Block (100% Transparent Background over Watermark) */}
+                      <div className="pb-[18%]">
+                        <p className="text-[1.45vw] lg:text-[14.5px] font-sans text-slate-800 max-w-[85%] mx-auto leading-relaxed font-normal bg-transparent">
+                          Foi {grauAction} ao {grauNumber} no {ritoText} na data de{' '}
+                          <span className="font-semibold text-slate-950">{eventDate}</span> E.:V e Membro efetivo da{' '}
+                          <span className="font-semibold text-slate-950">{lodgeName}</span>
+                        </p>
+                      </div>
+
+                      {/* Optional Public QR Code Stamp at Bottom Center */}
+                      {showQRCode && (
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-[3%] z-20 flex flex-col items-center">
+                          <div className="p-1 bg-white rounded border border-amber-500/40 shadow-sm">
+                            <QRCodeSVG value={validationUrl} size={38} level="M" />
+                          </div>
+                          <span className="text-[7.5px] font-mono text-slate-500 mt-0.5 uppercase tracking-tighter bg-white/80 px-1 rounded">
+                            Autenticidade GOIB
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -447,7 +506,7 @@ export default function Certificates() {
               <div className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
                 <Sparkles className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
-                  O certificado será exportado em alta definição com as assinaturas oficiais do Grão-Mestrado.
+                  O certificado será exportado em alta resolução sem blocos brancos, integrado à marca d'água original.
                 </span>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
