@@ -65,7 +65,7 @@ export default function Certificates() {
         // 1. First try fetching profiles with lodges join
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, cim_number, degree, lodge_position, initiation_date, status, member_status, lodges(name, number)')
+          .select('id, full_name, cim_number, degree, lodge_position, initiation_date, status, member_status, lodges(name)')
           .order('full_name', { ascending: true });
 
         if (!error && data && data.length > 0) {

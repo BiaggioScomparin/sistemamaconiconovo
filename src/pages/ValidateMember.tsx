@@ -116,7 +116,7 @@ export default function ValidateMember() {
         try {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('id, full_name, cim_number, member_status, degree, initiation_date, elevation_date, exaltation_date, created_at, lodge_id, lodges(name, number, city, state)')
+            .select('id, full_name, cim_number, member_status, degree, initiation_date, elevation_date, exaltation_date, created_at, lodge_id, lodges(name, city, state)')
             .or(`id.eq.${candidate},cim_number.eq.${candidate}`)
             .maybeSingle();
 
