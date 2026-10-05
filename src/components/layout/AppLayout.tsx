@@ -25,7 +25,8 @@ import {
   ClipboardList,
   Mail,
   Bell,
-  BarChart3
+  BarChart3,
+  Award
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -92,6 +93,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         { href: '/admin/minutes', label: 'Atas', icon: ClipboardList },
         { href: '/admin/calendar', label: 'Calendário', icon: Calendar },
         { href: '/admin/invites', label: 'Convites', icon: Mail },
+        { href: '/admin/certificados', label: 'Certificados', icon: Award },
       ]
     },
     {

@@ -32,6 +32,7 @@ import AdminMinutes from "./pages/admin/Minutes";
 import AdminInvites from "./pages/admin/Invites";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminReports from "./pages/admin/Reports";
+import AdminCertificates from "./pages/admin/Certificates";
 import MemberInicial from "./pages/member/Inicial";
 import MemberCard from "./pages/member/Card";
 import MemberProfile from "./pages/member/Profile";
@@ -86,6 +87,8 @@ const App = () => (
             <Route path="/admin/invites" element={<ProtectedInvitesRoute><AdminInvites /></ProtectedInvitesRoute>} />
             <Route path="/admin/notifications" element={<ProtectedAdminRoute><AdminNotifications /></ProtectedAdminRoute>} />
             <Route path="/admin/reports" element={<ProtectedReportsRoute><AdminReports /></ProtectedReportsRoute>} />
+            <Route path="/admin/certificates" element={<ProtectedAdminRoute><AdminCertificates /></ProtectedAdminRoute>} />
+            <Route path="/admin/certificados" element={<ProtectedAdminRoute><AdminCertificates /></ProtectedAdminRoute>} />
             {/* Member routes - Protected by status */}
             <Route path="/member/inicial" element={<ProtectedMemberRoute><MemberInicial /></ProtectedMemberRoute>} />
             <Route path="/member/card" element={<ProtectedMemberRoute><MemberCard /></ProtectedMemberRoute>} />
