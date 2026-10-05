@@ -129,7 +129,9 @@ export function MemberDetailDialog({ profile, open, onOpenChange }: MemberDetail
                   <InfoRow label="Grau" value={p.degree || 'Aprendiz'} />
                   <InfoRow label="Cargo" value={p.lodge_position} />
                   <InfoRow label="Loja" value={p.lodges?.name} />
-                  <InfoRow label="Iniciação" value={formatDate(profile.initiation_date)} />
+                  <InfoRow label="Iniciação (1º Grau)" value={formatDate(profile.initiation_date)} />
+                  <InfoRow label="Elevação (2º Grau)" value={formatDate((profile as any).elevation_date)} />
+                  <InfoRow label="Exaltação (3º Grau)" value={formatDate((profile as any).exaltation_date)} />
                   <InfoRow label="Padrinho" value={p.sponsor_name} />
                 </div>
               </CardContent>

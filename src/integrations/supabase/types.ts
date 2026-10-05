@@ -744,6 +744,8 @@ export type Database = {
           informed_financial_values: boolean | null
           initiation_date: string | null
           initiation_scheduled_date: string | null
+          elevation_date: string | null
+          exaltation_date: string | null
           is_retired: boolean | null
           lodge_id: string | null
           lodge_position: string | null
@@ -814,6 +816,8 @@ export type Database = {
           informed_financial_values?: boolean | null
           initiation_date?: string | null
           initiation_scheduled_date?: string | null
+          elevation_date?: string | null
+          exaltation_date?: string | null
           is_retired?: boolean | null
           lodge_id?: string | null
           lodge_position?: string | null
@@ -884,6 +888,8 @@ export type Database = {
           informed_financial_values?: boolean | null
           initiation_date?: string | null
           initiation_scheduled_date?: string | null
+          elevation_date?: string | null
+          exaltation_date?: string | null
           is_retired?: boolean | null
           lodge_id?: string | null
           lodge_position?: string | null

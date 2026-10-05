@@ -54,6 +54,8 @@ const profileSchema = z.object({
   cell_phone: z.string().max(20).optional(),
   // Masonry fields
   initiation_date: z.string().optional(),
+  elevation_date: z.string().optional(),
+  exaltation_date: z.string().optional(),
   cim_number: z.string().max(20).optional(),
   degree: z.string().optional(),
   cargo: z.string().max(100).optional(),
@@ -326,8 +328,18 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="initiation_date">Data de Iniciação</Label>
+            <Label htmlFor="initiation_date">Data de Iniciação (1º Grau)</Label>
             <Input {...register('initiation_date')} id="initiation_date" type="date" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="elevation_date">Data de Elevação (2º Grau)</Label>
+            <Input {...register('elevation_date')} id="elevation_date" type="date" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="exaltation_date">Data de Exaltação (3º Grau)</Label>
+            <Input {...register('exaltation_date')} id="exaltation_date" type="date" />
           </div>
 
           <div className="space-y-2">
