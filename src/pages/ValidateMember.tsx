@@ -12,7 +12,6 @@ import {
   Calendar, 
   Building2, 
   User, 
-  Sparkles,
   FileCheck
 } from 'lucide-react';
 import logoGoib from '@/assets/logo-goib.png';
@@ -38,103 +37,131 @@ export default function ValidateMember() {
   const params = useParams<{ profileId?: string; '*': string }>();
 
   // Extract raw ID parameter or pathname segment
-  const rawParam = (
+  let rawParam = (
     params['*'] || 
     params.profileId || 
-    window.location.pathname.replace(/^\/validar\/?/, '').replace(/^certificado\//, '')
+    window.location.pathname
   ).trim();
 
+  // Clean prefixes like /validar/, /certificado/, /cert/
+  rawParam = rawParam
+    .replace(/^\/validar\/?/, '')
+    .replace(/^certificado\//, '')
+    .replace(/^cert\//, '')
+    .trim();
+
   const { data: member, isLoading, error } = useQuery({
-    queryKey: ['validate-member-international', rawParam],
+    queryKey: ['validate-member-international-rpc', rawParam],
     queryFn: async (): Promise<MemberValidationData> => {
       if (!rawParam) throw new Error('ID not provided');
 
-      // 1. Try direct Supabase query
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, full_name, cim_number, member_status, degree, initiation_date, elevation_date, exaltation_date, created_at, lodge_id, lodges(name, number, city, state)')
-        .or(`id.eq.${rawParam},cim_number.eq.${rawParam}`)
-        .maybeSingle();
+      // Generate candidates to handle barcode scanner slash/7 replacements
+      const candidates: string[] = [rawParam];
+      if (rawParam.includes('7')) candidates.push(rawParam.replace(/7/g, '/'));
+      if (rawParam.includes('/')) candidates.push(rawParam.replace(/\//g, '7'));
 
-      if (profileData && profileData.full_name) {
-        // Auto-link missing degree dates if not set
-        let initDate = profileData.initiation_date;
-        let elevDate = profileData.elevation_date;
-        let exaltDate = profileData.exaltation_date;
+      // 1. Try RPC function get_public_member_profile FIRST (bypasses RLS)
+      for (const candidate of candidates) {
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_public_member_profile', {
+            p_id: candidate,
+          });
 
-        if (!initDate) {
-          const d = profileData.created_at ? new Date(profileData.created_at) : new Date(2024, 2, 15);
-          initDate = d.toISOString().split('T')[0];
-        }
+          if (!rpcError && rpcData && (rpcData as any).full_name) {
+            const r = rpcData as any;
+            
+            let initDate = r.initiation_date;
+            let elevDate = r.elevation_date;
+            let exaltDate = r.exaltation_date;
 
-        if (!elevDate) {
-          const d = new Date(initDate);
-          d.setMonth(d.getMonth() + 6);
-          elevDate = d.toISOString().split('T')[0];
-        }
+            if (!initDate) {
+              const d = r.created_at ? new Date(r.created_at) : new Date(2024, 2, 15);
+              initDate = d.toISOString().split('T')[0];
+            }
 
-        if (!exaltDate) {
-          const d = new Date(elevDate);
-          d.setMonth(d.getMonth() + 6);
-          exaltDate = d.toISOString().split('T')[0];
-        }
+            if (!elevDate) {
+              const d = new Date(initDate);
+              d.setMonth(d.getMonth() + 6);
+              elevDate = d.toISOString().split('T')[0];
+            }
 
-        // Asynchronously link dates to profile in DB if missing
-        if (!profileData.elevation_date || !profileData.exaltation_date || !profileData.initiation_date) {
-          supabase
-            .from('profiles')
-            .update({
+            if (!exaltDate) {
+              const d = new Date(elevDate);
+              d.setMonth(d.getMonth() + 6);
+              exaltDate = d.toISOString().split('T')[0];
+            }
+
+            return {
+              id: r.id || candidate,
+              full_name: r.full_name,
+              cim_number: r.cim_number,
+              member_status: r.member_status || 'active',
+              degree: r.degree || 'Mestre Maçom',
+              lodge_name: r.lodge_name ? `A.R.L.S ${r.lodge_name} Nº ${r.lodge_number || '001'}` : 'A.R.L.S Lealdade e Justiça Nº 001',
+              lodge_number: r.lodge_number || '001',
+              lodge_city: r.lodge_city || 'Oriente',
+              lodge_state: r.lodge_state || 'SP',
               initiation_date: initDate,
               elevation_date: elevDate,
               exaltation_date: exaltDate,
-            })
-            .eq('id', profileData.id)
-            .then(() => console.log('Degree dates linked successfully'));
+            };
+          }
+        } catch (err) {
+          console.warn('RPC check error:', err);
         }
-
-        const lodgeObj = profileData.lodges as any;
-
-        return {
-          id: profileData.id,
-          full_name: profileData.full_name,
-          cim_number: profileData.cim_number,
-          member_status: profileData.member_status || 'active',
-          degree: profileData.degree || 'Mestre Maçom',
-          lodge_name: lodgeObj?.name ? `A.R.L.S ${lodgeObj.name} Nº ${lodgeObj.number || '001'}` : 'A.R.L.S Lealdade e Justiça Nº 001',
-          lodge_number: lodgeObj?.number || '001',
-          lodge_city: lodgeObj?.city || 'Oriente',
-          lodge_state: lodgeObj?.state || 'SP',
-          initiation_date: initDate,
-          elevation_date: elevDate,
-          exaltation_date: exaltDate,
-        };
       }
 
-      // 2. Try RPC fallback
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('get_public_member_profile', {
-          p_id: rawParam,
-        });
+      // 2. Direct Supabase select fallback
+      for (const candidate of candidates) {
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, full_name, cim_number, member_status, degree, initiation_date, elevation_date, exaltation_date, created_at, lodge_id, lodges(name, number, city, state)')
+            .or(`id.eq.${candidate},cim_number.eq.${candidate}`)
+            .maybeSingle();
 
-        if (!rpcError && rpcData && (rpcData as any).full_name) {
-          const r = rpcData as any;
-          return {
-            id: rawParam,
-            full_name: r.full_name,
-            cim_number: r.cim_number,
-            member_status: r.member_status || 'active',
-            degree: r.degree || 'Mestre Maçom',
-            lodge_name: r.lodge_name ? `A.R.L.S ${r.lodge_name} Nº ${r.lodge_number || '001'}` : 'A.R.L.S Lealdade e Justiça Nº 001',
-            lodge_number: r.lodge_number || '001',
-            lodge_city: r.lodge_city || 'Oriente',
-            lodge_state: r.lodge_state || 'SP',
-            initiation_date: r.initiation_date || '2020-03-15',
-            elevation_date: r.elevation_date || '2021-08-20',
-            exaltation_date: r.exaltation_date || '2026-08-31',
-          };
+          if (profileData && profileData.full_name) {
+            let initDate = profileData.initiation_date;
+            let elevDate = profileData.elevation_date;
+            let exaltDate = profileData.exaltation_date;
+
+            if (!initDate) {
+              const d = profileData.created_at ? new Date(profileData.created_at) : new Date(2024, 2, 15);
+              initDate = d.toISOString().split('T')[0];
+            }
+
+            if (!elevDate) {
+              const d = new Date(initDate);
+              d.setMonth(d.getMonth() + 6);
+              elevDate = d.toISOString().split('T')[0];
+            }
+
+            if (!exaltDate) {
+              const d = new Date(elevDate);
+              d.setMonth(d.getMonth() + 6);
+              exaltDate = d.toISOString().split('T')[0];
+            }
+
+            const lodgeObj = profileData.lodges as any;
+
+            return {
+              id: profileData.id,
+              full_name: profileData.full_name,
+              cim_number: profileData.cim_number,
+              member_status: profileData.member_status || 'active',
+              degree: profileData.degree || 'Mestre Maçom',
+              lodge_name: lodgeObj?.name ? `A.R.L.S ${lodgeObj.name} Nº ${lodgeObj.number || '001'}` : 'A.R.L.S Lealdade e Justiça Nº 001',
+              lodge_number: lodgeObj?.number || '001',
+              lodge_city: lodgeObj?.city || 'Oriente',
+              lodge_state: lodgeObj?.state || 'SP',
+              initiation_date: initDate,
+              elevation_date: elevDate,
+              exaltation_date: exaltDate,
+            };
+          }
+        } catch (err) {
+          console.warn('Direct select fallback error:', err);
         }
-      } catch (err) {
-        console.warn('RPC check fallback error:', err);
       }
 
       throw new Error('Member or Certificate not found');
