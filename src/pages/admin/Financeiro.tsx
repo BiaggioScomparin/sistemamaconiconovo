@@ -105,43 +105,6 @@ export default function Financeiro() {
 
   const effectiveLodgeId = isAdmin ? lodgeFilter : (userLodgeId || 'all');
 
-  // Ensure test payment of R$ 200 for Alcivaneido Alves for Month 10/2026
-  useQuery({
-    queryKey: ['ensure-alcivaneido-payment'],
-    queryFn: async () => {
-      const { data: member } = await supabase
-        .from('profiles')
-        .select('id, full_name, lodge_id')
-        .ilike('full_name', '%Alcivaneido%')
-        .maybeSingle();
-
-      if (member) {
-        const { data: existing } = await supabase
-          .from('monthly_payments')
-          .select('id')
-          .eq('profile_id', member.id)
-          .eq('reference_month', 10)
-          .eq('reference_year', 2026)
-          .maybeSingle();
-
-        if (!existing) {
-          await supabase.from('monthly_payments').insert({
-            profile_id: member.id,
-            reference_month: 10,
-            reference_year: 2026,
-            amount: 200,
-            due_date: '2026-10-10',
-            status: 'pending',
-          });
-          queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
-          queryClient.invalidateQueries({ queryKey: ['approved-profiles-with-details'] });
-          queryClient.invalidateQueries({ queryKey: ['lodge-financial-report'] });
-        }
-      }
-      return true;
-    },
-  });
-
   const { data: payments, isLoading } = useQuery({
     queryKey: ['admin-payments', statusFilter, monthFilter, yearFilter, effectiveLodgeId],
     queryFn: async () => {
@@ -443,54 +406,54 @@ export default function Financeiro() {
         {/* Stats Cards - Only for Admin */}
         {isAdmin && (
           <>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 p-3 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.total}</div>
+                <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                  <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pagos</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 p-3 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Pagos</CardTitle>
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-500">{stats.paid}</div>
+                <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                  <div className="text-xl sm:text-2xl font-bold text-green-500">{stats.paid}</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 p-3 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Pendentes</CardTitle>
                   <Clock className="h-4 w-4 text-yellow-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-500">{stats.pending}</div>
+                <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                  <div className="text-xl sm:text-2xl font-bold text-yellow-500">{stats.pending}</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Em Atraso</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 p-3 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Em Atraso</CardTitle>
                   <AlertCircle className="h-4 w-4 text-red-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-500">{stats.overdue}</div>
+                <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                  <div className="text-xl sm:text-2xl font-bold text-red-500">{stats.overdue}</div>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
                   Total Recebido
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-500">
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className="text-2xl sm:text-3xl font-bold text-green-500">
                   R$ {stats.totalReceived.toFixed(2).replace('.', ',')}
                 </div>
               </CardContent>
@@ -500,23 +463,23 @@ export default function Financeiro() {
 
         {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
+          <CardHeader className="p-3 sm:p-6 pb-2">
+            <CardTitle className="text-base">Filtros</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-5">
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome ou CIM..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 text-sm h-9"
                 />
               </div>
               {isAdmin && (
                 <Select value={lodgeFilter} onValueChange={setLodgeFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Loja" />
                   </SelectTrigger>
                   <SelectContent>
@@ -530,7 +493,7 @@ export default function Financeiro() {
                 </Select>
               )}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -542,7 +505,7 @@ export default function Financeiro() {
                 </SelectContent>
               </Select>
               <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Mês" />
                 </SelectTrigger>
                 <SelectContent>
@@ -555,7 +518,7 @@ export default function Financeiro() {
                 </SelectContent>
               </Select>
               <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Ano" />
                 </SelectTrigger>
                 <SelectContent>
@@ -574,129 +537,233 @@ export default function Financeiro() {
         {/* Lodge Financial Report */}
         <LodgeFinancialReport monthFilter={monthFilter} yearFilter={yearFilter} lodgeIdFilter={effectiveLodgeId} />
 
-        {/* Members & Payments Table */}
+        {/* Members & Payments Table & Cards View */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 font-display text-lg">
               <Users className="h-5 w-5 text-primary" />
               Membros da Loja e Status das Mensalidades
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Lista de membros e a situação de pagamento da mensalidade no período selecionado.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             {isLoading || membersLoading ? (
               <p className="text-center py-8 text-muted-foreground">Carregando membros...</p>
             ) : memberStatusList && memberStatusList.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Membro</TableHead>
-                    <TableHead>Grau / Cargo</TableHead>
-                    <TableHead>CIM</TableHead>
-                    <TableHead>Loja</TableHead>
-                    <TableHead>Referência</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Status da Mensalidade</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile Cards View (Visible on small screens) */}
+                <div className="block md:hidden space-y-3">
                   {memberStatusList.map(({ member, payment }) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
+                    <div key={member.id} className="p-3.5 rounded-xl border border-border bg-card/60 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          {member.full_name}
+                          <h4 className="font-semibold text-sm text-foreground leading-tight">
+                            {member.full_name}
+                          </h4>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {[member.degree, member.lodge_position].filter(Boolean).join(' • ') || 'Membro'}
+                          </p>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {[member.degree, member.lodge_position].filter(Boolean).join(' • ') || '-'}
-                      </TableCell>
-                      <TableCell>{member.cim_number || '-'}</TableCell>
-                      <TableCell>{member.lodges?.name || '-'}</TableCell>
-                      <TableCell>
-                        {payment ? (
-                          `${monthNames[payment.reference_month - 1]} ${payment.reference_year}`
-                        ) : monthFilter !== 'all' ? (
-                          `${monthNames[parseInt(monthFilter) - 1]} ${yearFilter}`
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {payment ? `R$ ${Number(payment.amount).toFixed(2).replace('.', ',')}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {payment ? format(parseISO(payment.due_date), 'dd/MM/yyyy') : '-'}
-                      </TableCell>
-                      <TableCell>
                         {payment ? (
                           getStatusBadge(payment.status, payment.due_date)
                         ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
+                          <Badge variant="outline" className="text-[11px] text-muted-foreground">
                             Sem Lançamento
                           </Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="space-x-2">
-                        {payment && payment.status !== 'paid' && (
-                          <>
-                            {((member as any)?.lodges?.payment_gateway || getLodgeGateway(payment.profiles?.lodge_id, payment.profiles?.lodges?.payment_gateway, member.lodge_id)) !== 'manual' && (
-                              payment.pix_qr_code ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setSelectedPaymentForQR(payment)}
-                                >
-                                  <QrCode className="h-4 w-4 mr-1" />
-                                  Ver QR
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setGeneratingPixId(payment.id);
-                                    generatePixMutation.mutate(payment);
-                                  }}
-                                  disabled={generatingPixId === payment.id}
-                                >
-                                  {generatingPixId === payment.id ? (
-                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                  ) : (
-                                    <QrCode className="h-4 w-4 mr-1" />
-                                  )}
-                                  Gerar PIX
-                                </Button>
-                              )
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => markAsPaidMutation.mutate(payment.id)}
-                              disabled={markAsPaidMutation.isPending}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Confirmar
-                            </Button>
-                            {isAdmin && (
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs py-1.5 border-y border-border/40">
+                        <div>
+                          <span className="text-[10px] text-muted-foreground uppercase block">Referência</span>
+                          <span className="font-medium text-foreground">
+                            {payment ? `${monthNames[payment.reference_month - 1]} ${payment.reference_year}` : (monthFilter !== 'all' ? `${monthNames[parseInt(monthFilter) - 1]} ${yearFilter}` : '-')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground uppercase block">Valor / Vencimento</span>
+                          <span className="font-semibold text-foreground">
+                            {payment ? `R$ ${Number(payment.amount).toFixed(2).replace('.', ',')}` : '-'}
+                          </span>
+                          {payment && (
+                            <span className="text-[10px] text-muted-foreground block">
+                              Venc: {format(parseISO(payment.due_date), 'dd/MM/yyyy')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons on mobile */}
+                      {payment && payment.status !== 'paid' && (
+                        <div className="flex items-center gap-1.5 pt-1">
+                          {((member as any)?.lodges?.payment_gateway || getLodgeGateway(payment.profiles?.lodge_id, payment.profiles?.lodges?.payment_gateway, member.lodge_id)) !== 'manual' && (
+                            payment.pix_qr_code ? (
                               <Button
                                 size="sm"
-                                variant="destructive"
-                                onClick={() => setPaymentToDelete(payment)}
+                                variant="outline"
+                                onClick={() => setSelectedPaymentForQR(payment)}
+                                className="h-8 px-2 text-xs flex-1"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <QrCode className="h-3.5 w-3.5 mr-1" /> QR PIX
                               </Button>
-                            )}
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setGeneratingPixId(payment.id);
+                                  generatePixMutation.mutate(payment);
+                                }}
+                                disabled={generatingPixId === payment.id}
+                                className="h-8 px-2 text-xs flex-1"
+                              >
+                                {generatingPixId === payment.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                ) : (
+                                  <QrCode className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                PIX
+                              </Button>
+                            )
+                          )}
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => markAsPaidMutation.mutate(payment.id)}
+                            disabled={markAsPaidMutation.isPending}
+                            className="h-8 px-2.5 text-xs flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirmar
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setPaymentToDelete(payment)}
+                              className="h-8 px-2 text-xs"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Desktop Table View (Hidden on mobile) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Membro</TableHead>
+                        <TableHead>Grau / Cargo</TableHead>
+                        <TableHead>CIM</TableHead>
+                        <TableHead>Loja</TableHead>
+                        <TableHead>Referência</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Status da Mensalidade</TableHead>
+                        <TableHead>Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {memberStatusList.map(({ member, payment }) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-medium">
+                            <div>{member.full_name}</div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {[member.degree, member.lodge_position].filter(Boolean).join(' • ') || '-'}
+                          </TableCell>
+                          <TableCell>{member.cim_number || '-'}</TableCell>
+                          <TableCell>{member.lodges?.name || '-'}</TableCell>
+                          <TableCell>
+                            {payment ? (
+                              `${monthNames[payment.reference_month - 1]} ${payment.reference_year}`
+                            ) : monthFilter !== 'all' ? (
+                              `${monthNames[parseInt(monthFilter) - 1]} ${yearFilter}`
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {payment ? `R$ ${Number(payment.amount).toFixed(2).replace('.', ',')}` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {payment ? format(parseISO(payment.due_date), 'dd/MM/yyyy') : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {payment ? (
+                              getStatusBadge(payment.status, payment.due_date)
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Sem Lançamento
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="space-x-2">
+                            {payment && payment.status !== 'paid' && (
+                              <>
+                                {((member as any)?.lodges?.payment_gateway || getLodgeGateway(payment.profiles?.lodge_id, payment.profiles?.lodges?.payment_gateway, member.lodge_id)) !== 'manual' && (
+                                  payment.pix_qr_code ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setSelectedPaymentForQR(payment)}
+                                    >
+                                      <QrCode className="h-4 w-4 mr-1" />
+                                      Ver QR
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setGeneratingPixId(payment.id);
+                                        generatePixMutation.mutate(payment);
+                                      }}
+                                      disabled={generatingPixId === payment.id}
+                                    >
+                                      {generatingPixId === payment.id ? (
+                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <QrCode className="h-4 w-4 mr-1" />
+                                      )}
+                                      Gerar PIX
+                                    </Button>
+                                  )
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => markAsPaidMutation.mutate(payment.id)}
+                                  disabled={markAsPaidMutation.isPending}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Confirmar
+                                </Button>
+                                {isAdmin && (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => setPaymentToDelete(payment)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : (
               <p className="text-center py-8 text-muted-foreground">Nenhum membro encontrado</p>
             )}

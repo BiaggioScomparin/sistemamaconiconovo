@@ -96,7 +96,9 @@ export default function AdminMembers() {
   const [saving, setSaving] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table'
+  );
   
   // Filter state
   const [filters, setFilters] = useState<MemberFilters>({

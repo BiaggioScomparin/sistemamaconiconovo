@@ -473,7 +473,9 @@ export default function AdminProposals() {
     </Card>
   );
 
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'kanban'
+  );
 
   const kanbanColumns = [
     { key: 'proposta', title: 'Proposta', icon: FileText, color: 'border-blue-500/50 bg-blue-500/5' },

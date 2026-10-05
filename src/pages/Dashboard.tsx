@@ -60,86 +60,86 @@ export default function Dashboard() {
 
         {isAdmin && stats && (
           <>
-            {/* KPI CARDS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* KPI CARDS GRID - 2 columns on mobile */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               <Link to="/admin/members">
-                <Card className="card-elegant hover:border-primary/50 transition-all hover:shadow-md cursor-pointer group">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-body text-muted-foreground group-hover:text-primary transition-colors">
+                <Card className="card-elegant hover:border-primary/50 transition-all hover:shadow-md cursor-pointer group h-full">
+                  <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3 sm:p-6">
+                    <CardTitle className="text-xs sm:text-sm font-body text-muted-foreground group-hover:text-primary transition-colors">
                       Membros Ativos
                     </CardTitle>
-                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
-                      <Users className="h-5 w-5" />
+                    <div className="p-1.5 sm:p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform shrink-0">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-display text-foreground">
+                  <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                    <div className="text-2xl sm:text-3xl font-display text-foreground">
                       {stats.totalMembers}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      Ver cadastro completo <ArrowUpRight size={12} />
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-0.5 sm:gap-1">
+                      Ver cadastro <ArrowUpRight size={12} />
                     </p>
                   </CardContent>
                 </Card>
               </Link>
 
               <Link to="/admin/approvals">
-                <Card className="card-elegant hover:border-amber-500/50 transition-all hover:shadow-md cursor-pointer group">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-body text-muted-foreground group-hover:text-amber-500 transition-colors">
-                      Aprovações Pendentes
+                <Card className="card-elegant hover:border-amber-500/50 transition-all hover:shadow-md cursor-pointer group h-full">
+                  <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3 sm:p-6">
+                    <CardTitle className="text-xs sm:text-sm font-body text-muted-foreground group-hover:text-amber-500 transition-colors">
+                      Aprovações
                     </CardTitle>
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform">
-                      <ShieldAlert className="h-5 w-5" />
+                    <div className="p-1.5 sm:p-2.5 rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform shrink-0">
+                      <ShieldAlert className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-display text-foreground">
+                  <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                    <div className="text-2xl sm:text-3xl font-display text-foreground">
                       {stats.pendingApprovals}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      Aguardando validação <ArrowUpRight size={12} />
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-0.5 sm:gap-1">
+                      Validação <ArrowUpRight size={12} />
                     </p>
                   </CardContent>
                 </Card>
               </Link>
 
               <Link to="/admin/lodges">
-                <Card className="card-elegant hover:border-purple-500/50 transition-all hover:shadow-md cursor-pointer group">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-body text-muted-foreground group-hover:text-purple-500 transition-colors">
-                      Lojas Cadastradas
+                <Card className="card-elegant hover:border-purple-500/50 transition-all hover:shadow-md cursor-pointer group h-full">
+                  <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3 sm:p-6">
+                    <CardTitle className="text-xs sm:text-sm font-body text-muted-foreground group-hover:text-purple-500 transition-colors">
+                      Lojas
                     </CardTitle>
-                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform">
-                      <Building2 className="h-5 w-5" />
+                    <div className="p-1.5 sm:p-2.5 rounded-xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform shrink-0">
+                      <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-display text-foreground">
+                  <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                    <div className="text-2xl sm:text-3xl font-display text-foreground">
                       {stats.totalLodges}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      Gerenciar Lojas <ArrowUpRight size={12} />
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-0.5 sm:gap-1">
+                      Gerenciar <ArrowUpRight size={12} />
                     </p>
                   </CardContent>
                 </Card>
               </Link>
 
-              <Card className="card-elegant">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-body text-muted-foreground">
-                    Aniversários do Mês
+              <Card className="card-elegant h-full">
+                <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-body text-muted-foreground">
+                    Aniversários
                   </CardTitle>
-                  <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
-                    <Cake className="h-5 w-5" />
+                  <div className="p-1.5 sm:p-2.5 rounded-xl bg-rose-500/10 text-rose-500 shrink-0">
+                    <Cake className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-display text-foreground">
+                <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                  <div className="text-2xl sm:text-3xl font-display text-foreground">
                     {stats.birthdaysThisMonth.length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Irmãos aniversariantes
+                  <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
+                    No mês
                   </p>
                 </CardContent>
               </Card>
