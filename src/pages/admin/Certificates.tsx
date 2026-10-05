@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -17,7 +18,8 @@ import {
   QrCode as QrIcon, 
   Search, 
   CheckCircle2,
-  Sliders
+  Sliders,
+  RefreshCw
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
@@ -30,6 +32,8 @@ interface Profile {
   degree: string | null;
   lodge_position: string | null;
   initiation_date: string | null;
+  status?: string | null;
+  member_status?: string | null;
   lodges?: {
     name: string;
     number: string;
@@ -53,18 +57,36 @@ export default function Certificates() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Fetch registered members from database
-  const { data: members, isLoading: isLoadingMembers } = useQuery({
-    queryKey: ['members-for-certificates'],
+  // Fetch registered members from database robustly
+  const { data: members, isLoading: isLoadingMembers, refetch: refetchMembers } = useQuery({
+    queryKey: ['members-for-certificates-robust'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      try {
+        // 1. First try fetching profiles with lodges join
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, cim_number, degree, lodge_position, initiation_date, status, member_status, lodges(name, number)')
+          .order('full_name', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          // Filter valid members (membro, active, approved, or anyone with a name)
+          const valid = data.filter(
+            (p) => p.full_name && (p.status === 'membro' || p.status === 'approved' || p.member_status === 'active' || !p.status)
+          );
+          return (valid.length > 0 ? valid : data) as Profile[];
+        }
+      } catch (err) {
+        console.warn('Error fetching profiles with lodges join:', err);
+      }
+
+      // 2. Fallback: Fetch profiles directly without join if join failed
+      const { data: fallbackData, error: fallbackError } = await supabase
         .from('profiles')
-        .select('id, full_name, cim_number, degree, lodge_position, initiation_date, lodges(name, number)')
-        .eq('status', 'membro')
+        .select('id, full_name, cim_number, degree, lodge_position, initiation_date, status, member_status')
         .order('full_name', { ascending: true });
 
-      if (error) throw error;
-      return data as Profile[];
+      if (fallbackError) throw fallbackError;
+      return (fallbackData || []) as Profile[];
     },
   });
 
@@ -75,7 +97,7 @@ export default function Certificates() {
     const q = searchQuery.toLowerCase();
     return members.filter(
       (m) =>
-        m.full_name.toLowerCase().includes(q) ||
+        (m.full_name && m.full_name.toLowerCase().includes(q)) ||
         (m.cim_number && m.cim_number.includes(q)) ||
         (m.degree && m.degree.toLowerCase().includes(q))
     );
@@ -86,7 +108,9 @@ export default function Certificates() {
     setSelectedMemberId(member.id);
 
     // 1. Automatic Name (Uppercase)
-    setMemberName(member.full_name.toUpperCase());
+    if (member.full_name) {
+      setMemberName(member.full_name.toUpperCase());
+    }
 
     // 2. Automatic Degree Detection
     const currentDegree = (member.degree || '').toLowerCase();
@@ -114,7 +138,7 @@ export default function Certificates() {
     }
 
     // 4. Automatic Lodge Name (Formatted A.R.L.S ...)
-    if (member.lodges) {
+    if (member.lodges && member.lodges.name) {
       setLodgeName(`A.R.L.S ${member.lodges.name} Nº ${member.lodges.number || '001'}`);
     } else {
       setLodgeName('A.R.L.S Lealdade e Justiça Nº 001');
@@ -124,6 +148,11 @@ export default function Certificates() {
       title: 'Irmão selecionado!',
       description: `Certificado preenchido automaticamente para ${member.full_name}.`,
     });
+  };
+
+  const handleDropdownSelect = (memberId: string) => {
+    const m = members?.find((p) => p.id === memberId);
+    if (m) handleSelectMember(m);
   };
 
   // Export PNG in HD (4K / 300 DPI)
@@ -152,7 +181,7 @@ export default function Certificates() {
 
       toast({
         title: 'Certificado baixado!',
-        description: 'A imagem HD foi salva com sucesso sem fundo branco.',
+        description: 'A imagem HD foi salva com sucesso.',
       });
     } catch (error: any) {
       console.error('Error exporting PNG:', error);
@@ -262,29 +291,67 @@ export default function Certificates() {
           <div className="lg:col-span-4 space-y-5">
             {/* Auto-Search Member Card */}
             <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  1. Selecionar Irmão Cadastrado
-                </CardTitle>
-                <CardDescription>
-                  Clique no nome do irmão para carregar os dados instantaneamente
-                </CardDescription>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    1. Selecionar Irmão Cadastrado
+                  </CardTitle>
+                  <CardDescription>
+                    Selecione um irmão para preencher automaticamente
+                  </CardDescription>
+                </div>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-7 w-7" 
+                  onClick={() => refetchMembers()}
+                  title="Recarregar membros"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
               </CardHeader>
+
               <CardContent className="space-y-3">
-                {/* Search Input */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Digite o nome do irmão ou CIM..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+                {/* Select Dropdown */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Menu suspenso de membros</Label>
+                  <Select value={selectedMemberId} onValueChange={handleDropdownSelect}>
+                    <SelectTrigger className="w-full text-xs">
+                      <SelectValue placeholder="Escolha um membro cadastrado..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {isLoadingMembers ? (
+                        <SelectItem value="loading" disabled>Carregando membros...</SelectItem>
+                      ) : members && members.length > 0 ? (
+                        members.map((m) => (
+                          <SelectItem key={m.id} value={m.id} className="text-xs">
+                            {m.full_name} {m.cim_number ? `(CIM: ${m.cim_number})` : ''}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>Nenhum membro encontrado</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Search Input for Quick Filter */}
+                <div className="space-y-1 pt-1">
+                  <Label className="text-xs">Ou digite no campo de busca:</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome ou CIM..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 text-xs"
+                    />
+                  </div>
                 </div>
 
                 {/* Member Selector List */}
-                <div className="max-h-56 overflow-y-auto space-y-1 rounded-md border p-1 bg-muted/20">
+                <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-1 bg-muted/20">
                   {isLoadingMembers ? (
                     <p className="text-xs text-center py-4 text-muted-foreground">Carregando membros...</p>
                   ) : filteredMembers.length > 0 ? (
@@ -325,7 +392,7 @@ export default function Certificates() {
                   2. Dados do Certificado
                 </CardTitle>
                 <CardDescription>
-                  Ajustes finos dos textos sobrepostos
+                  Campos sobrepostos no modelo de certificado
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-xs">
