@@ -1,13 +1,14 @@
-import { useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Profile } from '@/lib/supabase-types';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { Download, Smartphone, Image as ImageIcon, Loader2, Layers, CreditCard } from 'lucide-react';
 import logoGoib from '@/assets/logo-goib.png';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import { downloadCardImageHD, downloadCombinedCardImageHD, downloadCardPDF } from '@/lib/cardExportUtils';
+import { WalletPassDialog } from '@/components/member/WalletPassDialog';
 
 interface MemberCardProps {
   profile: Profile;
@@ -16,37 +17,10 @@ interface MemberCardProps {
 export function MemberCard({ profile }: MemberCardProps) {
   const cardFrontRef = useRef<HTMLDivElement>(null);
   const cardBackRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  const handleDownload = async () => {
-    if (!cardFrontRef.current || !cardBackRef.current) return;
-
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: [85.6, 53.98], // Credit card size
-    });
-
-    // Capture front
-    const canvasFront = await html2canvas(cardFrontRef.current, {
-      scale: 3,
-      backgroundColor: null,
-      useCORS: true,
-    });
-    const imgFront = canvasFront.toDataURL('image/png');
-    pdf.addImage(imgFront, 'PNG', 0, 0, 85.6, 53.98);
-
-    // Add second page for back
-    pdf.addPage([85.6, 53.98], 'landscape');
-    const canvasBack = await html2canvas(cardBackRef.current, {
-      scale: 3,
-      backgroundColor: null,
-      useCORS: true,
-    });
-    const imgBack = canvasBack.toDataURL('image/png');
-    pdf.addImage(imgBack, 'PNG', 0, 0, 85.6, 53.98);
-
-    pdf.save(`carteirinha-${profile.full_name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
-  };
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const getDegreeAbbrev = (degree: string | null) => {
     switch (degree) {
@@ -61,7 +35,6 @@ export function MemberCard({ profile }: MemberCardProps) {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     try {
-      // Parse date string as local date to avoid timezone issues
       const [year, month, day] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, day);
       return format(date, 'dd/MM/yyyy', { locale: ptBR });
@@ -70,27 +43,69 @@ export function MemberCard({ profile }: MemberCardProps) {
     }
   };
 
-  // Access lodge data - Supabase returns as 'lodges' from the join
   const lodge = (profile as any).lodges;
   const lodgeInfo = lodge ? lodge.name : '-';
-
-  const orienteInfo = lodge?.city && lodge?.state 
-    ? `${lodge.city} - ${lodge.state}` 
-    : '-';
-
-  // QR Code URL for validation - links to a public validation page
+  const orienteInfo = lodge?.city && lodge?.state ? `${lodge.city} - ${lodge.state}` : '-';
   const validationUrl = `${window.location.origin}/validar/${profile.id}`;
-
   const isActive = (profile as any).member_status === 'active';
+  const safeFileName = profile.full_name.replace(/\s+/g, '-').toLowerCase();
+
+  const handleExportPDF = async () => {
+    setDownloading('pdf');
+    try {
+      await downloadCardPDF(cardFrontRef.current, cardBackRef.current, `carteirinha-goib-${safeFileName}`);
+      toast({ title: 'PDF baixado com sucesso!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar PDF', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleExportFrontHD = async () => {
+    setDownloading('front');
+    try {
+      await downloadCardImageHD(cardFrontRef.current, `goib-frente-${safeFileName}`);
+      toast({ title: 'Imagem da Frente HD salva na galeria!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar imagem HD', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleExportBackHD = async () => {
+    setDownloading('back');
+    try {
+      await downloadCardImageHD(cardBackRef.current, `goib-verso-${safeFileName}`);
+      toast({ title: 'Imagem do Verso HD salva na galeria!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar imagem HD', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleExportCombinedHD = async () => {
+    setDownloading('combined');
+    try {
+      await downloadCombinedCardImageHD(cardFrontRef.current, cardBackRef.current, `goib-carteira-${safeFileName}`);
+      toast({ title: 'Carteirinha Completa HD salva na galeria!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar imagem HD', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* FRONT OF CARD */}
       <div className="overflow-x-auto pb-2">
-        <p className="text-center text-sm text-muted-foreground mb-2 font-display">Frente</p>
+        <p className="text-center text-sm text-muted-foreground mb-2 font-display">Frente (Nacional GOIB)</p>
         <div
           ref={cardFrontRef}
-          className="min-w-[340px] w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-2xl relative"
+          className="min-w-[340px] w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-2xl relative border border-white/10"
           style={{
             background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
             aspectRatio: '1.7 / 1',
@@ -194,7 +209,7 @@ export function MemberCard({ profile }: MemberCardProps) {
         <p className="text-center text-sm text-muted-foreground mb-2 font-display">Verso</p>
         <div
           ref={cardBackRef}
-          className="min-w-[340px] w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-2xl relative"
+          className="min-w-[340px] w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-2xl relative border border-white/10"
           style={{
             background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
             aspectRatio: '1.7 / 1',
@@ -248,9 +263,9 @@ export function MemberCard({ profile }: MemberCardProps) {
               {/* Cargo */}
               <div>
                 <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Cargo</p>
-                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1 min-h-[20px] sm:min-h-[28px] flex items-center">
-                  <p className="font-body text-[10px] sm:text-xs text-black truncate">
-                    {(profile as any).cargo || '-'}
+                <div className="border-b border-white/30 pb-0.5 sm:pb-1">
+                  <p className="font-body text-xs sm:text-sm text-white truncate">
+                    {(profile as any).cargo || (profile as any).lodge_position || 'Membro'}
                   </p>
                 </div>
               </div>
@@ -258,25 +273,17 @@ export function MemberCard({ profile }: MemberCardProps) {
               {/* Oriente */}
               <div>
                 <p className="text-[8px] sm:text-[10px] text-white/50 uppercase mb-0.5">Oriente</p>
-                <div className="bg-white rounded px-1.5 sm:px-2 py-0.5 sm:py-1 min-h-[20px] sm:min-h-[28px] flex items-center">
-                  <p className="font-body text-[10px] sm:text-xs text-black truncate">
+                <div className="border-b border-white/30 pb-0.5 sm:pb-1">
+                  <p className="font-body text-xs sm:text-sm text-white truncate">
                     {orienteInfo}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Title */}
-            <div className="text-center flex-1 flex flex-col justify-center">
-              <h2 className="font-display text-xs sm:text-lg text-amber-400 font-bold tracking-wide">
-                Grande Oriente Independente do Brasil
-              </h2>
-            </div>
-
-            {/* Bottom section - QR Code and Status */}
-            <div className="flex items-end justify-between mt-auto">
-              {/* QR Code */}
-              <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* QR Code and status footer */}
+            <div className="mt-auto flex items-end justify-between pt-1 sm:pt-2 border-t border-white/20">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <div className="bg-white p-0.5 sm:p-1 rounded">
                   <QRCodeSVG 
                     value={validationUrl} 
@@ -305,16 +312,73 @@ export function MemberCard({ profile }: MemberCardProps) {
         </div>
       </div>
 
-      {/* Download button */}
-      <div className="flex justify-center">
+      {/* Download & Wallet Actions Toolbar */}
+      <div className="max-w-lg mx-auto space-y-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Download Front Image */}
+          <Button
+            variant="outline"
+            onClick={handleExportFrontHD}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'front' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-amber-400" />}
+            Frente HD (Galeria PNG)
+          </Button>
+
+          {/* Download Back Image */}
+          <Button
+            variant="outline"
+            onClick={handleExportBackHD}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'back' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-amber-400" />}
+            Verso HD (Galeria PNG)
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Download Combined Image */}
+          <Button
+            variant="outline"
+            onClick={handleExportCombinedHD}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-slate-200 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'combined' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4 text-amber-400" />}
+            Frente + Verso HD (PNG)
+          </Button>
+
+          {/* Download PDF */}
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-slate-200 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4 text-amber-400" />}
+            Documento PDF Oficial
+          </Button>
+        </div>
+
+        {/* Apple & Google Wallet Button */}
         <Button
-          onClick={handleDownload}
-          className="bg-secondary hover:bg-gold-dark text-secondary-foreground font-display"
+          onClick={() => setWalletDialogOpen(true)}
+          className="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold font-display shadow-xl gap-2.5 h-12 text-sm"
         >
-          <Download className="mr-2 h-4 w-4" />
-          Baixar Carteirinha (PDF)
+          <Smartphone className="h-5 w-5" />
+          Adicionar ao Apple / Google Wallet (Passe Digital)
         </Button>
       </div>
+
+      {/* Wallet Pass Modal */}
+      <WalletPassDialog
+        open={walletDialogOpen}
+        onOpenChange={setWalletDialogOpen}
+        profile={profile}
+        cardType="goib"
+      />
     </div>
   );
 }

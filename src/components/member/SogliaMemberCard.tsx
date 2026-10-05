@@ -1,14 +1,15 @@
-import { useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Profile } from '@/lib/supabase-types';
 import { Button } from '@/components/ui/button';
-import { Download, Globe, Shield } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { Download, Globe, Shield, Smartphone, Image as ImageIcon, Loader2, Sparkles, Layers } from 'lucide-react';
 import logoGoib from '@/assets/logo-goib.png';
 import logoSoglia from '@/assets/logo-soglia.png';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import { downloadCardImageHD, downloadCombinedCardImageHD, downloadCardPDF } from '@/lib/cardExportUtils';
+import { WalletPassDialog } from '@/components/member/WalletPassDialog';
 
 interface SogliaMemberCardProps {
   profile: Profile;
@@ -17,37 +18,10 @@ interface SogliaMemberCardProps {
 export function SogliaMemberCard({ profile }: SogliaMemberCardProps) {
   const cardFrontRef = useRef<HTMLDivElement>(null);
   const cardBackRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  const handleDownload = async () => {
-    if (!cardFrontRef.current || !cardBackRef.current) return;
-
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: [85.6, 53.98], // Credit card size
-    });
-
-    // Capture front
-    const canvasFront = await html2canvas(cardFrontRef.current, {
-      scale: 3,
-      backgroundColor: null,
-      useCORS: true,
-    });
-    const imgFront = canvasFront.toDataURL('image/png');
-    pdf.addImage(imgFront, 'PNG', 0, 0, 85.6, 53.98);
-
-    // Add second page for back
-    pdf.addPage([85.6, 53.98], 'landscape');
-    const canvasBack = await html2canvas(cardBackRef.current, {
-      scale: 3,
-      backgroundColor: null,
-      useCORS: true,
-    });
-    const imgBack = canvasBack.toDataURL('image/png');
-    pdf.addImage(imgBack, 'PNG', 0, 0, 85.6, 53.98);
-
-    pdf.save(`soglia-card-${profile.full_name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
-  };
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const getDegreeAbbrevEN = (degree: string | null) => {
     switch (degree) {
@@ -75,6 +49,55 @@ export function SogliaMemberCard({ profile }: SogliaMemberCardProps) {
   const orientCityOnly = lodge?.city || '-';
   const validationUrl = `${window.location.origin}/validar/${profile.id}`;
   const isActive = (profile as any).member_status === 'active';
+  const safeFileName = profile.full_name.replace(/\s+/g, '-').toLowerCase();
+
+  const handleExportPDF = async () => {
+    setDownloading('pdf');
+    try {
+      await downloadCardPDF(cardFrontRef.current, cardBackRef.current, `soglia-card-${safeFileName}`);
+      toast({ title: 'PDF baixado com sucesso!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar PDF', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleExportFrontHD = async () => {
+    setDownloading('front');
+    try {
+      await downloadCardImageHD(cardFrontRef.current, `soglia-frente-${safeFileName}`);
+      toast({ title: 'Imagem da Frente HD salva na galeria!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar imagem HD', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleExportBackHD = async () => {
+    setDownloading('back');
+    try {
+      await downloadCardImageHD(cardBackRef.current, `soglia-verso-${safeFileName}`);
+      toast({ title: 'Imagem do Verso HD salva na galeria!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar imagem HD', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleExportCombinedHD = async () => {
+    setDownloading('combined');
+    try {
+      await downloadCombinedCardImageHD(cardFrontRef.current, cardBackRef.current, `soglia-carteira-${safeFileName}`);
+      toast({ title: 'Carteirinha Completa HD salva na galeria!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar imagem HD', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -315,16 +338,73 @@ export function SogliaMemberCard({ profile }: SogliaMemberCardProps) {
         </div>
       </div>
 
-      {/* Download button */}
-      <div className="flex justify-center pt-2">
+      {/* Download & Wallet Actions Toolbar */}
+      <div className="max-w-lg mx-auto space-y-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Download Front Image */}
+          <Button
+            variant="outline"
+            onClick={handleExportFrontHD}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'front' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-amber-400" />}
+            Frente HD (Galeria PNG)
+          </Button>
+
+          {/* Download Back Image */}
+          <Button
+            variant="outline"
+            onClick={handleExportBackHD}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'back' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-amber-400" />}
+            Verso HD (Galeria PNG)
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Download Combined Image */}
+          <Button
+            variant="outline"
+            onClick={handleExportCombinedHD}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-slate-200 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'combined' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4 text-amber-400" />}
+            Frente + Verso HD (PNG)
+          </Button>
+
+          {/* Download PDF */}
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={downloading !== null}
+            className="border-amber-500/40 text-slate-200 hover:bg-amber-500/10 gap-2 h-11 text-xs"
+          >
+            {downloading === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4 text-amber-400" />}
+            Documento PDF Oficial
+          </Button>
+        </div>
+
+        {/* Apple & Google Wallet Button */}
         <Button
-          onClick={handleDownload}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold font-display shadow-lg"
+          onClick={() => setWalletDialogOpen(true)}
+          className="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold font-display shadow-xl gap-2.5 h-12 text-sm"
         >
-          <Download className="mr-2 h-4 w-4" />
-          Download SOGLIA Card (PDF)
+          <Smartphone className="h-5 w-5" />
+          Adicionar ao Apple / Google Wallet (Passe Digital)
         </Button>
       </div>
+
+      {/* Wallet Pass Modal */}
+      <WalletPassDialog
+        open={walletDialogOpen}
+        onOpenChange={setWalletDialogOpen}
+        profile={profile}
+        cardType="soglia"
+      />
     </div>
   );
 }
