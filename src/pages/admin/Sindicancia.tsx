@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -20,27 +20,20 @@ import {
   FileText, 
   Users, 
   CheckCircle2, 
-  AlertTriangle, 
   Printer, 
   Save, 
-  RefreshCw, 
   User, 
   Building2, 
   Scale, 
   ShieldAlert, 
-  Download, 
   FileCheck, 
   ChevronRight,
-  ExternalLink,
-  Clock,
   Sparkles,
   Vote,
   Receipt,
   Briefcase,
   Landmark,
-  Award,
-  BadgeCheck,
-  Check
+  Award
 } from 'lucide-react';
 
 interface CandidateData {
@@ -200,30 +193,11 @@ export default function AdminSindicancia() {
     }
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-foreground">Carregando...</div>
-      </div>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const [searchParams] = useSearchParams();
   const candidateIdParam = searchParams.get('candidateId');
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Auto-select candidate from URL query param if present
-  useEffect(() => {
-    if (candidateIdParam && profiles && profiles.length > 0) {
-      handleProfileSelect(candidateIdParam);
-    }
-  }, [candidateIdParam, profiles]);
-
-  const handleProfileSelect = (id: string) => {
+  const handleProfileSelect = useCallback((id: string) => {
     setSelectedProfileId(id);
     const profile = profiles?.find(p => p.id === id);
     if (profile) {
@@ -240,7 +214,26 @@ export default function AdminSindicancia() {
         hasLgpdConsent: true,
       });
     }
-  };
+  }, [profiles]);
+
+  // Auto-select candidate from URL query param if present
+  useEffect(() => {
+    if (candidateIdParam && profiles && profiles.length > 0) {
+      handleProfileSelect(candidateIdParam);
+    }
+  }, [candidateIdParam, profiles, handleProfileSelect]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-foreground" role="status" aria-live="polite">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSaveProfileChanges = async () => {
     if (!formData.id) {

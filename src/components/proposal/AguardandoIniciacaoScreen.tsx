@@ -105,10 +105,9 @@ export default function AguardandoIniciacaoScreen({ profile }: { profile: any })
                   <MapPin size={14} className="text-purple-400" /> Endereço do Templo
                 </span>
                 <p className="text-sm font-medium text-foreground">
-                  {lodge?.street 
-                    ? [lodge?.street, lodge?.city, lodge?.state].filter(Boolean).join(' - ') 
-                    : [lodge?.name || profile?.lodges?.name, lodge?.city || profile?.lodges?.city, lodge?.state || profile?.lodges?.state].filter(Boolean).join(' - ') || 
-                      'Templo Principal da Loja Maçônica'}
+                  {[lodge?.name || profile?.lodges?.name, lodge?.city || profile?.lodges?.city, lodge?.state || profile?.lodges?.state]
+                    .filter(Boolean)
+                    .join(' - ') || 'Templo Principal da Loja Maçônica'}
                 </p>
               </div>
 

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,38 +12,42 @@ import { ProtectedInvitesRoute } from "@/components/auth/ProtectedInvitesRoute";
 import { ProtectedAttendanceRoute } from "@/components/auth/ProtectedAttendanceRoute";
 import { ProtectedFinanceRoute } from "@/components/auth/ProtectedFinanceRoute";
 import { ProtectedReportsRoute } from "@/components/auth/ProtectedReportsRoute";
+
+// Entry pages kept eager for fast first paint; everything else is code-split
+// via React.lazy so the initial bundle stays small.
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Onboarding from "./pages/onboarding/Onboarding";
-import Proposal from "./pages/Proposal";
-import Dashboard from "./pages/Dashboard";
-import AdminLodges from "./pages/admin/Lodges";
-import AdminMembers from "./pages/admin/Members";
-import AdminApprovals from "./pages/admin/Approvals";
-import AdminProposals from "./pages/admin/Proposals";
-import AdminSindicancia from "./pages/admin/Sindicancia";
-import AdminAttendances from "./pages/admin/Attendances";
-import AdminPermissions from "./pages/admin/Permissions";
-import AdminFinanceiro from "./pages/admin/Financeiro";
-import AdminSettings from "./pages/admin/Settings";
-import AdminCalendar from "./pages/admin/Calendar";
-import AdminLibrary from "./pages/admin/Library";
-import AdminMinutes from "./pages/admin/Minutes";
-import AdminInvites from "./pages/admin/Invites";
-import AdminNotifications from "./pages/admin/Notifications";
-import AdminReports from "./pages/admin/Reports";
-import AdminCertificates from "./pages/admin/Certificates";
-import MemberInicial from "./pages/member/Inicial";
-import MemberCard from "./pages/member/Card";
-import MemberProfile from "./pages/member/Profile";
-import MemberAttendance from "./pages/member/Attendance";
-import MemberPayments from "./pages/member/Payments";
-import MemberCalendar from "./pages/member/Calendar";
-import MemberLibrary from "./pages/member/Library";
-import ProposalStatus from "./pages/member/ProposalStatus";
-import ValidateMember from "./pages/ValidateMember";
-import NotFound from "./pages/NotFound";
+
+const Register = lazy(() => import("./pages/Register"));
+const Onboarding = lazy(() => import("./pages/onboarding/Onboarding"));
+const Proposal = lazy(() => import("./pages/Proposal"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AdminLodges = lazy(() => import("./pages/admin/Lodges"));
+const AdminMembers = lazy(() => import("./pages/admin/Members"));
+const AdminApprovals = lazy(() => import("./pages/admin/Approvals"));
+const AdminProposals = lazy(() => import("./pages/admin/Proposals"));
+const AdminSindicancia = lazy(() => import("./pages/admin/Sindicancia"));
+const AdminAttendances = lazy(() => import("./pages/admin/Attendances"));
+const AdminPermissions = lazy(() => import("./pages/admin/Permissions"));
+const AdminFinanceiro = lazy(() => import("./pages/admin/Financeiro"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminCalendar = lazy(() => import("./pages/admin/Calendar"));
+const AdminLibrary = lazy(() => import("./pages/admin/Library"));
+const AdminMinutes = lazy(() => import("./pages/admin/Minutes"));
+const AdminInvites = lazy(() => import("./pages/admin/Invites"));
+const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
+const AdminReports = lazy(() => import("./pages/admin/Reports"));
+const AdminCertificates = lazy(() => import("./pages/admin/Certificates"));
+const MemberInicial = lazy(() => import("./pages/member/Inicial"));
+const MemberCard = lazy(() => import("./pages/member/Card"));
+const MemberProfile = lazy(() => import("./pages/member/Profile"));
+const MemberAttendance = lazy(() => import("./pages/member/Attendance"));
+const MemberPayments = lazy(() => import("./pages/member/Payments"));
+const MemberCalendar = lazy(() => import("./pages/member/Calendar"));
+const MemberLibrary = lazy(() => import("./pages/member/Library"));
+const ProposalStatus = lazy(() => import("./pages/member/ProposalStatus"));
+const ValidateMember = lazy(() => import("./pages/ValidateMember"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -51,9 +56,20 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 60_000,
     },
   },
 });
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-pulse text-muted-foreground" role="status" aria-live="polite">
+        Carregando...
+      </div>
+    </div>
+  );
+}
 
 const App = () => (
   <ErrorBoundary>
@@ -63,6 +79,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -103,6 +120,7 @@ const App = () => (
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

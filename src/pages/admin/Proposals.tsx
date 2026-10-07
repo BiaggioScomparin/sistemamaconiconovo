@@ -150,6 +150,9 @@ export default function AdminProposals() {
   const [editalDialogOpen, setEditalDialogOpen] = useState(false);
   const [editalProfile, setEditalProfile] = useState<Profile | null>(null);
   const [viewProfileChildren, setViewProfileChildren] = useState<{ name: string; birth_date: string }[]>([]);
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'kanban'
+  );
 
   // WhatsApp notification states
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
@@ -471,10 +474,6 @@ export default function AdminProposals() {
         </div>
       </CardContent>
     </Card>
-  );
-
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(
-    typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'kanban'
   );
 
   const kanbanColumns = [

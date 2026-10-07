@@ -63,7 +63,10 @@ export default function ValidateMember() {
       // 1. Try RPC function get_public_member_profile FIRST (bypasses RLS)
       for (const candidate of candidates) {
         try {
-          const { data: rpcData, error: rpcError } = await supabase.rpc('get_public_member_profile', {
+          // NOTE: get_public_member_profile existe no banco (ver update_rpc_public.sql),
+          // mas não está nos tipos gerados do Supabase. Cast localizado até os tipos
+          // serem regenerados (supabase gen types).
+          const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_public_member_profile', {
             p_id: candidate,
           });
 

@@ -85,8 +85,8 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
       const PAGE_SIZE = 1000;
       const payments: PaymentRow[] = [];
       let page = 0;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
+      let hasMore = true;
+      while (hasMore) {
         let paymentsQuery = supabase
           .from('monthly_payments')
           .select(`
@@ -108,8 +108,11 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
 
         const rows = (pageData || []) as PaymentRow[];
         payments.push(...rows);
-        if (rows.length < PAGE_SIZE) break;
-        page++;
+        if (rows.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          page++;
+        }
       }
 
       const now = new Date();
