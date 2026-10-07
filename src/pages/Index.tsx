@@ -5,6 +5,7 @@ import { LandingPricing } from '@/components/landing/LandingPricing';
 import { LandingCTA } from '@/components/landing/LandingCTA';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { Button } from '@/components/ui/button';
+import logoGoib from '@/assets/logo-goib.png';
 
 export default function Index() {
   return (
@@ -15,10 +16,11 @@ export default function Index() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <span className="font-display text-xl text-secondary">∴</span>
+              <img src={logoGoib} alt="G.O.I.B." className="h-10 w-10 object-contain" />
+              <div>
+                <span className="font-display text-lg font-bold text-foreground block leading-none">G.O.I.B.</span>
+                <span className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider">Sistema Maçônico</span>
               </div>
-              <span className="font-display text-xl text-foreground">MaçonApp</span>
             </div>
 
             {/* Nav Links */}

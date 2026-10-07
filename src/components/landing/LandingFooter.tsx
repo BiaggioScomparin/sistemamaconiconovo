@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import logoGoib from '@/assets/logo-goib.png';
 
 export function LandingFooter() {
   const currentYear = new Date().getFullYear();
@@ -10,17 +11,14 @@ export function LandingFooter() {
           {/* Brand */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <span className="font-display text-xl text-secondary">∴</span>
+              <img src={logoGoib} alt="G.O.I.B." className="h-10 w-10 object-contain" />
+              <div>
+                <span className="font-display text-lg font-bold text-foreground block leading-none">G.O.I.B.</span>
+                <span className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider">Grande Oriente Independente do Brasil</span>
               </div>
-              <span className="font-display text-xl text-foreground">MaçonApp</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-sm mb-4">
-              Sistema completo para gestão de lojas maçônicas. Simples, seguro e 
-              desenvolvido com o respeito que a tradição merece.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              contato@maconapp.com.br
+              Sistema oficial para gestão de Lojas Maçônicas sob a jurisdição do Grande Oriente Independente do Brasil (G.O.I.B.).
             </p>
           </div>
 
@@ -77,10 +75,10 @@ export function LandingFooter() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {currentYear} MaçonApp. Todos os direitos reservados.
+            © {currentYear} G.O.I.B. - Grande Oriente Independente do Brasil. Todos os direitos reservados.
           </p>
           <p className="text-sm text-muted-foreground">
-            Feito com ♥ para a comunidade maçônica
+            T.T.G.O.T.U. ∴
           </p>
         </div>
       </div>

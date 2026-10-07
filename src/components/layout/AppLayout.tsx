@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 import { isVeneravelMestre, isTesoureiro, isChanceler } from '@/lib/roleUtils';
+import logoGoib from '@/assets/logo-goib.png';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -259,7 +260,10 @@ export function AppLayout({ children }: AppLayoutProps) {
         >
           {sidebarOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
-        <h1 className="font-display text-lg">Sistema Maçônico</h1>
+        <div className="flex items-center gap-2">
+          <img src={logoGoib} alt="G.O.I.B." className="h-8 w-8 object-contain" />
+          <h1 className="font-display text-base font-bold">G.O.I.B.</h1>
+        </div>
         {isAdmin && !isAdminRoute ? (
           <Link
             to="/dashboard"
@@ -283,13 +287,21 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="h-full flex flex-col">
-          {/* Logo */}
-          <div className="p-6 border-b border-sidebar-border">
-            <h1 className="font-display text-xl text-sidebar-primary text-center">
-              Sistema Maçônico
-            </h1>
-            <p className="text-sm text-sidebar-foreground/70 text-center mt-1 font-body">
-              {isAdminRoute && isAdmin ? 'Administração' : 'Área do Membro'}
+          {/* Logo Header */}
+          <div className="p-5 border-b border-sidebar-border text-center">
+            <div className="flex items-center justify-center gap-3 mb-1">
+              <img src={logoGoib} alt="G.O.I.B." className="h-10 w-10 object-contain drop-shadow-md" />
+              <div className="text-left">
+                <h1 className="font-display text-lg font-bold text-sidebar-primary leading-none tracking-wide">
+                  G.O.I.B.
+                </h1>
+                <p className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider mt-0.5">
+                  Sistema Maçônico
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-sidebar-foreground/70 text-center mt-1 font-body">
+              {isAdminRoute && isAdmin ? 'Painel Administrativo' : 'Área do Membro'}
             </p>
             
             {/* Admin Access Button */}

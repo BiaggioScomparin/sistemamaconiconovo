@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { useAuth } from '@/contexts/AuthContext';
+import logoGoib from '@/assets/logo-goib.png';
 
 export default function Login() {
   const { user, loading, isAdmin } = useAuth();
@@ -24,12 +25,15 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary mb-4">
-            <span className="font-display text-4xl text-secondary">∴</span>
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-slate-900 border border-amber-500/30 mb-3 shadow-xl">
+            <img src={logoGoib} alt="G.O.I.B." className="h-20 w-20 object-contain" />
           </div>
-          <h1 className="text-3xl font-display text-foreground">Sistema Maçônico</h1>
-          <p className="text-muted-foreground font-body mt-2">
-            Acesse sua conta para continuar
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-wide">G.O.I.B.</h1>
+          <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
+            Grande Oriente Independente do Brasil
+          </p>
+          <p className="text-xs text-muted-foreground font-body mt-2">
+            Acesse sua conta para continuar no Sistema Maçônico
           </p>
         </div>
 
