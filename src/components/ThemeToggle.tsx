@@ -32,12 +32,13 @@ export function ThemeToggle() {
       size="icon"
       onClick={toggleTheme}
       title={theme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
-      className="text-sidebar-foreground hover:bg-sidebar-accent rounded-full transition-colors"
+      aria-label={theme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
+      className="text-sidebar-foreground hover:bg-sidebar-accent rounded-full transition-colors motion-reduce:transition-none"
     >
       {theme === 'dark' ? (
-        <Sun className="h-5 w-5 text-yellow-400 transition-all" />
+        <Sun className="h-5 w-5 text-yellow-400 transition-all motion-reduce:transition-none" aria-hidden="true" />
       ) : (
-        <Moon className="h-5 w-5 text-slate-700 transition-all" />
+        <Moon className="h-5 w-5 text-slate-700 transition-all motion-reduce:transition-none" aria-hidden="true" />
       )}
     </Button>
   );

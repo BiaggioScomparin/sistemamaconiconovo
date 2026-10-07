@@ -28,7 +28,7 @@ import {
   BarChart3,
   Award
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -45,6 +45,56 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close the mobile sidebar when the user presses Escape.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
+
+  // Close the sidebar automatically when navigating to a new route (mobile).
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Keep the browser tab title in sync with the current route for better
+  // tab/history navigation and accessibility.
+  useEffect(() => {
+    const base = 'Sistema Maçônico';
+    const titleMap: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/admin/reports': 'Relatórios',
+      '/admin/proposals': 'Propostas',
+      '/admin/sindicancia': 'Sindicância',
+      '/admin/members': 'Membros',
+      '/admin/approvals': 'Aprovações',
+      '/admin/lodges': 'Lojas',
+      '/admin/attendances': 'Presenças',
+      '/admin/minutes': 'Atas',
+      '/admin/calendar': 'Calendário',
+      '/admin/invites': 'Convites',
+      '/admin/certificados': 'Certificados',
+      '/admin/financeiro': 'Financeiro',
+      '/admin/library': 'Biblioteca',
+      '/admin/permissions': 'Permissões',
+      '/admin/notifications': 'Notificações',
+      '/admin/settings': 'Configurações',
+      '/member/inicial': 'Início',
+      '/member/profile': 'Meu Perfil',
+      '/member/card': 'Carteirinha',
+      '/member/attendance': 'Frequência',
+      '/member/payments': 'Mensalidades',
+      '/member/library': 'Biblioteca',
+      '/member/calendar': 'Calendário',
+    };
+    const page = titleMap[location.pathname];
+    document.title = page ? `${page} — ${base}` : base;
+  }, [location.pathname]);
 
   // Check if user can access minutes (Venerável Mestre, Orador, Secretário)
   const canAccessMinutes = profile?.lodge_position && 
@@ -190,9 +240,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       {isAdmin && !isAdminRoute && (
         <Link
           to="/dashboard"
-          className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-bold shadow-lg transition-colors"
+          className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold shadow-lg transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <Crown size={20} />
+          <Crown size={20} aria-hidden="true" />
           ADMIN
         </Link>
       )}
@@ -200,18 +250,22 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-primary text-primary-foreground h-16 flex items-center justify-between px-4 shadow-lg">
         <button
+          type="button"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-navy-light rounded-lg transition-colors"
+          aria-label={sidebarOpen ? 'Fechar menu de navegação' : 'Abrir menu de navegação'}
+          aria-expanded={sidebarOpen}
+          aria-controls="main-sidebar"
+          className="p-2 hover:bg-navy-light rounded-lg transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          {sidebarOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
         <h1 className="font-display text-lg">Sistema Maçônico</h1>
         {isAdmin && !isAdminRoute ? (
           <Link
             to="/dashboard"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Crown size={16} />
+            <Crown size={16} aria-hidden="true" />
             ADMIN
           </Link>
         ) : (
@@ -221,8 +275,10 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Sidebar */}
       <aside
+        id="main-sidebar"
+        aria-label="Navegação principal"
         className={cn(
-          "fixed top-0 left-0 z-40 h-full w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-300 lg:translate-x-0 shadow-xl",
+          "fixed top-0 left-0 z-40 h-full w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-300 lg:translate-x-0 shadow-xl motion-reduce:transition-none",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -241,9 +297,9 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Link
                 to="/dashboard"
                 onClick={() => setSidebarOpen(false)}
-                className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-bold shadow-md transition-all hover:shadow-lg"
+                className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold shadow-md transition-all hover:shadow-lg motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Crown size={18} />
+                <Crown size={18} aria-hidden="true" />
                 Acessar Admin
               </Link>
             )}
@@ -253,9 +309,9 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Link
                 to="/member/inicial"
                 onClick={() => setSidebarOpen(false)}
-                className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground font-medium transition-colors"
+                className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
               >
-                <User size={18} />
+                <User size={18} aria-hidden="true" />
                 Área do Membro
               </Link>
             )}
@@ -266,7 +322,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             {isAdminRoute && isAdmin ? (
               adminCategories.map((cat, idx) => (
                 <div key={idx} className="space-y-1">
-                  <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                  <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
                     {cat.title}
                   </h3>
                   <div className="space-y-1">
@@ -277,14 +333,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                           key={link.href}
                           to={link.href}
                           onClick={() => setSidebarOpen(false)}
+                          aria-current={isActive ? 'page' : undefined}
                           className={cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                            "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                             isActive
                               ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
                               : "hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground"
                           )}
                         >
-                          <link.icon size={18} />
+                          <link.icon size={18} aria-hidden="true" />
                           {link.label}
                         </Link>
                       );
@@ -300,14 +357,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                     key={link.href}
                     to={link.href}
                     onClick={() => setSidebarOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg font-body transition-colors",
+                      "flex items-center gap-3 px-4 py-2.5 rounded-lg font-body transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                       isActive
                         ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
                         : "hover:bg-sidebar-accent text-sidebar-foreground"
                     )}
                   >
-                    <link.icon size={20} />
+                    <link.icon size={20} aria-hidden="true" />
                     {link.label}
                   </Link>
                 );
@@ -346,6 +404,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Overlay */}
       {sidebarOpen && (
         <div
+          aria-hidden="true"
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -359,25 +418,44 @@ export function AppLayout({ children }: AppLayoutProps) {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar/95 backdrop-blur-md border-t border-sidebar-border h-16 flex items-center justify-around px-2 shadow-2xl">
+      <nav
+        aria-label="Navegação rápida"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar/95 backdrop-blur-md border-t border-sidebar-border h-16 flex items-center justify-around px-2 shadow-2xl"
+      >
         {currentMobileLinks.map((link) => {
           const isActive = location.pathname === link.href;
           return (
             <Link
               key={link.href}
               to={link.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full py-1 text-xs font-medium transition-colors",
+                "flex flex-col items-center justify-center w-full h-full py-1 text-xs font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sidebar-ring",
                 isActive
                   ? "text-sidebar-primary font-bold"
                   : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
               )}
             >
-              <link.icon className={cn("h-5 w-5 mb-0.5", isActive && "scale-110 transition-transform")} />
+              <link.icon
+                aria-hidden="true"
+                className={cn("h-5 w-5 mb-0.5", isActive && "scale-110 transition-transform motion-reduce:transition-none")}
+              />
               <span>{link.label}</span>
             </Link>
           );
         })}
+        {/* "Mais" opens the full sidebar so every destination stays reachable on mobile */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Abrir menu completo"
+          aria-controls="main-sidebar"
+          aria-expanded={sidebarOpen}
+          className="flex flex-col items-center justify-center w-full h-full py-1 text-xs font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sidebar-ring"
+        >
+          <Menu aria-hidden="true" className="h-5 w-5 mb-0.5" />
+          <span>Mais</span>
+        </button>
       </nav>
     </div>
   );

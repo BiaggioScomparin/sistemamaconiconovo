@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Building2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { parseISO } from 'date-fns';
 
@@ -188,8 +189,25 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">Carregando relatório...</p>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" aria-hidden="true" />
+            Relatório por Loja Maçônica
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3" role="status" aria-live="polite" aria-label="Carregando relatório financeiro">
+            <span className="sr-only">Carregando relatório…</span>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-5 flex-1" />
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
