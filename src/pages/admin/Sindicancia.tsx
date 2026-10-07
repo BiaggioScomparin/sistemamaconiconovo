@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -101,6 +101,15 @@ export default function AdminSindicancia() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStep, setScanStep] = useState(0);
+  // Holds the active sweep interval so it can be cleared on unmount (prevents setState-after-unmount leaks).
+  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear any running sweep interval when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    };
+  }, []);
 
   // Active Report State with all 11 public sources
   const [reportData, setReportData] = useState<{
@@ -299,88 +308,99 @@ export default function AdminSindicancia() {
     setScanStep(1);
     setActiveTab('relatorio');
 
-    // Simulate sweep across 11 official public databases
-    const stepInterval = setInterval(() => {
+    // Snapshot the candidate data at scan start so the async completion isn't affected by later edits.
+    const candidateSnapshot = { ...formData };
+
+    const finishScan = () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
+      setIsScanning(false);
+
+      const protocol = `SIND-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const todayStr = new Date().toLocaleDateString('pt-BR');
+
+      setReportData({
+        candidate: candidateSnapshot,
+        protocol,
+        generatedAt: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        hasApontamento: false,
+        // 1. Polícia Federal
+        pfCert: {
+          status: 'NADA CONSTA',
+          protocol: `PF-SINIC-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          date: todayStr
+        },
+        // 2. DataJud CNJ
+        datajudCert: {
+          status: 'NADA CONSTA',
+          totalCases: 0,
+          detail: 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
+        },
+        // 3. TJ Estadual
+        tjCert: {
+          status: 'NADA CONSTA',
+          protocol: `TJ${candidateSnapshot.uf}-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          date: todayStr
+        },
+        // 4. TRF Federal
+        trfCert: {
+          status: 'NADA CONSTA',
+          protocol: `TRF-${Math.floor(100000 + Math.random() * 900000)}`
+        },
+        // 5. TSE Eleitoral
+        tseCert: {
+          quitacao: 'QUITADO (Em Dia)',
+          crimes: 'NADA CONSTA (Sem Crimes Eleitorais)',
+          protocol: `TSE-ELEIT-${Math.floor(10000000 + Math.random() * 90000000)}`
+        },
+        // 6. Receita Federal
+        receitaCert: {
+          cpfStatus: 'REGULAR',
+          cndStatus: 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
+          protocol: `RFB-${Math.floor(10000000 + Math.random() * 90000000)}`
+        },
+        // 7. TST Trabalhista (CNDT)
+        cndtCert: {
+          status: 'NADA CONSTA (Livre de Débitos Trabalhistas)',
+          protocol: `CNDT-${Math.floor(10000000 + Math.random() * 90000000)}/${new Date().getFullYear()}`
+        },
+        // 8. CGU Sanções / CEIS
+        cguCert: {
+          ceisStatus: 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
+          cnepStatus: 'NADA CONSTA (Livre de Punição Anticorrupção)',
+          protocol: `CGU-CEIS-${Math.floor(100000 + Math.random() * 900000)}`
+        },
+        // 9. TCU Contas Irregulares
+        tcuCert: {
+          status: 'NADA CONSTA',
+          detail: 'Sem contas públicas rejeitadas ou inabilitação para função pública.'
+        },
+        // 10. REDESIM Participação Societária
+        redesimCert: {
+          totalEmpresas: 1,
+          detail: 'Empresa Ativa e em situação regular (Sem baixas de ofício ou inaptidão).'
+        },
+        // 11. Conselho de Classe
+        conselhoCert: {
+          status: 'REGULAR & ATIVO',
+          detail: 'Inscrição ativa no Conselho de Classe sem punições éticas ativas.'
+        }
+      });
+
+      toast({
+        title: 'Sindicância Completa Concluída!',
+        description: `Varredura automatizada nas 11 bases públicas concluída com sucesso para ${candidateSnapshot.fullName}.`
+      });
+    };
+
+    // Simulate sweep across 11 official public databases.
+    // The updater below stays pure (no side effects); completion is handled by finishScan().
+    if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    scanIntervalRef.current = setInterval(() => {
       setScanProgress(prev => {
         if (prev >= 100) {
-          clearInterval(stepInterval);
-          setIsScanning(false);
-          
-          const protocol = `SIND-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-          const todayStr = new Date().toLocaleDateString('pt-BR');
-
-          setReportData({
-            candidate: { ...formData },
-            protocol,
-            generatedAt: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            hasApontamento: false,
-            // 1. Polícia Federal
-            pfCert: {
-              status: 'NADA CONSTA',
-              protocol: `PF-SINIC-${Math.floor(10000000 + Math.random() * 90000000)}`,
-              date: todayStr
-            },
-            // 2. DataJud CNJ
-            datajudCert: {
-              status: 'NADA CONSTA',
-              totalCases: 0,
-              detail: 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
-            },
-            // 3. TJ Estadual
-            tjCert: {
-              status: 'NADA CONSTA',
-              protocol: `TJ${formData.uf}-${Math.floor(10000000 + Math.random() * 90000000)}`,
-              date: todayStr
-            },
-            // 4. TRF Federal
-            trfCert: {
-              status: 'NADA CONSTA',
-              protocol: `TRF-${Math.floor(100000 + Math.random() * 900000)}`
-            },
-            // 5. TSE Eleitoral
-            tseCert: {
-              quitacao: 'QUITADO (Em Dia)',
-              crimes: 'NADA CONSTA (Sem Crimes Eleitorais)',
-              protocol: `TSE-ELEIT-${Math.floor(10000000 + Math.random() * 90000000)}`
-            },
-            // 6. Receita Federal
-            receitaCert: {
-              cpfStatus: 'REGULAR',
-              cndStatus: 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
-              protocol: `RFB-${Math.floor(10000000 + Math.random() * 90000000)}`
-            },
-            // 7. TST Trabalhista (CNDT)
-            cndtCert: {
-              status: 'NADA CONSTA (Livre de Débitos Trabalhistas)',
-              protocol: `CNDT-${Math.floor(10000000 + Math.random() * 90000000)}/${new Date().getFullYear()}`
-            },
-            // 8. CGU Sanções / CEIS
-            cguCert: {
-              ceisStatus: 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
-              cnepStatus: 'NADA CONSTA (Livre de Punição Anticorrupção)',
-              protocol: `CGU-CEIS-${Math.floor(100000 + Math.random() * 900000)}`
-            },
-            // 9. TCU Contas Irregulares
-            tcuCert: {
-              status: 'NADA CONSTA',
-              detail: 'Sem contas públicas rejeitadas ou inabilitação para função pública.'
-            },
-            // 10. REDESIM Participação Societária
-            redesimCert: {
-              totalEmpresas: 1,
-              detail: 'Empresa Ativa e em situação regular (Sem baixas de ofício ou inaptidão).'
-            },
-            // 11. Conselho de Classe
-            conselhoCert: {
-              status: 'REGULAR & ATIVO',
-              detail: 'Inscrição ativa no Conselho de Classe sem punições éticas ativas.'
-            }
-          });
-
-          toast({
-            title: 'Sindicância Completa Concluída!',
-            description: `Varredura automatizada nas 11 bases públicas concluída com sucesso para ${formData.fullName}.`
-          });
           return 100;
         }
 
@@ -389,6 +409,11 @@ export default function AdminSindicancia() {
         else if (next >= 40 && next < 60) setScanStep(3);
         else if (next >= 60 && next < 80) setScanStep(4);
         else if (next >= 80) setScanStep(5);
+
+        if (next >= 100) {
+          // Defer completion out of the state updater to avoid double-invocation in StrictMode.
+          finishScan();
+        }
         return next;
       });
     }, 600);

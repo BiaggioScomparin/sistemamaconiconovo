@@ -51,42 +51,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let roleTimeout: ReturnType<typeof setTimeout> | null = null;
+    // Monotonic token to discard results from stale/out-of-order role fetches.
+    let latestRequestId = 0;
+
+    const applyRole = (requestId: number, userRole: AppRole | null) => {
+      // Ignore if unmounted or superseded by a newer auth event.
+      if (!isMounted || requestId !== latestRequestId) return;
+      setRole(userRole);
+      setLoading(false);
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (_event, session) => {
+        const requestId = ++latestRequestId;
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to avoid potential Supabase deadlocks
-          setTimeout(async () => {
-            const userRole = await fetchUserRole(session.user.id);
-            setRole(userRole);
-            setLoading(false);
+          // Defer the role fetch to avoid potential Supabase deadlocks inside the callback.
+          if (roleTimeout) clearTimeout(roleTimeout);
+          roleTimeout = setTimeout(() => {
+            fetchUserRole(session.user.id).then((userRole) => applyRole(requestId, userRole));
           }, 0);
         } else {
-          setRole(null);
-          setLoading(false);
+          applyRole(requestId, null);
         }
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const requestId = ++latestRequestId;
+      if (!isMounted) return;
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        fetchUserRole(session.user.id).then((userRole) => {
-          setRole(userRole);
-          setLoading(false);
-        });
+        fetchUserRole(session.user.id).then((userRole) => applyRole(requestId, userRole));
       } else {
-        setLoading(false);
+        applyRole(requestId, null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      if (roleTimeout) clearTimeout(roleTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -112,8 +126,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!signInError) return { error: null };
     }
 
-    // Fallback if mailer error occurs
-    if (error && (error.message.includes('confirmation email') || error.message.includes('email'))) {
+    // Fallback only for mailer/SMTP errors (e.g. confirmation email could not be sent).
+    // We intentionally do NOT swallow "already registered" style errors.
+    const msg = error?.message?.toLowerCase() ?? '';
+    const isMailerError =
+      msg.includes('confirmation email') ||
+      msg.includes('sending') ||
+      msg.includes('smtp') ||
+      msg.includes('mailer');
+    if (error && isMailerError) {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,

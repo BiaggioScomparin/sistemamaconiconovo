@@ -83,7 +83,12 @@ export default function Payments() {
     if (settings) {
       const feeSetting = settings.find(s => s.key === 'credit_card_fee_percent');
       if (feeSetting?.value) {
-        setCreditCardFee(parseFloat(feeSetting.value));
+        const parsed = parseFloat(feeSetting.value);
+        // Guard against invalid/out-of-range config that would break getCardAmount
+        // (e.g. a fee >= 100 would cause a division by zero).
+        if (Number.isFinite(parsed) && parsed >= 0 && parsed < 100) {
+          setCreditCardFee(parsed);
+        }
       }
     }
   }, [settings]);
@@ -191,7 +196,13 @@ export default function Payments() {
   const getCardAmount = (payment: Payment) => {
     const baseAmount = getAmount(payment);
     // Calcula o valor com taxa repassada: valor / (1 - taxa/100)
-    return baseAmount / (1 - creditCardFee / 100);
+    // Clamp defensivo: evita divisão por zero/negativo caso a taxa esteja fora da faixa [0, 100).
+    const safeFee = Number.isFinite(creditCardFee)
+      ? Math.min(Math.max(creditCardFee, 0), 99.99)
+      : 0;
+    const divisor = 1 - safeFee / 100;
+    if (divisor <= 0) return baseAmount;
+    return baseAmount / divisor;
   };
 
   const handleGeneratePix = (payment: Payment) => {

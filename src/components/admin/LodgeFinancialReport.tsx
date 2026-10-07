@@ -6,6 +6,33 @@ import { Badge } from '@/components/ui/badge';
 import { Building2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { parseISO } from 'date-fns';
 
+const LATE_FEE = 50; // multa fixa por atraso (R$)
+
+// Soma valores monetários em centavos (inteiros) para evitar erros de ponto flutuante.
+function sumAmountsToReais(values: number[], extraPerItemReais = 0): number {
+  const totalCents = values.reduce(
+    (acc, v) => acc + Math.round((Number(v) || 0) * 100) + Math.round(extraPerItemReais * 100),
+    0
+  );
+  return totalCents / 100;
+}
+
+// Interpreta due_date: strings date-only (YYYY-MM-DD) são tratadas no fuso local
+// (meio-dia) para evitar off-by-one; demais formatos usam parseISO.
+function parseDueDate(due: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+    return new Date(`${due}T12:00:00`);
+  }
+  return parseISO(due);
+}
+
+// Acesso null-safe ao lodge_id do join profiles (pode vir objeto, array ou null).
+function getProfileLodgeId(profiles: unknown): string | null {
+  if (!profiles) return null;
+  const p = Array.isArray(profiles) ? profiles[0] : profiles;
+  return (p as { lodge_id?: string | null })?.lodge_id ?? null;
+}
+
 interface LodgeReportData {
   id: string;
   name: string;
@@ -44,35 +71,65 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
       const { data: lodges, error: lodgesError } = await lodgesQuery;
       if (lodgesError) throw lodgesError;
 
-      // Fetch all payments with profiles (including lodge info)
-      let paymentsQuery = supabase
-        .from('monthly_payments')
-        .select(`
-          *,
-          profiles!inner(lodge_id)
-        `);
+      // Fetch all payments with profiles (including lodge info).
+      // Paginate explicitly: PostgREST caps results (~1000 rows) by default, which would
+      // silently truncate the financial totals once the base grows past that limit.
+      type PaymentRow = {
+        status: string;
+        amount: number;
+        due_date: string;
+        profiles: unknown;
+      };
 
-      if (yearFilter !== 'all') {
-        paymentsQuery = paymentsQuery.eq('reference_year', parseInt(yearFilter));
+      const PAGE_SIZE = 1000;
+      const payments: PaymentRow[] = [];
+      let page = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        let paymentsQuery = supabase
+          .from('monthly_payments')
+          .select(`
+            *,
+            profiles!inner(lodge_id)
+          `)
+          .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+
+        if (yearFilter !== 'all') {
+          paymentsQuery = paymentsQuery.eq('reference_year', parseInt(yearFilter));
+        }
+
+        if (monthFilter !== 'all') {
+          paymentsQuery = paymentsQuery.eq('reference_month', parseInt(monthFilter));
+        }
+
+        const { data: pageData, error: paymentsError } = await paymentsQuery;
+        if (paymentsError) throw paymentsError;
+
+        const rows = (pageData || []) as PaymentRow[];
+        payments.push(...rows);
+        if (rows.length < PAGE_SIZE) break;
+        page++;
       }
-
-      if (monthFilter !== 'all') {
-        paymentsQuery = paymentsQuery.eq('reference_month', parseInt(monthFilter));
-      }
-
-      const { data: payments, error: paymentsError } = await paymentsQuery;
-      if (paymentsError) throw paymentsError;
 
       const now = new Date();
 
+      const buildStats = (rows: PaymentRow[]) => {
+        const paid = rows.filter(p => p.status === 'paid');
+        const pending = rows.filter(p => p.status === 'pending' && now <= parseDueDate(p.due_date));
+        const overdue = rows.filter(p => p.status === 'pending' && now > parseDueDate(p.due_date));
+        return {
+          paid_count: paid.length,
+          pending_count: pending.length,
+          overdue_count: overdue.length,
+          total_paid: sumAmountsToReais(paid.map(p => p.amount)),
+          total_pending: sumAmountsToReais(pending.map(p => p.amount)),
+          total_overdue: sumAmountsToReais(overdue.map(p => p.amount), LATE_FEE),
+        };
+      };
+
       // Calculate stats per lodge
       const lodgeStats: LodgeReportData[] = (lodges || []).map(lodge => {
-        const lodgePayments = payments?.filter(p => p.profiles.lodge_id === lodge.id) || [];
-        
-        const paid = lodgePayments.filter(p => p.status === 'paid');
-        const pending = lodgePayments.filter(p => p.status === 'pending' && now <= parseISO(p.due_date));
-        const overdue = lodgePayments.filter(p => p.status === 'pending' && now > parseISO(p.due_date));
-
+        const lodgePayments = payments.filter(p => getProfileLodgeId(p.profiles) === lodge.id);
         return {
           id: lodge.id,
           name: lodge.name,
@@ -80,23 +137,14 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
           state: lodge.state,
           default_payment_amount: Number(lodge.default_payment_amount) || 200,
           payment_gateway: lodge.payment_gateway || 'mercado_pago',
-          paid_count: paid.length,
-          pending_count: pending.length,
-          overdue_count: overdue.length,
-          total_paid: paid.reduce((sum, p) => sum + Number(p.amount), 0),
-          total_pending: pending.reduce((sum, p) => sum + Number(p.amount), 0),
-          total_overdue: overdue.reduce((sum, p) => sum + Number(p.amount) + 50, 0), // +50 de multa
+          ...buildStats(lodgePayments),
         };
       });
 
       // Add "Sem Loja" only if no specific lodge filter is active
       if (!lodgeIdFilter || lodgeIdFilter === 'all') {
-        const noLodgePayments = payments?.filter(p => !p.profiles.lodge_id) || [];
+        const noLodgePayments = payments.filter(p => !getProfileLodgeId(p.profiles));
         if (noLodgePayments.length > 0) {
-          const paid = noLodgePayments.filter(p => p.status === 'paid');
-          const pending = noLodgePayments.filter(p => p.status === 'pending' && now <= parseISO(p.due_date));
-          const overdue = noLodgePayments.filter(p => p.status === 'pending' && now > parseISO(p.due_date));
-
           lodgeStats.push({
             id: 'no-lodge',
             name: 'Sem Loja',
@@ -104,12 +152,7 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
             state: null,
             default_payment_amount: 200,
             payment_gateway: 'manual',
-            paid_count: paid.length,
-            pending_count: pending.length,
-            overdue_count: overdue.length,
-            total_paid: paid.reduce((sum, p) => sum + Number(p.amount), 0),
-            total_pending: pending.reduce((sum, p) => sum + Number(p.amount), 0),
-            total_overdue: overdue.reduce((sum, p) => sum + Number(p.amount) + 50, 0),
+            ...buildStats(noLodgePayments),
           });
         }
       }
@@ -118,17 +161,25 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
     },
   });
 
+  // Soma os totais em centavos para evitar acúmulo de erro de ponto flutuante.
   const totals = reportData?.reduce(
     (acc, lodge) => ({
       paid_count: acc.paid_count + lodge.paid_count,
       pending_count: acc.pending_count + lodge.pending_count,
       overdue_count: acc.overdue_count + lodge.overdue_count,
-      total_paid: acc.total_paid + lodge.total_paid,
-      total_pending: acc.total_pending + lodge.total_pending,
-      total_overdue: acc.total_overdue + lodge.total_overdue,
+      total_paid_cents: acc.total_paid_cents + Math.round(lodge.total_paid * 100),
+      total_pending_cents: acc.total_pending_cents + Math.round(lodge.total_pending * 100),
+      total_overdue_cents: acc.total_overdue_cents + Math.round(lodge.total_overdue * 100),
     }),
-    { paid_count: 0, pending_count: 0, overdue_count: 0, total_paid: 0, total_pending: 0, total_overdue: 0 }
+    { paid_count: 0, pending_count: 0, overdue_count: 0, total_paid_cents: 0, total_pending_cents: 0, total_overdue_cents: 0 }
   );
+
+  const totalsReais = totals && {
+    ...totals,
+    total_paid: totals.total_paid_cents / 100,
+    total_pending: totals.total_pending_cents / 100,
+    total_overdue: totals.total_overdue_cents / 100,
+  };
 
   const formatCurrency = (value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
@@ -239,13 +290,13 @@ export function LodgeFinancialReport({ monthFilter, yearFilter, lodgeIdFilter }:
                   <Badge variant="destructive">{totals?.overdue_count}</Badge>
                 </TableCell>
                 <TableCell className="text-right text-green-600">
-                  {formatCurrency(totals?.total_paid || 0)}
+                  {formatCurrency(totalsReais?.total_paid || 0)}
                 </TableCell>
                 <TableCell className="text-right text-yellow-600">
-                  {formatCurrency(totals?.total_pending || 0)}
+                  {formatCurrency(totalsReais?.total_pending || 0)}
                 </TableCell>
                 <TableCell className="text-right text-red-600">
-                  {formatCurrency(totals?.total_overdue || 0)}
+                  {formatCurrency(totalsReais?.total_overdue || 0)}
                 </TableCell>
               </TableRow>
             </TableBody>

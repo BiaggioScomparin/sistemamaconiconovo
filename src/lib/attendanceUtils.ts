@@ -45,10 +45,16 @@ export function canMemberConfirmAttendance(
 
   // Rule 2: Up to 1 hour before session start time
   // Default session time if not provided: 20:00 (8:00 PM)
+  // NOTE: the comparison uses the device's local timezone. This matches the assumption
+  // that members confirm from the same timezone as the lodge. If multi-timezone support
+  // is needed later, the session's timezone should be passed in explicitly.
   const timeStr = sessionTime || '20:00';
   const timeParts = timeStr.split(':');
-  const hours = parseInt(timeParts[0], 10) || 20;
-  const minutes = parseInt(timeParts[1], 10) || 0;
+  const parsedHours = parseInt(timeParts[0], 10);
+  const parsedMinutes = parseInt(timeParts[1], 10);
+  // Validate ranges; fall back to the 20:00 default on malformed input.
+  const hours = Number.isFinite(parsedHours) && parsedHours >= 0 && parsedHours <= 23 ? parsedHours : 20;
+  const minutes = Number.isFinite(parsedMinutes) && parsedMinutes >= 0 && parsedMinutes <= 59 ? parsedMinutes : 0;
 
   // Construct session start Date for today
   const sessionDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);

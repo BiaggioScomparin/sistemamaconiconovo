@@ -34,7 +34,14 @@ export function useEvents(lodgeId?: string) {
         .order('event_date', { ascending: true });
 
       if (lodgeId) {
-        query = query.or(`lodge_id.eq.${lodgeId},lodge_id.is.null`);
+        // Validate as UUID before interpolating into the PostgREST .or() filter string
+        // to avoid breaking/altering the filter with unexpected characters.
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lodgeId);
+        if (isUuid) {
+          query = query.or(`lodge_id.eq.${lodgeId},lodge_id.is.null`);
+        } else {
+          query = query.is('lodge_id', null);
+        }
       }
 
       const { data, error } = await query;

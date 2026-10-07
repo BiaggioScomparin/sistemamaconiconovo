@@ -48,7 +48,8 @@ export function useDashboardReports(lodgeId?: string) {
         profilesQuery = profilesQuery.eq('lodge_id', lodgeId);
       }
 
-      const { data: profiles } = await profilesQuery;
+      const { data: profiles, error: profilesError } = await profilesQuery;
+      if (profilesError) throw profilesError;
 
       let lodgesQuery = supabase
         .from('lodges')
@@ -58,7 +59,8 @@ export function useDashboardReports(lodgeId?: string) {
         lodgesQuery = lodgesQuery.eq('id', lodgeId);
       }
 
-      const { data: lodges } = await lodgesQuery;
+      const { data: lodges, error: lodgesError } = await lodgesQuery;
+      if (lodgesError) throw lodgesError;
 
       const lodgeMap = new Map(lodges?.map(l => [l.id, l.name]) || []);
 
@@ -169,7 +171,8 @@ export function useDashboardReports(lodgeId?: string) {
         paymentsQuery = paymentsQuery.eq('profiles.lodge_id', lodgeId);
       }
 
-      const { data: payments } = await paymentsQuery;
+      const { data: payments, error: paymentsError } = await paymentsQuery;
+      if (paymentsError) throw paymentsError;
 
       const paymentStats: PaymentStats = {
         paid: 0,

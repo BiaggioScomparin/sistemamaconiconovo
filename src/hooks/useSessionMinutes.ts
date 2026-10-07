@@ -99,13 +99,15 @@ export function useSessionMinute(id: string | undefined) {
     queryKey: ['session-minute', id],
     queryFn: async () => {
       if (!id) return null;
+      // maybeSingle() returns null (instead of throwing PGRST116) when the row
+      // doesn't exist or is hidden by RLS.
       const { data, error } = await supabase
         .from('session_minutes')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as SessionMinute;
+      return data as SessionMinute | null;
     },
     enabled: !!id,
   });

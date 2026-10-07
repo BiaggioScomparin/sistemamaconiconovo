@@ -49,6 +49,9 @@ export function AttendanceSessionManager({ event, lodgeId, onBack }: AttendanceS
       return data;
     },
     enabled: !!lodgeId,
+    // Avoid refetch-on-focus clobbering the admin's in-progress selections,
+    // which are kept in local state and re-synced by the merge effect below.
+    refetchOnWindowFocus: false,
   });
 
   // Fetch existing attendances for this session
@@ -65,6 +68,7 @@ export function AttendanceSessionManager({ event, lodgeId, onBack }: AttendanceS
       return data;
     },
     enabled: !!lodgeId && !!event.event_date,
+    refetchOnWindowFocus: false,
   });
 
   // Merge members with existing attendances
@@ -120,37 +124,49 @@ export function AttendanceSessionManager({ event, lodgeId, onBack }: AttendanceS
       const presentMembers = memberAttendances.filter(m => m.present);
       const absentMembers = memberAttendances.filter(m => !m.present);
 
-      // Upsert present members
-      for (const member of presentMembers) {
-        if (member.attendanceId) {
-          // Update existing
-          await supabase
+      const nowIso = new Date().toISOString();
+
+      // Batch the writes and run them concurrently; collect any errors instead of
+      // silently continuing (the previous loop ignored every error).
+      const updates = presentMembers
+        .filter(m => m.attendanceId)
+        .map(m =>
+          supabase
             .from('attendances')
-            .update({ confirmed: true, confirmed_at: new Date().toISOString() })
-            .eq('id', member.attendanceId);
-        } else {
-          // Insert new
-          await supabase
-            .from('attendances')
-            .insert({
-              profile_id: member.profileId,
-              lodge_id: lodgeId,
-              session_date: event.event_date,
-              session_type: 'ordinaria',
-              confirmed: true,
-              confirmed_at: new Date().toISOString(),
-            });
-        }
+            .update({ confirmed: true, confirmed_at: nowIso })
+            .eq('id', m.attendanceId!)
+        );
+
+      const insertsPayload = presentMembers
+        .filter(m => !m.attendanceId)
+        .map(m => ({
+          profile_id: m.profileId,
+          lodge_id: lodgeId,
+          session_date: event.event_date,
+          session_type: 'ordinaria',
+          confirmed: true,
+          confirmed_at: nowIso,
+        }));
+
+      const idsToDelete = absentMembers
+        .filter(m => m.attendanceId)
+        .map(m => m.attendanceId!);
+
+      const operations: PromiseLike<{ error: unknown }>[] = [...updates];
+
+      if (insertsPayload.length > 0) {
+        operations.push(supabase.from('attendances').insert(insertsPayload));
       }
 
-      // Remove or update absent members who had attendance records
-      for (const member of absentMembers) {
-        if (member.attendanceId) {
-          await supabase
-            .from('attendances')
-            .delete()
-            .eq('id', member.attendanceId);
-        }
+      if (idsToDelete.length > 0) {
+        operations.push(supabase.from('attendances').delete().in('id', idsToDelete));
+      }
+
+      const results = await Promise.all(operations.map(op => Promise.resolve(op)));
+      const firstError = results.find(r => r.error)?.error as { message?: string } | undefined;
+
+      if (firstError) {
+        throw new Error(firstError.message || 'Falha ao gravar uma ou mais presenças.');
       }
 
       queryClient.invalidateQueries({ queryKey: ['session-attendances'] });

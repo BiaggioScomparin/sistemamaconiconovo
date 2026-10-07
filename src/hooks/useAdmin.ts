@@ -52,9 +52,12 @@ export function useUpdateProfileStatus() {
         .update({ status })
         .eq('id', profileId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) {
+        throw new Error('Não foi possível atualizar o status (registro não encontrado ou sem permissão).');
+      }
       return data;
     },
     onSuccess: () => {
@@ -68,46 +71,53 @@ export function useDashboardStats() {
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       // Total members
-      const { count: totalMembers } = await supabase
+      const { count: totalMembers, error: totalMembersError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .in('status', ['approved', 'membro']);
+      if (totalMembersError) throw totalMembersError;
 
       // Pending approvals
-      const { count: pendingApprovals } = await supabase
+      const { count: pendingApprovals, error: pendingError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
+      if (pendingError) throw pendingError;
 
       // Total lodges
-      const { count: totalLodges } = await supabase
+      const { count: totalLodges, error: lodgesCountError } = await supabase
         .from('lodges')
         .select('*', { count: 'exact', head: true });
+      if (lodgesCountError) throw lodgesCountError;
 
       // Members per lodge
-      const { data: lodgesWithMembers } = await supabase
+      const { data: lodgesWithMembers, error: lodgesWithMembersError } = await supabase
         .from('lodges')
         .select('id, name, profiles(id)')
         .in('profiles.status', ['approved', 'membro']);
+      if (lodgesWithMembersError) throw lodgesWithMembersError;
 
       // Birthday this month
       const currentMonth = new Date().getMonth() + 1;
-      const { data: birthdays } = await supabase
+      const { data: birthdays, error: birthdaysError } = await supabase
         .from('profiles')
         .select('id, full_name, birth_date')
         .in('status', ['approved', 'membro']);
+      if (birthdaysError) throw birthdaysError;
 
       const birthdaysThisMonth = birthdays?.filter((profile) => {
+        if (!profile.birth_date) return false;
         const birthMonth = new Date(profile.birth_date + 'T12:00:00').getMonth() + 1;
         return birthMonth === currentMonth;
       }) || [];
 
       // Members by degree (only active members)
-      const { data: membersByDegree } = await supabase
+      const { data: membersByDegree, error: degreeError } = await supabase
         .from('profiles')
         .select('degree')
         .in('status', ['approved', 'membro'])
         .eq('member_status', 'active');
+      if (degreeError) throw degreeError;
 
       const degreeCount: Record<string, number> = {
         'Aprendiz': 0,
