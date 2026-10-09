@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, Phone, FileText, Calendar, MapPin, Briefcase } from 'lucide-react';
+import { trackMetaEvent } from '@/lib/metaPixel';
 
 const formatCPF = (value: string): string => {
   const clean = value.replace(/\D/g, '').slice(0, 11);
@@ -140,6 +141,10 @@ export default function Register() {
           console.error('Erro ao atualizar perfil na inscrição:', profileError);
         }
       }
+
+      // 3. Trigger Meta (Facebook) Conversion Events
+      trackMetaEvent('CompleteRegistration', { content_name: 'Admissão Maçônica - Sindicância' });
+      trackMetaEvent('Lead', { content_name: 'Candidato GOIB' });
 
       toast.success('Cadastro e pré-proposta enviados com sucesso!');
     } catch (error: any) {

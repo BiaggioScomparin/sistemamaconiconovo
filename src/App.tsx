@@ -12,6 +12,7 @@ import { ProtectedInvitesRoute } from "@/components/auth/ProtectedInvitesRoute";
 import { ProtectedAttendanceRoute } from "@/components/auth/ProtectedAttendanceRoute";
 import { ProtectedFinanceRoute } from "@/components/auth/ProtectedFinanceRoute";
 import { ProtectedReportsRoute } from "@/components/auth/ProtectedReportsRoute";
+import { MetaPixelTracker } from "@/components/MetaPixelTracker";
 
 // Entry pages kept eager for fast first paint; everything else is code-split
 // via React.lazy so the initial bundle stays small.
@@ -79,6 +80,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <MetaPixelTracker />
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Index />} />
