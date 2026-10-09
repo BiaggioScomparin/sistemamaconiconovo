@@ -6,7 +6,7 @@ declare global {
 }
 
 // Get Facebook Meta Pixel ID from environment variable or default fallback
-export const META_PIXEL_ID = import.meta.env.VITE_FACEBOOK_PIXEL_ID || '';
+export const META_PIXEL_ID = import.meta.env.VITE_FACEBOOK_PIXEL_ID || '1657243225455917';
 
 /**
  * Initializes Meta (Facebook) Pixel SDK dynamically if Pixel ID is configured
