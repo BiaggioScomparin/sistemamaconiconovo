@@ -8,7 +8,7 @@ declare global {
 
 // Environment variables for tracking IDs
 export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-51YNZP3MKZ';
-export const CLARITY_PROJECT_ID = import.meta.env.VITE_CLARITY_PROJECT_ID || '';
+export const CLARITY_PROJECT_ID = import.meta.env.VITE_CLARITY_PROJECT_ID || 'yv5fzhlkvi';
 
 /**
  * Initializes Google Analytics 4 (GA4) dynamically
