@@ -58,6 +58,8 @@ function getActiveStep(status: string): number {
   switch (status) {
     case 'proposta': return 1;
     case 'sindicancia': return 2;
+    case 'sindicancia_aprovada': return 2;
+    case 'proposta_completa':
     case 'votacao': return 3;
     case 'aprovado':
     case 'aguardando_iniciacao': return 4;
@@ -80,6 +82,20 @@ const STATUS_DETAILS: Record<string, { label: string; badgeVariant: 'default' | 
     color: 'text-blue-500',
     description: 'Sua proposta está sob avaliação da Comissão de Sindicância. Os mestres sindicantes entrarão em contato para realizar a entrevista formal.',
     alertNotice: 'Tenha em mãos documento oficial com foto (RG ou CNH) para apresentar à comissão quando solicitado.'
+  },
+  sindicancia_aprovada: {
+    label: 'Sindicância Aprovada - Preencha a Proposta',
+    badgeVariant: 'default',
+    color: 'text-amber-500',
+    description: 'Sua verificação de sindicância foi aprovada! Acesse a Ficha de Proposta para preencher os dados complementares de filiação.',
+    alertNotice: 'Acesse /proposta para preencher seus dados residenciais, profissionais e familiares.'
+  },
+  proposta_completa: {
+    label: 'Ficha de Proposta Recebida',
+    badgeVariant: 'default',
+    color: 'text-emerald-500',
+    description: 'Sua Ficha de Proposta Maçônica completa foi recebida com sucesso pela Secretaria e está pronta para votação em Loja.',
+    alertNotice: 'Todos os seus dados foram confirmados. Aguarde o retorno da Loja sobre a data da cerimônia.'
   },
   votacao: {
     label: 'Em Votação Plenária na Loja',

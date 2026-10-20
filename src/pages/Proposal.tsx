@@ -34,7 +34,7 @@ const formatCPF = (value: string): string => {
 const proposalSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('E-mail inválido'),
-  cpf: z.string().min(14, 'CPF inválido'),
+  cpf: z.string().refine(val => val.replace(/\D/g, '').length === 11, 'CPF deve conter 11 dígitos'),
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
   naturality: z.string().optional(),
   nationality: z.string().optional(),
@@ -190,6 +190,24 @@ function Stage1SindicanciaForm({ profile, onComplete }: { profile: any; onComple
     cell_phone: profile?.cell_phone || '',
   });
 
+  // Keep form in sync if profile query finishes after mount
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        full_name: profile.full_name && profile.full_name !== profile.email ? profile.full_name : prev.full_name,
+        email: profile.email || user?.email || prev.email,
+        cpf: profile.cpf || prev.cpf,
+        identity_number: profile.identity_number || prev.identity_number,
+        identity_issuer: profile.identity_issuer || prev.identity_issuer,
+        birth_date: profile.birth_date && profile.birth_date !== '1990-01-01' ? profile.birth_date : prev.birth_date,
+        state: profile.state || prev.state,
+        city: profile.city || prev.city,
+        profession: profile.profession || prev.profession,
+        cell_phone: profile.cell_phone || prev.cell_phone,
+      }));
+    }
+  }, [profile, user]);
+
   const handleSubmitSindicancia = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -214,9 +232,9 @@ function Stage1SindicanciaForm({ profile, onComplete }: { profile: any; onComple
     setSubmitting(true);
     try {
       const payload = {
-        full_name: formData.full_name,
-        email: formData.email,
-        cpf: formData.cpf,
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        cpf: formatCPF(formData.cpf),
         birth_date: formData.birth_date && formData.birth_date.trim() !== '' ? formData.birth_date : null,
         identity_number: formData.identity_number,
         identity_issuer: formData.identity_issuer,
@@ -487,6 +505,20 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
   const [photoPreview, setPhotoPreview] = useState<string | null>(profile?.photo_url || null);
   const [children, setChildren] = useState<Child[]>([]);
 
+  // Pre-load existing registered children if profile is already created
+  useEffect(() => {
+    if (!profile?.id) return;
+    supabase
+      .from('children')
+      .select('name, birth_date')
+      .eq('profile_id', profile.id)
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          setChildren(data.map(c => ({ name: c.name, birth_date: c.birth_date || '' })));
+        }
+      });
+  }, [profile?.id]);
+
   const {
     register,
     handleSubmit,
@@ -496,7 +528,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
   } = useForm<ProposalFormData>({
     resolver: zodResolver(proposalSchema),
     defaultValues: {
-      full_name: profile?.full_name || '',
+      full_name: profile?.full_name && profile.full_name !== profile.email ? profile.full_name : '',
       email: profile?.email || user?.email || '',
       cpf: profile?.cpf || '',
       birth_date: profile?.birth_date || '',
@@ -600,11 +632,13 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
       let photoUrl = profile?.photo_url || null;
 
       if (photoFile) {
-        const fileName = getValidatedFileName(photoFile, 'proposals');
+        const fileName = getValidatedFileName(photoFile, user?.id || 'proposals');
         const { error: uploadError } = await supabase.storage.from('photos').upload(fileName, photoFile, { upsert: true });
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
           photoUrl = urlData.publicUrl;
+        } else {
+          console.error('Erro no upload de foto:', uploadError);
         }
       }
 
@@ -612,6 +646,9 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
 
       const updateData = {
         ...data,
+        full_name: data.full_name.trim(),
+        email: data.email ? data.email.trim().toLowerCase() : (user?.email || profile?.email || ''),
+        cpf: formatCPF(data.cpf),
         birth_date: sanitizeDate(data.birth_date),
         marriage_date: sanitizeDate(data.marriage_date),
         photo_url: photoUrl,
@@ -656,6 +693,28 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
     }
   };
 
+  const onInvalid = (validationErrors: any) => {
+    const errorList = Object.entries(validationErrors);
+    if (errorList.length > 0) {
+      const [field, error] = errorList[0] as [string, any];
+      const fieldLabels: Record<string, string> = {
+        full_name: 'Nome Completo',
+        email: 'E-mail',
+        cpf: 'CPF',
+        birth_date: 'Data de Nascimento',
+        profession: 'Profissão',
+        cell_phone: 'Telefone Celular',
+        expectation_masonry: 'Expectativas na Maçonaria',
+      };
+      const label = fieldLabels[field] || field;
+      toast({
+        title: 'Verifique o formulário',
+        description: error?.message || `O campo "${label}" precisa ser preenchido corretamente.`,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -672,7 +731,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmitFullProposal)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmitFullProposal, onInvalid)} className="space-y-6">
           {/* 1. Dados Pessoais & Filiação */}
           <Card className="card-elegant">
             <CardHeader>
@@ -697,14 +756,22 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
                 <div className="space-y-2 sm:col-span-2">
                   <Label className="text-xs font-semibold">Nome Completo *</Label>
                   <Input {...register('full_name')} required />
+                  {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">CPF *</Label>
-                  <Input {...register('cpf')} required />
+                  <Input
+                    {...register('cpf')}
+                    required
+                    placeholder="000.000.000-00"
+                    onChange={e => setValue('cpf', formatCPF(e.target.value), { shouldValidate: true })}
+                  />
+                  {errors.cpf && <p className="text-xs text-destructive">{errors.cpf.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">Data de Nascimento *</Label>
                   <Input type="date" {...register('birth_date')} required />
+                  {errors.birth_date && <p className="text-xs text-destructive">{errors.birth_date.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">RG e Órgão Emissor</Label>
