@@ -71,6 +71,33 @@ const profileSchema = z.object({
   state: z.string().max(2).optional(),
 });
 
+// Schema permissivo para administradores (salva mesmo se faltar algum campo obrigatório de usuário)
+const adminProfileSchema = z.object({
+  full_name: z.string().optional(),
+  email: z.string().optional(),
+  cpf: z.string().optional(),
+  birth_date: z.string().optional(),
+  mother_name: z.string().optional(),
+  spouse_name: z.string().optional(),
+  spouse_birth_date: z.string().optional(),
+  cell_phone: z.string().optional(),
+  initiation_date: z.string().optional(),
+  elevation_date: z.string().optional(),
+  exaltation_date: z.string().optional(),
+  cim_number: z.string().optional(),
+  degree: z.string().optional(),
+  cargo: z.string().optional(),
+  lodge_id: z.string().optional(),
+  lodge_position: z.string().optional(),
+  cep: z.string().optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+});
+
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface Child {
@@ -97,14 +124,17 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(photoUrl || null);
 
+  const schemaToUse = showAdminFields ? adminProfileSchema : profileSchema;
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(schemaToUse),
     defaultValues: initialData,
   });
 
@@ -223,7 +253,25 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
+    <form 
+      onSubmit={handleSubmit(
+        handleFormSubmit,
+        (validationErrors) => {
+          if (showAdminFields) {
+            console.warn('Validações ignoradas para admin, forçando salvamento dos campos preenchidos:', validationErrors);
+            handleFormSubmit(getValues());
+          } else {
+            console.error('Erros de validação:', validationErrors);
+            toast({
+              title: 'Campos pendentes',
+              description: 'Verifique os campos obrigatórios antes de salvar.',
+              variant: 'destructive',
+            });
+          }
+        }
+      )} 
+      className="space-y-8"
+    >
       {/* Photo upload */}
       {!hidePhoto && (
         <div className="space-y-4">

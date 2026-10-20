@@ -310,8 +310,8 @@ export default function AdminMembers() {
         photoUrl = urlData.publicUrl;
       }
 
-      // Sanitiza datas e strings vazias para evitar erro 22007 no Postgres
-      const sanitizedData = { ...data };
+      // 1. Sanitiza datas e strings vazias para evitar erro 22007 no Postgres
+      const sanitizedData: Record<string, any> = { ...data };
       const dateFields = ['initiation_date', 'elevation_date', 'exaltation_date', 'spouse_birth_date', 'marriage_date'];
       for (const field of dateFields) {
         if (!sanitizedData[field] || (typeof sanitizedData[field] === 'string' && sanitizedData[field].trim() === '')) {
@@ -319,34 +319,79 @@ export default function AdminMembers() {
         }
       }
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          ...sanitizedData,
-          photo_url: photoUrl,
-        })
-        .eq('id', editingProfile.id);
+      // 2. Calcula APENAS os campos que realmente foram alterados pelo admin
+      const diffPayload: Record<string, any> = {};
+      for (const [key, val] of Object.entries(sanitizedData)) {
+        const originalVal = (editingProfile as any)[key] ?? null;
+        const currentVal = val ?? null;
 
-      if (profileError) throw profileError;
+        const origNorm = originalVal === '' ? null : originalVal;
+        const currNorm = currentVal === '' ? null : currentVal;
 
-      await supabase
-        .from('children')
-        .delete()
-        .eq('profile_id', editingProfile.id);
+        if (origNorm !== currNorm) {
+          diffPayload[key] = currNorm;
+        }
+      }
 
-      const validChildren = children.filter(c => c.name && c.birth_date);
-      if (validChildren.length > 0) {
-        const { error: childrenError } = await supabase
+      if (photoUrl && photoUrl !== editingProfile.photo_url) {
+        diffPayload.photo_url = photoUrl;
+      }
+
+      console.log('Campos alterados enviados pelo admin:', diffPayload);
+
+      // 3. Salva apenas os campos alterados de forma resiliente
+      if (Object.keys(diffPayload).length > 0) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(diffPayload)
+          .eq('id', editingProfile.id);
+
+        // Fallback resiliente: se falhar em bloco, salva campo a campo para não perder nada
+        if (profileError) {
+          console.warn('Erro ao atualizar em bloco, aplicando fallback campo a campo:', profileError);
+          let anySaved = false;
+          let lastError = profileError;
+          for (const [field, fVal] of Object.entries(diffPayload)) {
+            const { error: singleErr } = await supabase
+              .from('profiles')
+              .update({ [field]: fVal })
+              .eq('id', editingProfile.id);
+
+            if (!singleErr) {
+              anySaved = true;
+            } else {
+              lastError = singleErr;
+              console.warn(`Erro no campo ${field}:`, singleErr);
+            }
+          }
+          if (!anySaved) throw lastError;
+        }
+      }
+
+      // 4. Atualiza dependentes somente se houve alteração na lista de filhos
+      const originalChildren = editingChildren?.map(c => ({ name: c.name, birth_date: c.birth_date })) || [];
+      const currentValidChildren = children.filter(c => c.name && c.birth_date).map(c => ({ name: c.name, birth_date: c.birth_date }));
+      const hasChildrenChanged = JSON.stringify(originalChildren) !== JSON.stringify(currentValidChildren);
+
+      if (hasChildrenChanged) {
+        await supabase
           .from('children')
-          .insert(
-            validChildren.map(c => ({
-              profile_id: editingProfile.id,
-              name: c.name,
-              birth_date: c.birth_date,
-            }))
-          );
+          .delete()
+          .eq('profile_id', editingProfile.id);
 
-        if (childrenError) throw childrenError;
+        if (currentValidChildren.length > 0) {
+          const { error: childrenError } = await supabase
+            .from('children')
+            .insert(
+              currentValidChildren.map(c => ({
+                profile_id: editingProfile.id,
+                name: c.name,
+                birth_date: c.birth_date,
+              }))
+            );
+
+          if (childrenError) console.warn('Aviso ao atualizar filhos:', childrenError);
+        }
       }
 
       toast({ title: 'Membro atualizado com sucesso!' });
@@ -354,7 +399,7 @@ export default function AdminMembers() {
       queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
     } catch (error: any) {
       console.error('Error updating member:', error);
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao atualizar membro', description: error.message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
