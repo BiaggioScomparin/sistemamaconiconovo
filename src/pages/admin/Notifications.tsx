@@ -23,9 +23,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award, Copy, Baby, Heart, Send } from 'lucide-react';
+import { Bell, MessageSquare, Plus, Trash2, Save, Eye, EyeOff, Wifi, WifiOff, Clock, CalendarDays, CreditCard, CheckCircle, AlertTriangle, Pencil, Cake, Award, Copy, Baby, Heart, Send, Users, Settings2 } from 'lucide-react';
 import { WhatsAppGroupPicker } from '@/components/admin/WhatsAppGroupPicker';
 import { GroupMessagePanel } from '@/components/admin/GroupMessagePanel';
+import { ProposalMessageSettingsDialog } from '@/components/admin/ProposalMessageSettingsDialog';
+import { useProposalMessageTemplates, DEFAULT_PROPOSAL_TEMPLATES } from '@/hooks/useProposalMessageTemplates';
 import { format, parseISO } from 'date-fns';
 
 const CATEGORY_LABELS: Record<string, { label: string; description: string; icon: any }> = {
@@ -85,6 +87,10 @@ export default function AdminNotifications() {
   const [editRepeatDays, setEditRepeatDays] = useState('');
   const [editTemplate, setEditTemplate] = useState('');
   const [editGroupId, setEditGroupId] = useState('');
+
+  // Proposal messages settings state
+  const [proposalSettingsOpen, setProposalSettingsOpen] = useState(false);
+  const { templates: proposalTemplates } = useProposalMessageTemplates();
 
   // Auto-select first lodge
   useEffect(() => {
@@ -279,10 +285,14 @@ export default function AdminNotifications() {
 
         {selectedLodgeId && (
           <Tabs defaultValue="whatsapp" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
               <TabsTrigger value="whatsapp">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="propostas">
+                <Users className="h-4 w-4 mr-2 text-amber-500" />
+                Mensagens de Candidatos
               </TabsTrigger>
               <TabsTrigger value="rules">
                 <Bell className="h-4 w-4 mr-2" />
@@ -378,6 +388,70 @@ export default function AdminNotifications() {
                     <Save className="h-4 w-4 mr-2" />
                     Salvar Configuração
                   </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Proposals Messages Tab */}
+            <TabsContent value="propostas">
+              <Card>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-amber-500" />
+                      Modelos de Mensagens do Funil de Candidatos
+                    </CardTitle>
+                    <CardDescription>
+                      Personalize as mensagens de WhatsApp disparadas para os candidatos em cada mudança de etapa no Kanban.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setProposalSettingsOpen(true)}
+                    className="gap-2 bg-primary text-primary-foreground font-semibold shrink-0"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Gerenciar Modelos de Mensagens
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { key: 'proposta' as const, label: 'Proposta Recebida', badge: 'Azul' },
+                      { key: 'sindicancia' as const, label: 'Sindicância', badge: 'Amarelo' },
+                      { key: 'sindicancia_aprovada' as const, label: 'Sindicância Aprovada', badge: 'Laranja' },
+                      { key: 'aguardando_iniciacao' as const, label: 'Aguardando Iniciação', badge: 'Roxo' },
+                      { key: 'membro' as const, label: 'Novo Membro (Boas-Vindas)', badge: 'Verde' },
+                      { key: 'reprovado' as const, label: 'Reprovado / Inativo', badge: 'Vermelho' },
+                    ].map((item) => {
+                      const cfg = proposalTemplates?.[item.key] || DEFAULT_PROPOSAL_TEMPLATES[item.key];
+                      return (
+                        <div
+                          key={item.key}
+                          className="p-4 rounded-xl border border-border/60 bg-accent/20 flex flex-col justify-between space-y-2 hover:border-border transition-colors"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-semibold text-xs text-foreground">{item.label}</span>
+                              <Badge variant={cfg.enabled ? 'default' : 'secondary'} className="text-[10px]">
+                                {cfg.enabled ? 'Disparo Ativo' : 'Desativado'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-3 italic">
+                              "{cfg.template}"
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setProposalSettingsOpen(true)}
+                            className="text-xs justify-start px-0 text-primary hover:text-primary/80 h-7"
+                          >
+                            <Pencil className="h-3 w-3 mr-1" /> Editar Mensagem
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -700,6 +774,12 @@ export default function AdminNotifications() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Dialog de Edição de Mensagens do Funil / Candidatos */}
+        <ProposalMessageSettingsDialog
+          open={proposalSettingsOpen}
+          onOpenChange={setProposalSettingsOpen}
+        />
       </div>
     </AppLayout>
   );

@@ -58,6 +58,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
 import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
+import { ProposalMessageSettingsDialog } from '@/components/admin/ProposalMessageSettingsDialog';
+import { useProposalMessageTemplates, formatProposalMessage, ProposalStatusKey } from '@/hooks/useProposalMessageTemplates';
 
 type ProfileStatus = 'proposta' | 'sindicancia' | 'sindicancia_aprovada' | 'aguardando_iniciacao' | 'reprovado' | 'membro' | 'pending' | 'approved' | 'rejected';
 
@@ -184,9 +186,25 @@ export default function AdminProposals() {
   // WhatsApp notification states
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
   const [customWhatsappMsg, setCustomWhatsappMsg] = useState('');
+  const [messageSettingsOpen, setMessageSettingsOpen] = useState(false);
+  const { templates: messageTemplates } = useProposalMessageTemplates();
 
   const getWhatsAppTemplate = (status: string, profile: Profile | null, dateStr?: string) => {
     if (!profile) return '';
+    const key = status as ProposalStatusKey;
+    const templateConfig = messageTemplates?.[key];
+    const templateStr = templateConfig?.template;
+
+    const lodgeObj = lodges?.find(l => l.id === (selectedLodge || profile.lodge_id));
+    const lodgeName = lodgeObj?.name ? `${lodgeObj.name}${lodgeObj.city ? ` (${lodgeObj.city}/${lodgeObj.state})` : ''}` : '';
+
+    if (templateStr) {
+      return formatProposalMessage(templateStr, profile, {
+        lodgeName,
+        initiationDate: dateStr || (profile.initiation_scheduled_date ? formatDate(profile.initiation_scheduled_date) : undefined),
+      });
+    }
+
     const name = profile.full_name || 'Candidato';
     switch (status) {
       case 'sindicancia':
@@ -206,6 +224,10 @@ export default function AdminProposals() {
 
   const handleSelectStatus = (status: string) => {
     setNewStatus(status);
+    const key = status as ProposalStatusKey;
+    const isEnabled = messageTemplates?.[key]?.enabled ?? true;
+    setNotifyWhatsApp(isEnabled);
+
     if (selectedProfile) {
       setCustomWhatsappMsg(getWhatsAppTemplate(status, selectedProfile, initiationDate));
     }
@@ -667,25 +689,38 @@ export default function AdminProposals() {
             </p>
           </div>
 
-          <div className="flex items-center gap-1 p-1 bg-accent/40 rounded-xl border border-border">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
-              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              variant="outline"
               size="sm"
-              onClick={() => setViewMode('kanban')}
-              className="gap-2 text-xs font-semibold"
+              onClick={() => setMessageSettingsOpen(true)}
+              className="gap-2 text-xs font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+              title="Configurar os modelos de mensagens de WhatsApp para cada etapa do funil"
             >
-              <Kanban className="h-4 w-4" />
-              Quadro Kanban
+              <MessageSquare className="h-4 w-4" />
+              Configurar Mensagens
             </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="gap-2 text-xs font-semibold"
-            >
-              <List className="h-4 w-4" />
-              Lista por Abas
-            </Button>
+
+            <div className="flex items-center gap-1 p-1 bg-accent/40 rounded-xl border border-border">
+              <Button
+                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className="gap-2 text-xs font-semibold"
+              >
+                <Kanban className="h-4 w-4" />
+                Quadro Kanban
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="gap-2 text-xs font-semibold"
+              >
+                <List className="h-4 w-4" />
+                Lista por Abas
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -1480,6 +1515,12 @@ export default function AdminProposals() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Configuração de Mensagens de Disparo */}
+      <ProposalMessageSettingsDialog
+        open={messageSettingsOpen}
+        onOpenChange={setMessageSettingsOpen}
+      />
     </AppLayout>
   );
 }
