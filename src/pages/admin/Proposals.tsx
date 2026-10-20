@@ -33,8 +33,29 @@ import {
   List,
   ShieldCheck,
   MessageSquare,
-  Send
+  Send,
+  Trash2,
+  RotateCcw,
+  MoreVertical,
+  AlertTriangle
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { generateEditalPDF } from '@/lib/generateEditalPDF';
 import { EditalFormDialog, EditalFormData } from '@/components/admin/EditalFormDialog';
 
@@ -155,6 +176,11 @@ export default function AdminProposals() {
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'kanban'
   );
 
+  // Inactivate and delete states
+  const [candidateToDelete, setCandidateToDelete] = useState<Profile | null>(null);
+  const [deletingCandidate, setDeletingCandidate] = useState(false);
+  const [togglingInactivateId, setTogglingInactivateId] = useState<string | null>(null);
+
   // WhatsApp notification states
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
   const [customWhatsappMsg, setCustomWhatsappMsg] = useState('');
@@ -192,6 +218,81 @@ export default function AdminProposals() {
       .select('name, birth_date')
       .eq('profile_id', profileId);
     setViewProfileChildren(data || []);
+  };
+
+  const handleToggleInactivate = async (profile: Profile) => {
+    const isInactive = profile.status === 'reprovado' || profile.status === 'rejected';
+    const targetStatus = isInactive ? 'proposta' : 'reprovado';
+    const targetMemberStatus = isInactive ? 'active' : 'inactive';
+
+    setTogglingInactivateId(profile.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          status: targetStatus,
+          member_status: targetMemberStatus 
+        })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      toast({
+        title: isInactive ? 'Candidato reativado!' : 'Candidato inativado!',
+        description: isInactive
+          ? `${profile.full_name} foi reativado e voltou para o fluxo de Propostas.`
+          : `${profile.full_name} foi inativado e movido para a lista de Reprovados.`,
+      });
+
+      if (viewProfile?.id === profile.id) {
+        setViewProfile(null);
+        setViewProfileChildren([]);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
+    } catch (error: any) {
+      console.error('Error toggling inactivate:', error);
+      toast({ title: 'Erro ao alterar situação', description: error.message, variant: 'destructive' });
+    } finally {
+      setTogglingInactivateId(null);
+    }
+  };
+
+  const handleConfirmDeleteCandidate = async () => {
+    if (!candidateToDelete) return;
+    setDeletingCandidate(true);
+    try {
+      const { error: rpcError } = await supabase.rpc('delete_candidate', {
+        _profile_id: candidateToDelete.id,
+      });
+
+      if (rpcError) {
+        console.warn('RPC delete_candidate falhou, aplicando fallback direto:', rpcError);
+        await supabase.from('children').delete().eq('profile_id', candidateToDelete.id);
+        const { error: delError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', candidateToDelete.id);
+        if (delError) throw delError;
+      }
+
+      toast({
+        title: 'Candidato excluído!',
+        description: `O cadastro de ${candidateToDelete.full_name} foi excluído permanentemente.`,
+      });
+
+      if (viewProfile?.id === candidateToDelete.id) {
+        setViewProfile(null);
+        setViewProfileChildren([]);
+      }
+      setCandidateToDelete(null);
+      await queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
+    } catch (error: any) {
+      console.error('Error deleting candidate:', error);
+      toast({ title: 'Erro ao excluir candidato', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeletingCandidate(false);
+    }
   };
 
   if (loading) {
@@ -501,6 +602,38 @@ export default function AdminProposals() {
           >
             Alterar Status
           </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => handleToggleInactivate(profile)}
+            disabled={togglingInactivateId === profile.id}
+            className={
+              profile.status === 'reprovado' || profile.status === 'rejected'
+                ? 'border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10'
+                : 'border-amber-500/40 text-amber-600 hover:bg-amber-500/10'
+            }
+          >
+            {profile.status === 'reprovado' || profile.status === 'rejected' ? (
+              <>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reativar
+              </>
+            ) : (
+              <>
+                <UserX className="mr-2 h-4 w-4" />
+                Inativar
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setCandidateToDelete(profile)}
+            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -642,6 +775,46 @@ export default function AdminProposals() {
                                 >
                                   Avançar
                                 </Button>
+
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground shrink-0"
+                                      title="Mais opções"
+                                    >
+                                      <MoreVertical className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem
+                                      onClick={() => handleToggleInactivate(candidate)}
+                                      disabled={togglingInactivateId === candidate.id}
+                                      className="cursor-pointer"
+                                    >
+                                      {candidate.status === 'reprovado' || candidate.status === 'rejected' ? (
+                                        <>
+                                          <RotateCcw className="mr-2 h-4 w-4 text-emerald-600" />
+                                          <span>Reativar Candidato</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <UserX className="mr-2 h-4 w-4 text-amber-600" />
+                                          <span>Inativar Candidato</span>
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => setCandidateToDelete(candidate)}
+                                      className="text-destructive focus:text-destructive cursor-pointer"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      <span>Excluir Definitivamente</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
 
                               {col.key === 'sindicancia' && (
@@ -1163,38 +1336,78 @@ export default function AdminProposals() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => {
-              setViewProfile(null);
-              setViewProfileChildren([]);
-            }}>
-              Fechar
-            </Button>
-            {viewProfile && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditalProfile(viewProfile);
-                  setEditalDialogOpen(true);
-                }}
-                disabled={generatingPDF === viewProfile.id}
-                className="border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimir Edital
+          <DialogFooter className="gap-2 sm:gap-2 flex-wrap sm:flex-row justify-between w-full">
+            <div className="flex gap-2 flex-wrap">
+              {viewProfile && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleToggleInactivate(viewProfile)}
+                    disabled={togglingInactivateId === viewProfile.id}
+                    className={
+                      viewProfile.status === 'reprovado' || viewProfile.status === 'rejected'
+                        ? 'border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10'
+                        : 'border-amber-500/40 text-amber-600 hover:bg-amber-500/10'
+                    }
+                  >
+                    {viewProfile.status === 'reprovado' || viewProfile.status === 'rejected' ? (
+                      <>
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Reativar Candidato
+                      </>
+                    ) : (
+                      <>
+                        <UserX className="mr-2 h-4 w-4" />
+                        Inativar Candidato
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCandidateToDelete(viewProfile)}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir Candidato
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => {
+                setViewProfile(null);
+                setViewProfileChildren([]);
+              }}>
+                Fechar
               </Button>
-            )}
-            <Button onClick={() => {
-              setViewProfile(null);
-              setViewProfileChildren([]);
-              if (viewProfile) {
-                setSelectedProfile(viewProfile);
-                setNewStatus('');
-                setSelectedLodge(viewProfile.lodge_id || '');
-              }
-            }}>
-              Alterar Status
-            </Button>
+              {viewProfile && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditalProfile(viewProfile);
+                    setEditalDialogOpen(true);
+                  }}
+                  disabled={generatingPDF === viewProfile.id}
+                  className="border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimir Edital
+                </Button>
+              )}
+              <Button onClick={() => {
+                const cur = viewProfile;
+                setViewProfile(null);
+                setViewProfileChildren([]);
+                if (cur) {
+                  setSelectedProfile(cur);
+                  setNewStatus('');
+                  setSelectedLodge(cur.lodge_id || '');
+                }
+              }}>
+                Alterar Status
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1234,6 +1447,39 @@ export default function AdminProposals() {
           }
         }}
       />
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={!!candidateToDelete} onOpenChange={(open) => !open && setCandidateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir Candidato Definitivamente?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span>
+                Tem certeza que deseja excluir o cadastro de <strong>{candidateToDelete?.full_name}</strong>?
+              </span>
+              <span className="block text-xs text-muted-foreground pt-1">
+                Esta ação é irreversível. Todos os dados da proposta, questionários e informações associadas serão permanentemente removidos.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingCandidate}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDeleteCandidate();
+              }}
+              disabled={deletingCandidate}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
+            >
+              {deletingCandidate ? 'Excluindo...' : 'Sim, Excluir Definitivamente'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
