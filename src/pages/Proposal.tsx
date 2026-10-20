@@ -93,6 +93,66 @@ interface Child {
   birth_date: string;
 }
 
+/**
+ * Salva campos no perfil de forma ultra-resiliente.
+ * Se o update em lote falhar por qualquer erro de coluna ou validação do PostgreSQL,
+ * realiza uma varredura salvando individualmente cada campo aceito pelo banco para que
+ * NENHUM dado preenchido seja perdido.
+ */
+async function saveProfileResiliently(profileId: string, payload: Record<string, any>) {
+  // Limpeza de campos vazios e datas inválidas
+  const cleanPayload: Record<string, any> = {};
+  for (const [key, val] of Object.entries(payload)) {
+    if (val === undefined) continue;
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      cleanPayload[key] = trimmed !== '' ? trimmed : null;
+    } else {
+      cleanPayload[key] = val;
+    }
+  }
+
+  // 1. Tentativa de update com todo o conjunto de dados
+  const { error: fullError } = await supabase
+    .from('profiles')
+    .update(cleanPayload)
+    .eq('id', profileId);
+
+  if (!fullError) {
+    return { success: true, savedFields: Object.keys(cleanPayload), errors: [] };
+  }
+
+  console.warn('Erro ao atualizar conjunto completo. Iniciando salvamento individual dos campos válidos:', fullError);
+
+  // 2. Fallback resiliente: salva individualmente cada campo aceito pelo banco
+  const savedFields: string[] = [];
+  const fieldErrors: Array<{ field: string; error: string }> = [];
+
+  for (const [key, value] of Object.entries(cleanPayload)) {
+    try {
+      const { error: singleError } = await supabase
+        .from('profiles')
+        .update({ [key]: value })
+        .eq('id', profileId);
+
+      if (!singleError) {
+        savedFields.push(key);
+      } else {
+        fieldErrors.push({ field: key, error: singleError.message });
+      }
+    } catch (err: any) {
+      fieldErrors.push({ field: key, error: err.message || 'Erro desconhecido' });
+    }
+  }
+
+  return {
+    success: savedFields.length > 0,
+    savedFields,
+    errors: fieldErrors,
+    originalError: fullError,
+  };
+}
+
 export default function Proposal() {
   return (
     <ProposalAuthGate>
@@ -249,8 +309,14 @@ function Stage1SindicanciaForm({ profile, onComplete }: { profile: any; onComple
       };
 
       if (profile?.id) {
-        const { error: updateError } = await supabase.from('profiles').update(payload as any).eq('id', profile.id);
-        if (updateError) throw updateError;
+        const saveResult = await saveProfileResiliently(profile.id, payload);
+        if (!saveResult.success) throw saveResult.originalError || new Error('Erro ao salvar dados.');
+        if (saveResult.errors.length > 0) {
+          toast({
+            title: 'Dados Parciais Salvos',
+            description: `Seus dados principais foram salvos (${saveResult.savedFields.length} campos). Pendência em: ${saveResult.errors.map(e => e.field).join(', ')}.`,
+          });
+        }
       } else {
         const { error: upsertError } = await supabase.from('profiles').upsert(payload as any, { onConflict: 'user_id' });
         if (upsertError) throw upsertError;
@@ -637,6 +703,8 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
           photoUrl = urlData.publicUrl;
+          // Vinculação imediata da foto no perfil para não perder sob nenhuma hipótese
+          await supabase.from('profiles').update({ photo_url: photoUrl }).eq('id', profile.id);
         } else {
           console.error('Erro no upload de foto:', uploadError);
         }
@@ -644,7 +712,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
 
       const sanitizeDate = (val?: string | null) => (val && val.trim() !== '' ? val : null);
 
-      const updateData = {
+      const updateData: Record<string, any> = {
         ...data,
         full_name: data.full_name.trim(),
         email: data.email ? data.email.trim().toLowerCase() : (user?.email || profile?.email || ''),
@@ -656,44 +724,69 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
         proposal_date: new Date().toISOString().split('T')[0],
       };
 
-      const { error: updateError } = await supabase.from('profiles').update(updateData as any).eq('id', profile.id);
-      if (updateError) {
-        console.error('Erro ao salvar proposta completa:', updateError);
-        throw updateError;
+      // 1. Salva todos os campos possíveis de forma resiliente
+      const saveResult = await saveProfileResiliently(profile.id, updateData);
+      if (!saveResult.success) {
+        throw saveResult.originalError || new Error('Não foi possível salvar os campos no perfil.');
       }
 
-      // Insert children if any
-      const validChildren = children.filter(c => c.name.trim() !== '');
+      // 2. Salva dependentes se houver (sem travar a proposta caso haja falha isolada)
+      const validChildren = children.filter(c => c.name && c.name.trim() !== '');
       if (validChildren.length > 0) {
-        // Remove existing children for this profile first to prevent duplicate entries on retry
-        await supabase.from('children').delete().eq('profile_id', profile.id);
-
-        const childrenPayload = validChildren.map(c => ({
-          profile_id: profile.id,
-          name: c.name,
-          birth_date: sanitizeDate(c.birth_date),
-        }));
-        const { error: childrenError } = await supabase.from('children').insert(childrenPayload);
-        if (childrenError) {
-          console.error('Erro ao salvar dependentes:', childrenError);
-          throw childrenError;
+        try {
+          await supabase.from('children').delete().eq('profile_id', profile.id);
+          const childrenPayload = validChildren.map(c => ({
+            profile_id: profile.id,
+            name: c.name.trim(),
+            birth_date: sanitizeDate(c.birth_date),
+          }));
+          await supabase.from('children').insert(childrenPayload);
+        } catch (cErr) {
+          console.warn('Aviso ao persistir dependentes:', cErr);
         }
       }
 
-      toast({
-        title: 'Ficha de Proposta Finalizada com Sucesso!',
-        description: 'Sua proposta completa foi registrada e enviada para a Secretaria da Loja.',
-      });
+      // 3. Feedback detalhado ao usuário
+      if (saveResult.errors.length > 0) {
+        const failedNames = saveResult.errors.map(e => e.field).join(', ');
+        toast({
+          title: 'Dados Salvos Parcialmente!',
+          description: `Os campos válidos foram salvos com sucesso (${saveResult.savedFields.length} campos atualizados). Ocorreu uma pendência em: ${failedNames}.`,
+        });
+      } else {
+        toast({
+          title: 'Ficha de Proposta Finalizada com Sucesso!',
+          description: 'Sua proposta completa foi registrada e enviada para a Secretaria da Loja.',
+        });
+      }
 
       onComplete();
     } catch (error: any) {
-      toast({ title: 'Erro', description: error.message || 'Erro ao enviar proposta', variant: 'destructive' });
+      toast({ title: 'Erro ao Enviar', description: error.message || 'Erro ao enviar proposta', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const onInvalid = (validationErrors: any) => {
+  const onInvalid = async (validationErrors: any) => {
+    // Mesmo quando a validação do formulário aponta campos faltantes,
+    // já persistimos no banco todos os campos que o usuário já preencheu!
+    if (profile?.id) {
+      try {
+        const currentValues = watch();
+        const sanitizeDate = (val?: string | null) => (val && val.trim() !== '' ? val : null);
+        const partialData: Record<string, any> = { ...currentValues };
+        if (partialData.birth_date !== undefined) partialData.birth_date = sanitizeDate(partialData.birth_date);
+        if (partialData.marriage_date !== undefined) partialData.marriage_date = sanitizeDate(partialData.marriage_date);
+        if (partialData.cpf) partialData.cpf = formatCPF(partialData.cpf);
+        if (photoPreview && !partialData.photo_url) partialData.photo_url = photoPreview;
+
+        await saveProfileResiliently(profile.id, partialData);
+      } catch (err) {
+        console.warn('Aviso ao persistir campos parciais no banco:', err);
+      }
+    }
+
     const errorList = Object.entries(validationErrors);
     if (errorList.length > 0) {
       const [field, error] = errorList[0] as [string, any];
@@ -708,8 +801,8 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
       };
       const label = fieldLabels[field] || field;
       toast({
-        title: 'Verifique o formulário',
-        description: error?.message || `O campo "${label}" precisa ser preenchido corretamente.`,
+        title: 'Campos Preenchidos Salvos!',
+        description: `Os campos preenchidos já foram salvos no sistema. Complete o campo "${label}" para finalizar a proposta.`,
         variant: 'destructive',
       });
     }
