@@ -242,10 +242,10 @@ export default function AdminMembers() {
   const handleResetPassword = async () => {
     if (!resetPasswordProfile || !newPassword) return;
 
-    if (!resetPasswordProfile.user_id) {
+    if (!resetPasswordProfile.user_id && !resetPasswordProfile.email) {
       toast({ 
         title: 'Erro', 
-        description: 'Este membro não possui acesso ao sistema.', 
+        description: 'Este membro não possui e-mail ou acesso ao sistema.', 
         variant: 'destructive' 
       });
       return;
@@ -262,15 +262,49 @@ export default function AdminMembers() {
 
     setResettingPassword(true);
     try {
-      const response = await supabase.functions.invoke('reset-password', {
-        body: {
-          userId: resetPasswordProfile.user_id,
-          newPassword: newPassword,
-        },
-      });
+      let success = false;
+      let lastErrorMessage = '';
 
-      if (response.error) throw new Error(response.error.message);
-      if (response.data?.error) throw new Error(response.data.error);
+      // 1. Tentar via Edge Function nativa
+      try {
+        const response = await supabase.functions.invoke('reset-password', {
+          body: {
+            userId: resetPasswordProfile.user_id,
+            profileId: resetPasswordProfile.id,
+            email: resetPasswordProfile.email,
+            newPassword: newPassword,
+          },
+        });
+
+        if (!response.error && !response.data?.error) {
+          success = true;
+        } else {
+          lastErrorMessage = response.error?.message || response.data?.error || '';
+          console.warn('Edge function reset-password retornou erro, tentando RPC fallback:', lastErrorMessage);
+        }
+      } catch (fnErr: any) {
+        lastErrorMessage = fnErr?.message || '';
+        console.warn('Falha na invocação da Edge function reset-password, tentando RPC fallback:', fnErr);
+      }
+
+      // 2. Se a Edge Function falhou mas temos o user_id, usa o fallback da RPC no Postgres
+      if (!success && resetPasswordProfile.user_id) {
+        const { error: rpcError } = await supabase.rpc('admin_reset_user_password', {
+          _user_id: resetPasswordProfile.user_id,
+          _new_password: newPassword,
+        });
+
+        if (!rpcError) {
+          success = true;
+        } else {
+          console.error('RPC admin_reset_user_password também falhou:', rpcError);
+          lastErrorMessage = rpcError.message || lastErrorMessage;
+        }
+      }
+
+      if (!success) {
+        throw new Error(lastErrorMessage || 'Não foi possível redefinir a senha do membro.');
+      }
 
       toast({ 
         title: 'Senha alterada!', 
@@ -278,9 +312,10 @@ export default function AdminMembers() {
       });
       setResetPasswordProfile(null);
       setNewPassword('');
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
     } catch (error: any) {
       console.error('Error resetting password:', error);
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao redefinir senha', description: error.message, variant: 'destructive' });
     } finally {
       setResettingPassword(false);
     }

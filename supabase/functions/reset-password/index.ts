@@ -13,34 +13,13 @@ serve(async (req) => {
 
   try {
     // Validate authorization header
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized: Missing or invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Create client with user's auth
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    // Verify the user using getClaims
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      console.error('Claims error:', claimsError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const adminUserId = claimsData.claims.sub;
 
     // Create admin client
     const supabaseAdmin = createClient(
@@ -54,41 +33,90 @@ serve(async (req) => {
       }
     );
 
-    // Verify caller has admin role
-    const { data: roleData, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', adminUserId)
-      .eq('role', 'admin')
-      .single();
+    const token = authHeader.replace('Bearer ', '');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (roleError || !roleData) {
-      console.error('Role check error:', roleError);
+    let isAuthorized = false;
+
+    if (serviceRoleKey && token === serviceRoleKey) {
+      isAuthorized = true;
+    } else {
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+      
+      if (!userError && user) {
+        const callerUserId = user.id;
+
+        // Verify caller has admin role
+        const { data: roleData } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', callerUserId)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (roleData?.role === 'admin') {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Admin access required' }),
+        JSON.stringify({ error: 'Forbidden: Acesso restrito a administradores' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { userId, newPassword } = await req.json();
+    const body = await req.json();
+    const { userId, newPassword, profileId, email } = body;
 
-    if (!userId || !newPassword) {
+    if (!newPassword || newPassword.length < 6) {
       return new Response(
-        JSON.stringify({ error: 'User ID and new password are required' }),
+        JSON.stringify({ error: 'A senha deve conter no mínimo 6 caracteres.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (newPassword.length < 6) {
+    let targetUserId = userId;
+
+    // Se targetUserId não veio ou profileId foi passado
+    if (!targetUserId && profileId) {
+      const { data: prof } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, email')
+        .eq('id', profileId)
+        .maybeSingle();
+      if (prof?.user_id) {
+        targetUserId = prof.user_id;
+      } else if (prof?.email) {
+        // Tentar achar por email
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === prof.email.toLowerCase());
+        if (existingUser) {
+          targetUserId = existingUser.id;
+          await supabaseAdmin.from('profiles').update({ user_id: existingUser.id }).eq('id', profileId);
+        }
+      }
+    }
+
+    if (!targetUserId && email) {
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (existingUser) {
+        targetUserId = existingUser.id;
+      }
+    }
+
+    if (!targetUserId) {
       return new Response(
-        JSON.stringify({ error: 'Password must be at least 6 characters' }),
+        JSON.stringify({ error: 'Usuário não localizado para redefinição de senha.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update user password
+    // Update user password via Supabase Admin Auth
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
+      targetUserId,
       { password: newPassword }
     );
 
@@ -103,7 +131,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Password updated successfully'
+        message: 'Senha atualizada com sucesso!' 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
