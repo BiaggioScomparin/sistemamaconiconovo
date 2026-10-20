@@ -42,14 +42,19 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("lodge_id", lodge_id)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
     if (instanceError || !instance) {
       console.error("No active WhatsApp instance for lodge:", lodge_id);
       await supabase.from("notification_logs").insert({
-        lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
-        category: category || "manual", reference_id: reference_id || null,
-        phone, message, status: "failed",
+        lodge_id,
+        rule_id: rule_id || null,
+        profile_id: profile_id || null,
+        category: category || "manual",
+        reference_id: reference_id || null,
+        phone,
+        message,
+        status: "failed",
         error_message: "No active WhatsApp instance configured for this lodge",
       });
       return new Response(
@@ -59,19 +64,46 @@ Deno.serve(async (req) => {
     }
 
     const isGroupMessage = !!group_id;
-    const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
-    const apiFormat = instance.api_format || "z-pro";
+    let cleanPhone = phone ? phone.replace(/\D/g, "") : "";
+    if (!isGroupMessage && cleanPhone) {
+      // Auto-prefix Brazilian country code if missing
+      if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith("55")) {
+        cleanPhone = `55${cleanPhone}`;
+      }
+    }
+
+    const apiFormat = instance.api_format || "evolution";
     let baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
-    // Ensure base_url has protocol
     if (baseUrl && !baseUrl.startsWith("http")) {
-      baseUrl = `https://${baseUrl}`;
+      baseUrl = `http://${baseUrl}`;
+    }
+    // When running inside Docker bridge, map localhost/127.0.0.1 to Docker host bridge IP
+    if (baseUrl.includes("127.0.0.1") || baseUrl.includes("localhost")) {
+      baseUrl = baseUrl.replace("127.0.0.1", "172.18.0.1").replace("localhost", "172.18.0.1");
     }
 
     let apiUrl: string;
     let fetchHeaders: Record<string, string>;
     let fetchBody: string;
 
-    if (apiFormat === "z-api") {
+    if (apiFormat === "evolution") {
+      const target = isGroupMessage ? group_id : cleanPhone;
+      apiUrl = `${baseUrl}/message/sendText/${instance.instance_id}`;
+      fetchHeaders = {
+        "Content-Type": "application/json",
+        apikey: instance.token,
+      };
+      fetchBody = JSON.stringify({
+        number: target,
+        text: message,
+        delay: 1200,
+        options: {
+          delay: 1200,
+          presence: "composing",
+          linkPreview: true,
+        },
+      });
+    } else if (apiFormat === "z-api") {
       if (isGroupMessage) {
         apiUrl = `${baseUrl}/instances/${instance.instance_id}/token/${instance.token}/send-text`;
         fetchHeaders = { "Content-Type": "application/json" };
@@ -85,7 +117,7 @@ Deno.serve(async (req) => {
       apiUrl = `${baseUrl}/v2/api/external/${instance.instance_id}`;
       fetchHeaders = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${instance.token}`,
+        Authorization: `Bearer ${instance.token}`,
       };
       if (isGroupMessage) {
         fetchBody = JSON.stringify({
@@ -104,18 +136,16 @@ Deno.serve(async (req) => {
         });
       }
     } else {
-      // Z-Pro / CloudZAPI format
+      // Z-Pro / CloudZAPI format fallback
+      apiUrl = `${baseUrl}/message/sendText`;
+      fetchHeaders = { "Content-Type": "application/json", apikey: instance.token };
       if (isGroupMessage) {
-        apiUrl = `${baseUrl}/message/sendText`;
-        fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
         fetchBody = JSON.stringify({
           groupId: group_id,
           options: { delay: 1200, presence: "composing" },
           textMessage: { text: message },
         });
       } else {
-        apiUrl = `${baseUrl}/message/sendText`;
-        fetchHeaders = { "Content-Type": "application/json", "apikey": instance.token };
         fetchBody = JSON.stringify({
           numbers: [cleanPhone],
           options: { delay: 1200, presence: "composing" },
@@ -124,7 +154,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Sending WhatsApp (${apiFormat}) to URL:`, apiUrl, isGroupMessage ? "group:" : "phone:", isGroupMessage ? group_id : cleanPhone);
+    console.log(
+      `Sending WhatsApp (${apiFormat}) to URL: ${apiUrl} | target: ${isGroupMessage ? "group:" + group_id : "phone:" + cleanPhone}`
+    );
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -136,14 +168,23 @@ Deno.serve(async (req) => {
     console.log("WhatsApp API response status:", response.status, "body:", responseText);
 
     let responseData;
-    try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
 
     if (!response.ok) {
       console.error("WhatsApp API error:", responseData);
       await supabase.from("notification_logs").insert({
-        lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
-        category: category || "manual", reference_id: reference_id || null,
-        phone: isGroupMessage ? `grupo:${group_id}` : cleanPhone, message, status: "failed",
+        lodge_id,
+        rule_id: rule_id || null,
+        profile_id: profile_id || null,
+        category: category || "manual",
+        reference_id: reference_id || null,
+        phone: isGroupMessage ? `grupo:${group_id}` : cleanPhone,
+        message,
+        status: "failed",
         error_message: JSON.stringify(responseData),
       });
       return new Response(
@@ -153,9 +194,14 @@ Deno.serve(async (req) => {
     }
 
     await supabase.from("notification_logs").insert({
-      lodge_id, rule_id: rule_id || null, profile_id: profile_id || null,
-      category: category || "manual", reference_id: reference_id || null,
-      phone: isGroupMessage ? `grupo:${group_id}` : cleanPhone, message, status: "sent",
+      lodge_id,
+      rule_id: rule_id || null,
+      profile_id: profile_id || null,
+      category: category || "manual",
+      reference_id: reference_id || null,
+      phone: isGroupMessage ? `grupo:${group_id}` : cleanPhone,
+      message,
+      status: "sent",
     });
 
     return new Response(
@@ -164,8 +210,9 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in send-whatsapp:", error);
+    const msg = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

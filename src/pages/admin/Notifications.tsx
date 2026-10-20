@@ -100,13 +100,13 @@ export default function AdminNotifications() {
       setWpToken(whatsappInstance.token);
       setWpBaseUrl(whatsappInstance.base_url);
       setWpActive(whatsappInstance.is_active);
-      setWpApiFormat((whatsappInstance as any).api_format || 'wattend');
+      setWpApiFormat((whatsappInstance as any).api_format || 'evolution');
     } else {
-      setWpInstanceId('');
+      setWpInstanceId('GOIB');
       setWpToken('');
-      setWpBaseUrl('https://api.wattend.io');
+      setWpBaseUrl('http://184.107.176.201:8085');
       setWpActive(true);
-      setWpApiFormat('wattend');
+      setWpApiFormat('evolution');
     }
   }, [whatsappInstance]);
 
@@ -321,11 +321,18 @@ export default function AdminNotifications() {
                   
                   <div className="space-y-2">
                     <Label>Provedor da API</Label>
-                    <Select value={wpApiFormat} onValueChange={setWpApiFormat}>
+                    <Select value={wpApiFormat} onValueChange={(val) => {
+                      setWpApiFormat(val);
+                      if (val === 'evolution' && (!wpBaseUrl || wpBaseUrl.includes('wattend') || wpBaseUrl.includes('z-api'))) {
+                        setWpBaseUrl('http://184.107.176.201:8085');
+                        if (!wpInstanceId) setWpInstanceId('GOIB');
+                      }
+                    }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o provedor" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="evolution">Evolution API (GOIB)</SelectItem>
                         <SelectItem value="wattend">Wattend</SelectItem>
                         <SelectItem value="z-api">Z-API</SelectItem>
                         <SelectItem value="z-pro">Z-Pro / CloudZAPI</SelectItem>
@@ -334,20 +341,28 @@ export default function AdminNotifications() {
                   </div>
                   <div className="space-y-2">
                     <Label>URL Base da API</Label>
-                    <Input value={wpBaseUrl} onChange={(e) => setWpBaseUrl(e.target.value)} placeholder="https://api.wattend.io" />
+                    <Input
+                      value={wpBaseUrl}
+                      onChange={(e) => setWpBaseUrl(e.target.value)}
+                      placeholder={wpApiFormat === 'evolution' ? 'http://184.107.176.201:8085' : 'https://api.wattend.io'}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label>Instance ID</Label>
-                    <Input value={wpInstanceId} onChange={(e) => setWpInstanceId(e.target.value)} placeholder="Seu Instance ID" />
+                    <Label>Instance ID / Nome da Instância</Label>
+                    <Input
+                      value={wpInstanceId}
+                      onChange={(e) => setWpInstanceId(e.target.value)}
+                      placeholder={wpApiFormat === 'evolution' ? 'GOIB' : 'Seu Instance ID'}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label>Token</Label>
+                    <Label>Token / API Key</Label>
                     <div className="relative">
                       <Input
                         type={showToken ? 'text' : 'password'}
                         value={wpToken}
                         onChange={(e) => setWpToken(e.target.value)}
-                        placeholder="Seu Token"
+                        placeholder={wpApiFormat === 'evolution' ? 'API Key da Evolution' : 'Seu Token'}
                         className="pr-10"
                       />
                       <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowToken(!showToken)}>

@@ -67,10 +67,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiFormat = instance.api_format || "z-pro";
+    const apiFormat = instance.api_format || "evolution";
     let baseUrl = (instance.base_url || "").trim().replace(/\/+$/, "");
     if (baseUrl && !baseUrl.startsWith("http")) {
-      baseUrl = `https://${baseUrl}`;
+      baseUrl = `http://${baseUrl}`;
+    }
+    if (baseUrl.includes("127.0.0.1") || baseUrl.includes("localhost")) {
+      baseUrl = baseUrl.replace("127.0.0.1", "172.18.0.1").replace("localhost", "172.18.0.1");
     }
 
     if (apiFormat === "z-api") {
