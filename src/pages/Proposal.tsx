@@ -217,7 +217,7 @@ function Stage1SindicanciaForm({ profile, onComplete }: { profile: any; onComple
         full_name: formData.full_name,
         email: formData.email,
         cpf: formData.cpf,
-        birth_date: formData.birth_date,
+        birth_date: formData.birth_date && formData.birth_date.trim() !== '' ? formData.birth_date : null,
         identity_number: formData.identity_number,
         identity_issuer: formData.identity_issuer,
         state: formData.state,
@@ -231,9 +231,11 @@ function Stage1SindicanciaForm({ profile, onComplete }: { profile: any; onComple
       };
 
       if (profile?.id) {
-        await supabase.from('profiles').update(payload as any).eq('id', profile.id);
+        const { error: updateError } = await supabase.from('profiles').update(payload as any).eq('id', profile.id);
+        if (updateError) throw updateError;
       } else {
-        await supabase.from('profiles').insert(payload as any);
+        const { error: upsertError } = await supabase.from('profiles').upsert(payload as any, { onConflict: 'user_id' });
+        if (upsertError) throw upsertError;
       }
 
       toast({
@@ -606,24 +608,39 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
         }
       }
 
+      const sanitizeDate = (val?: string | null) => (val && val.trim() !== '' ? val : null);
+
       const updateData = {
         ...data,
+        birth_date: sanitizeDate(data.birth_date),
+        marriage_date: sanitizeDate(data.marriage_date),
         photo_url: photoUrl,
         status: 'proposta_completa',
         proposal_date: new Date().toISOString().split('T')[0],
       };
 
-      await supabase.from('profiles').update(updateData as any).eq('id', profile.id);
+      const { error: updateError } = await supabase.from('profiles').update(updateData as any).eq('id', profile.id);
+      if (updateError) {
+        console.error('Erro ao salvar proposta completa:', updateError);
+        throw updateError;
+      }
 
       // Insert children if any
       const validChildren = children.filter(c => c.name.trim() !== '');
       if (validChildren.length > 0) {
+        // Remove existing children for this profile first to prevent duplicate entries on retry
+        await supabase.from('children').delete().eq('profile_id', profile.id);
+
         const childrenPayload = validChildren.map(c => ({
           profile_id: profile.id,
           name: c.name,
-          birth_date: c.birth_date,
+          birth_date: sanitizeDate(c.birth_date),
         }));
-        await supabase.from('children').insert(childrenPayload);
+        const { error: childrenError } = await supabase.from('children').insert(childrenPayload);
+        if (childrenError) {
+          console.error('Erro ao salvar dependentes:', childrenError);
+          throw childrenError;
+        }
       }
 
       toast({
