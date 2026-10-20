@@ -720,7 +720,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
         birth_date: sanitizeDate(data.birth_date),
         marriage_date: sanitizeDate(data.marriage_date),
         photo_url: photoUrl,
-        status: 'proposta_completa',
+        status: profile?.status === 'membro' || profile?.status === 'approved' ? profile.status : 'proposta_completa',
         proposal_date: new Date().toISOString().split('T')[0],
       };
 

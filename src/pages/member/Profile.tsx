@@ -71,9 +71,18 @@ export default function MemberProfile() {
         photoUrl = urlData.publicUrl;
       }
 
+      // Sanitiza datas para garantir null se estiverem vazias
+      const sanitizedData = { ...data };
+      const dateFields = ['initiation_date', 'elevation_date', 'exaltation_date', 'spouse_birth_date', 'marriage_date'];
+      for (const field of dateFields) {
+        if (!sanitizedData[field] || (typeof sanitizedData[field] === 'string' && sanitizedData[field].trim() === '')) {
+          sanitizedData[field] = null;
+        }
+      }
+
       // Update profile
       await updateProfile.mutateAsync({
-        ...data,
+        ...sanitizedData,
         photo_url: photoUrl,
       });
 
@@ -173,6 +182,8 @@ export default function MemberProfile() {
     cpf: profile.cpf || '',
     birth_date: profile.birth_date,
     initiation_date: profile.initiation_date || undefined,
+    elevation_date: (profile as any).elevation_date || undefined,
+    exaltation_date: (profile as any).exaltation_date || undefined,
     mother_name: profile.mother_name || undefined,
     spouse_name: profile.spouse_name || undefined,
     spouse_birth_date: (profile as any).spouse_birth_date || undefined,

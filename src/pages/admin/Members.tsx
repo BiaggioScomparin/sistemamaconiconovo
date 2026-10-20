@@ -310,10 +310,19 @@ export default function AdminMembers() {
         photoUrl = urlData.publicUrl;
       }
 
+      // Sanitiza datas e strings vazias para evitar erro 22007 no Postgres
+      const sanitizedData = { ...data };
+      const dateFields = ['initiation_date', 'elevation_date', 'exaltation_date', 'spouse_birth_date', 'marriage_date'];
+      for (const field of dateFields) {
+        if (!sanitizedData[field] || (typeof sanitizedData[field] === 'string' && sanitizedData[field].trim() === '')) {
+          sanitizedData[field] = null;
+        }
+      }
+
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          ...data,
+          ...sanitizedData,
           photo_url: photoUrl,
         })
         .eq('id', editingProfile.id);
@@ -375,6 +384,8 @@ export default function AdminMembers() {
     cpf: profile.cpf || '',
     birth_date: profile.birth_date,
     initiation_date: profile.initiation_date || undefined,
+    elevation_date: (profile as any).elevation_date || undefined,
+    exaltation_date: (profile as any).exaltation_date || undefined,
     mother_name: profile.mother_name || undefined,
     spouse_name: profile.spouse_name || undefined,
     spouse_birth_date: (profile as any).spouse_birth_date || undefined,

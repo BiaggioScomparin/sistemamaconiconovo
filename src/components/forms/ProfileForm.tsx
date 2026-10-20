@@ -109,6 +109,13 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   });
 
   const cepValue = watch('cep');
+  const watchedDegree = watch('degree') || initialData?.degree || 'Aprendiz';
+  const isCompanheiroOrAbove = ['Companheiro', 'Mestre', 'Mestre Instalado'].includes(watchedDegree);
+  const isMestreOrAbove = ['Mestre', 'Mestre Instalado'].includes(watchedDegree);
+
+  const canEditInitiation = !!showAdminFields;
+  const canEditElevation = !!showAdminFields && isCompanheiroOrAbove;
+  const canEditExaltation = !!showAdminFields && isMestreOrAbove;
 
   useEffect(() => {
     if (photoUrl) {
@@ -186,15 +193,31 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   };
 
   const handleFormSubmit = async (data: ProfileFormData) => {
-    // Normalize empty optional fields to null so DB date/text columns don't reject "".
     const cleaned: Record<string, any> = { ...data };
+
+    const currentDegree = cleaned.degree || watchedDegree || 'Aprendiz';
+    const isCompanheiro = ['Companheiro', 'Mestre', 'Mestre Instalado'].includes(currentDegree);
+    const isMestre = ['Mestre', 'Mestre Instalado'].includes(currentDegree);
+
+    // Se o grau não permite elevação ou exaltação, zera os campos
+    if (!isCompanheiro) {
+      cleaned.elevation_date = null;
+    }
+    if (!isMestre) {
+      cleaned.exaltation_date = null;
+    }
+
+    // Normaliza campos vazios para null para evitar erros de sintaxe no Postgres (especialmente colunas do tipo DATE)
     const optionalFields = [
       'mother_name', 'spouse_name', 'spouse_birth_date', 'cell_phone',
-      'initiation_date', 'cim_number', 'degree', 'cargo', 'lodge_id', 'lodge_position',
+      'initiation_date', 'elevation_date', 'exaltation_date',
+      'cim_number', 'degree', 'cargo', 'lodge_id', 'lodge_position',
       'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state',
     ];
     for (const k of optionalFields) {
-      if (cleaned[k] === '' || cleaned[k] === undefined) cleaned[k] = null;
+      if (cleaned[k] === '' || cleaned[k] === undefined || (typeof cleaned[k] === 'string' && cleaned[k].trim() === '')) {
+        cleaned[k] = null;
+      }
     }
     await onSubmit(cleaned as ProfileFormData, children, photoFile);
   };
@@ -327,65 +350,118 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
             </Select>
           </div>
 
+          {/* Grau Maçônico */}
+          {showAdminFields ? (
+            <div className="space-y-2">
+              <Label htmlFor="degree">Grau Maçônico</Label>
+              <Select
+                onValueChange={(value) => {
+                  setValue('degree', value);
+                  if (value === 'Aprendiz') {
+                    setValue('elevation_date', '');
+                    setValue('exaltation_date', '');
+                  } else if (value === 'Companheiro') {
+                    setValue('exaltation_date', '');
+                  }
+                }}
+                defaultValue={initialData?.degree || 'Aprendiz'}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o grau" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aprendiz">1º Grau - Aprendiz</SelectItem>
+                  <SelectItem value="Companheiro">2º Grau - Companheiro</SelectItem>
+                  <SelectItem value="Mestre">3º Grau - Mestre</SelectItem>
+                  <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            (initialData?.degree || watchedDegree) && (
+              <div className="space-y-2">
+                <Label htmlFor="degree_display">Grau</Label>
+                <Input 
+                  id="degree_display" 
+                  value={initialData?.degree || watchedDegree} 
+                  disabled 
+                  className="bg-muted cursor-not-allowed"
+                />
+                <p className="text-xs text-muted-foreground">Definido pela administração</p>
+              </div>
+            )
+          )}
+
+          {/* Data de Iniciação (1º Grau) - Apenas Admin */}
           <div className="space-y-2">
             <Label htmlFor="initiation_date">Data de Iniciação (1º Grau)</Label>
-            <Input {...register('initiation_date')} id="initiation_date" type="date" />
+            <Input 
+              {...register('initiation_date')} 
+              id="initiation_date" 
+              type="date" 
+              disabled={!canEditInitiation}
+              className={!canEditInitiation ? 'bg-muted cursor-not-allowed' : ''}
+            />
+            {!canEditInitiation && (
+              <p className="text-xs text-muted-foreground">Alterável apenas pela administração</p>
+            )}
           </div>
 
+          {/* Data de Elevação (2º Grau) - Apenas a partir de Companheiro */}
           <div className="space-y-2">
             <Label htmlFor="elevation_date">Data de Elevação (2º Grau)</Label>
-            <Input {...register('elevation_date')} id="elevation_date" type="date" />
+            <Input 
+              {...register('elevation_date')} 
+              id="elevation_date" 
+              type="date" 
+              disabled={!canEditElevation}
+              className={!canEditElevation ? 'bg-muted cursor-not-allowed' : ''}
+            />
+            {!showAdminFields ? (
+              <p className="text-xs text-muted-foreground">Alterável apenas pela administração</p>
+            ) : !isCompanheiroOrAbove ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                🔒 Disponível apenas a partir do 2º Grau (Companheiro)
+              </p>
+            ) : null}
           </div>
 
+          {/* Data de Exaltação (3º Grau) - Apenas para Mestre */}
           <div className="space-y-2">
             <Label htmlFor="exaltation_date">Data de Exaltação (3º Grau)</Label>
-            <Input {...register('exaltation_date')} id="exaltation_date" type="date" />
+            <Input 
+              {...register('exaltation_date')} 
+              id="exaltation_date" 
+              type="date" 
+              disabled={!canEditExaltation}
+              className={!canEditExaltation ? 'bg-muted cursor-not-allowed' : ''}
+            />
+            {!showAdminFields ? (
+              <p className="text-xs text-muted-foreground">Alterável apenas pela administração</p>
+            ) : !isMestreOrAbove ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                🔒 Disponível apenas a partir do 3º Grau (Mestre)
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="cim_number">Número do CIM</Label>
-            <Input {...register('cim_number')} id="cim_number" disabled={!showAdminFields} />
+            <Input 
+              {...register('cim_number')} 
+              id="cim_number" 
+              disabled={!showAdminFields} 
+              className={!showAdminFields ? 'bg-muted cursor-not-allowed' : ''} 
+            />
             {!showAdminFields && (
               <p className="text-xs text-muted-foreground">Gerado automaticamente</p>
             )}
           </div>
 
-          {/* Grau - readonly for members */}
-          {!showAdminFields && initialData?.degree && (
-            <div className="space-y-2">
-              <Label htmlFor="degree_display">Grau</Label>
-              <Input 
-                id="degree_display" 
-                value={initialData.degree} 
-                disabled 
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">Definido pela administração</p>
-            </div>
-          )}
-
           {showAdminFields && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="degree">Grau</Label>
-                <Select
-                  onValueChange={(value) => setValue('degree', value)}
-                  defaultValue={initialData?.degree || 'Aprendiz'}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o grau" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Aprendiz">Aprendiz</SelectItem>
-                    <SelectItem value="Companheiro">Companheiro</SelectItem>
-                    <SelectItem value="Mestre">Mestre</SelectItem>
-                    <SelectItem value="Mestre Instalado">Mestre Instalado</SelectItem>
-                  </SelectContent>
-              </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cargo">Cargo</Label>
+                <Label htmlFor="cargo">Cargo Profissional</Label>
                 <Input {...register('cargo')} id="cargo" placeholder="Ex: Engenheiro, Advogado..." />
               </div>
 
