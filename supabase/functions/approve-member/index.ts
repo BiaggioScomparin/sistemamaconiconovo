@@ -13,34 +13,13 @@ serve(async (req) => {
 
   try {
     // Validate authorization header
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized: Missing or invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Create client with user's auth
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    // Verify the user using getClaims
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      console.error('Claims error:', claimsError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const userId = claimsData.claims.sub;
 
     // Create admin client for role check and user creation
     const supabaseAdmin = createClient(
@@ -54,13 +33,27 @@ serve(async (req) => {
       }
     );
 
+    // Verify the caller using admin client
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('User verification error:', userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+
     // Verify caller has admin role
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
     if (roleError || !roleData) {
       console.error('Role check error:', roleError);
@@ -70,7 +63,7 @@ serve(async (req) => {
       );
     }
 
-    const { profileId, email, lodgeId } = await req.json();
+    const { profileId, email, lodgeId, cpf } = await req.json();
 
     if (!profileId || !email) {
       return new Response(
@@ -79,81 +72,72 @@ serve(async (req) => {
       );
     }
 
-    // Generate a cryptographically secure random password
-    const randomBytes = new Uint8Array(24);
-    crypto.getRandomValues(randomBytes);
-    const securePassword = Array.from(randomBytes)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    // Check if profile already exists and has user_id
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, user_id, email, cpf')
+      .eq('id', profileId)
+      .maybeSingle();
 
-    // Try to create the user, or find existing one
-    let authUserId: string;
-    
-    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: securePassword,
-      email_confirm: true,
-    });
+    let authUserId = existingProfile?.user_id;
 
-    if (createError) {
-      if (createError.message?.includes('already been registered')) {
-        // User already exists, find them by email
-        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-        if (listError) {
-          console.error('List users error:', listError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to find existing user' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        const existingUser = listData.users.find(u => u.email === email);
-        if (!existingUser) {
-          return new Response(
-            JSON.stringify({ error: 'User exists but could not be found' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+    if (!authUserId) {
+      // Check if user already registered in auth.users by email
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = listData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+      if (existingUser) {
         authUserId = existingUser.id;
-        console.log('Using existing auth user:', authUserId);
       } else {
-        console.error('Create user error:', createError);
-        return new Response(
-          JSON.stringify({ error: createError.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Create new user in auth
+        const tempPassword = cpf ? cpf.replace(/\D/g, '') : 'Membro@2026';
+        const passwordToUse = tempPassword.length >= 6 ? tempPassword : 'Membro@' + Math.floor(1000 + Math.random() * 9000);
+        
+        const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: passwordToUse,
+          email_confirm: true,
+        });
+
+        if (createError) {
+          console.error('Create user error:', createError);
+          return new Response(
+            JSON.stringify({ error: createError.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        authUserId = userData.user.id;
       }
-    } else {
-      authUserId = userData.user.id;
     }
 
-    // Send password reset email so user can set their own password
-    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email: email,
-    });
-
-    if (resetError) {
-      console.error('Failed to send password reset email:', resetError);
+    // Try sending password reset / recovery email (non-fatal if SMTP is not configured)
+    try {
+      await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+      });
+    } catch (resetErr) {
+      console.warn('generateLink warning (non-fatal):', resetErr);
     }
 
-    // Add member role (ignore if already exists)
-    const { error: roleInsertError } = await supabaseAdmin
-      .from('user_roles')
-      .upsert({
-        user_id: authUserId,
-        role: 'member'
-      }, { onConflict: 'user_id,role', ignoreDuplicates: true });
-
-    if (roleInsertError) {
-      console.error('Role insert error:', roleInsertError);
+    // Add member role in user_roles
+    if (authUserId) {
+      await supabaseAdmin
+        .from('user_roles')
+        .upsert({
+          user_id: authUserId,
+          role: 'member'
+        }, { onConflict: 'user_id,role', ignoreDuplicates: true });
     }
 
-    // Update profile with user_id, status, and optionally lodge_id
+    // Update profile
     const updateData: Record<string, unknown> = {
-      user_id: authUserId,
-      status: 'membro'
+      status: 'membro',
+      member_status: 'active'
     };
-    
+    if (authUserId) {
+      updateData.user_id = authUserId;
+    }
     if (lodgeId) {
       updateData.lodge_id = lodgeId;
     }
@@ -174,7 +158,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Member approved successfully. A password reset email has been sent.',
+        message: 'Membro aprovado com sucesso!',
         user_id: authUserId 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

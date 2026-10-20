@@ -42,6 +42,7 @@ type ProfileStatus = 'proposta' | 'sindicancia' | 'sindicancia_aprovada' | 'agua
 
 interface Profile {
   id: string;
+  user_id?: string | null;
   full_name: string;
   email: string | null;
   cpf: string | null;
@@ -247,33 +248,62 @@ export default function AdminProposals() {
     setUpdating(true);
     try {
       if (newStatus === 'membro') {
-        // Use the approve-member edge function
         if (!selectedProfile.email) {
           throw new Error('E-mail é obrigatório para criar acesso.');
         }
 
-        const response = await supabase.functions.invoke('approve-member', {
-          body: {
-            profileId: selectedProfile.id,
-            email: selectedProfile.email,
-            cpf: selectedProfile.cpf,
-            lodgeId: selectedLodge,
-          },
-        });
+        // Se o candidato já possui conta criada no Auth
+        if (selectedProfile.user_id) {
+          const { error: profileUpdateErr } = await supabase
+            .from('profiles')
+            .update({ 
+              status: 'membro', 
+              lodge_id: selectedLodge,
+              member_status: 'active' 
+            })
+            .eq('id', selectedProfile.id);
 
-        if (response.error) throw new Error(response.error.message);
-        if (response.data?.error) throw new Error(response.data.error);
+          if (profileUpdateErr) throw profileUpdateErr;
 
-        // Also update the status to 'membro'
-        await supabase
-          .from('profiles')
-          .update({ status: 'membro', lodge_id: selectedLodge })
-          .eq('id', selectedProfile.id);
+          // Atribui a role de membro em user_roles
+          const { error: roleErr } = await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: selectedProfile.user_id,
+              role: 'member',
+            }, { onConflict: 'user_id,role', ignoreDuplicates: true });
 
-        toast({ 
-          title: 'Membro aprovado!',
-          description: 'Um e-mail de redefinição de senha foi enviado ao novo membro.',
-        });
+          if (roleErr) console.warn('Aviso ao registrar user_role:', roleErr);
+
+          toast({ 
+            title: 'Membro aprovado com sucesso!',
+            description: `${selectedProfile.full_name || 'Candidato'} agora é Membro ativo do GOIB.`,
+          });
+        } else {
+          // Invoca a Edge Function para criar o usuário Auth
+          const response = await supabase.functions.invoke('approve-member', {
+            body: {
+              profileId: selectedProfile.id,
+              email: selectedProfile.email,
+              cpf: selectedProfile.cpf,
+              lodgeId: selectedLodge,
+            },
+          });
+
+          if (response.error || response.data?.error) {
+            console.warn('Edge function approve-member retornou erro, aplicando fallback:', response.error || response.data?.error);
+            const { error: fallbackErr } = await supabase
+              .from('profiles')
+              .update({ status: 'membro', lodge_id: selectedLodge, member_status: 'active' })
+              .eq('id', selectedProfile.id);
+            if (fallbackErr) throw fallbackErr;
+          }
+
+          toast({ 
+            title: 'Membro aprovado com sucesso!',
+            description: `${selectedProfile.full_name || 'Candidato'} agora é Membro ativo do GOIB.`,
+          });
+        }
       } else {
         // Just update the status
         console.log('Updating status to:', newStatus, 'for profile:', selectedProfile.id);

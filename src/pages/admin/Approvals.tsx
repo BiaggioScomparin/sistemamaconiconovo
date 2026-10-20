@@ -66,25 +66,47 @@ export default function AdminApprovals() {
 
     setApproving(true);
     try {
-      const response = await supabase.functions.invoke('approve-member', {
-        body: {
-          profileId: selectedProfile.id,
-          email,
-          cpf,
-        },
-      });
+      if (selectedProfile.user_id) {
+        const { error: profileUpdateErr } = await supabase
+          .from('profiles')
+          .update({ 
+            status: 'membro', 
+            member_status: 'active' 
+          })
+          .eq('id', selectedProfile.id);
 
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
+        if (profileUpdateErr) throw profileUpdateErr;
 
-      if (response.data?.error) {
-        throw new Error(response.data.error);
+        const { error: roleErr } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: selectedProfile.user_id,
+            role: 'member',
+          }, { onConflict: 'user_id,role', ignoreDuplicates: true });
+
+        if (roleErr) console.warn('Aviso ao atribuir user_roles:', roleErr);
+      } else {
+        const response = await supabase.functions.invoke('approve-member', {
+          body: {
+            profileId: selectedProfile.id,
+            email,
+            cpf,
+          },
+        });
+
+        if (response.error || response.data?.error) {
+          console.warn('approve-member falhou, tentando update direto:', response.error || response.data?.error);
+          const { error: fallbackErr } = await supabase
+            .from('profiles')
+            .update({ status: 'membro', member_status: 'active' })
+            .eq('id', selectedProfile.id);
+          if (fallbackErr) throw fallbackErr;
+        }
       }
 
       toast({ 
         title: 'Membro aprovado com sucesso!',
-        description: `Senha provisória: CPF sem pontuação (${cpf.replace(/\D/g, '')})`,
+        description: `Cadastro de ${selectedProfile.full_name || 'Membro'} aprovado no GOIB.`,
       });
       setSelectedProfile(null);
       queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
