@@ -9,7 +9,7 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 export function LoginForm() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,13 +21,17 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(identifier, password);
 
     if (error) {
       console.error('Supabase Login Error:', error);
+      let errorMsg = error.message;
+      if (error.message?.toLowerCase().includes('invalid login credentials')) {
+        errorMsg = 'E-mail/CPF/CIM ou senha incorretos.';
+      }
       toast({
         title: 'Erro ao entrar',
-        description: error.message || 'E-mail ou senha incorretos.',
+        description: errorMsg || 'E-mail, CPF, CIM ou senha incorretos.',
         variant: 'destructive',
       });
       setLoading(false);
@@ -76,13 +80,16 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-foreground font-body">E-mail</Label>
+        <Label htmlFor="identifier" className="text-foreground font-body">E-mail, CPF ou CIM</Label>
         <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="seu@email.com"
+          id="identifier"
+          type="text"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          placeholder="seu@email.com, CPF ou CIM"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
           required
           className="border-border focus:ring-secondary"
         />

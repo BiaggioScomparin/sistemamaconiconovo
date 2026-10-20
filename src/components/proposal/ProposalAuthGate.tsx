@@ -75,9 +75,13 @@ export default function ProposalAuthGate({ children }: ProposalAuthGateProps) {
       } else {
         const { error } = await signIn(email, password);
         if (error) {
+          let errorMsg = error.message;
+          if (error.message?.toLowerCase().includes('invalid login credentials')) {
+            errorMsg = 'E-mail/CPF/CIM ou senha incorretos.';
+          }
           toast({
             title: 'Erro ao entrar',
-            description: 'E-mail ou senha incorretos',
+            description: errorMsg || 'E-mail, CPF, CIM ou senha incorretos',
             variant: 'destructive',
           });
         }
@@ -106,20 +110,23 @@ export default function ProposalAuthGate({ children }: ProposalAuthGateProps) {
           <CardDescription>
             {mode === 'register' 
               ? 'Crie um acesso para preencher sua proposta de filiação'
-              : 'Entre com seu e-mail e senha para continuar'
+              : 'Entre com seu e-mail, CPF ou CIM e sua senha para continuar'
             }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">{mode === 'register' ? 'E-mail' : 'E-mail, CPF ou CIM'}</Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="seu@email.com"
+                type={mode === 'register' ? 'email' : 'text'}
+                placeholder={mode === 'register' ? 'seu@email.com' : 'seu@email.com, CPF ou CIM'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
                 required
               />
             </div>

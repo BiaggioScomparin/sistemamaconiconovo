@@ -9,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   role: AppRole | null;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (identifier: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -103,9 +103,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identifier: string, password: string) => {
+    const cleanIdentifier = identifier.trim();
+    if (!cleanIdentifier) {
+      return { error: new Error('Informe seu e-mail, CPF ou CIM.') };
+    }
+
+    let emailToUse = cleanIdentifier;
+
+    // Se não for e-mail (não possui @), tenta resolver via CPF ou CIM
+    if (!cleanIdentifier.includes('@')) {
+      try {
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc('get_login_email', {
+          _identifier: cleanIdentifier,
+        });
+
+        if (rpcError) {
+          console.error('Erro na RPC get_login_email:', rpcError);
+          return { error: new Error('Erro ao localizar o cadastro. Verifique os dados digitados.') };
+        }
+
+        if (!resolvedEmail) {
+          return { error: new Error('Nenhum cadastro encontrado com este CPF ou CIM.') };
+        }
+
+        emailToUse = resolvedEmail;
+      } catch (err: any) {
+        console.error('Erro ao resolver identificador de login:', err);
+        return { error: new Error('Erro ao verificar CPF ou CIM. Tente novamente.') };
+      }
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: emailToUse,
       password,
     });
     return { error };
