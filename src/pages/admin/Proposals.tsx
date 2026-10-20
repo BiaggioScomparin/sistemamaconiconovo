@@ -183,8 +183,8 @@ export default function AdminProposals() {
   const [deletingCandidate, setDeletingCandidate] = useState(false);
   const [togglingInactivateId, setTogglingInactivateId] = useState<string | null>(null);
 
-  // WhatsApp notification states
-  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
+  // WhatsApp notification states (desligadas por padrão conforme solicitado)
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
   const [customWhatsappMsg, setCustomWhatsappMsg] = useState('');
   const [messageSettingsOpen, setMessageSettingsOpen] = useState(false);
   const { templates: messageTemplates } = useProposalMessageTemplates();
@@ -225,7 +225,7 @@ export default function AdminProposals() {
   const handleSelectStatus = (status: string) => {
     setNewStatus(status);
     const key = status as ProposalStatusKey;
-    const isEnabled = messageTemplates?.[key]?.enabled ?? true;
+    const isEnabled = messageTemplates?.[key]?.enabled ?? false;
     setNotifyWhatsApp(isEnabled);
 
     if (selectedProfile) {

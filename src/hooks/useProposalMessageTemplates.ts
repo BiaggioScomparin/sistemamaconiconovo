@@ -17,23 +17,23 @@ export type ProposalStatusKey =
 
 export const DEFAULT_PROPOSAL_TEMPLATES: Record<ProposalStatusKey, ProposalMessageTemplate> = {
   proposta: {
-    enabled: true,
+    enabled: false,
     template: 'Olá, {nome}! Recebemos a sua proposta para o Grande Oriente Independente do Brasil (GOIB). Seu cadastro está sob análise preliminar pela secretaria da Ordem.',
   },
   sindicancia: {
-    enabled: true,
+    enabled: false,
     template: 'Olá, {nome}! Sua proposta para o GOIB avançou para a etapa de Sindicância & Verificação Preliminar. A comissão de sindicantes iniciou a análise e em breve entrará em contato para agendar a entrevista.',
   },
   sindicancia_aprovada: {
-    enabled: true,
+    enabled: false,
     template: 'Olá, {nome}! Parabéns! Sua Sindicância foi Aprovada pela Comissão. Acesse o sistema em {link_sistema}/proposta para conferir ou atualizar sua Ficha de Proposta Completa.',
   },
   aguardando_iniciacao: {
-    enabled: true,
+    enabled: false,
     template: 'Olá, {nome}! Sua proposta foi aprovada pela Loja {loja} e sua Cerimônia de Iniciação foi agendada para {data_iniciacao}. Em breve a secretaria entrará em contato com todas as instruções de preparação e vestimenta.',
   },
   membro: {
-    enabled: true,
+    enabled: false,
     template: 'Ilustre Irmão {nome}, seja muito bem-vindo ao Grande Oriente Independente do Brasil (GOIB) e à A.·.R.·.L.·.S.·. {loja}! Seu cadastro foi aprovado como {grau} e seu CIM é {cim}. Acesse o sistema em {link_sistema}/login com o e-mail {email}. Fraternal T.·.F.·.A.·.',
   },
   reprovado: {
