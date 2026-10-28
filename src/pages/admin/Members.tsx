@@ -1034,9 +1034,47 @@ export default function AdminMembers() {
                             {renderPositionBadge(position) || <span className="text-muted-foreground text-xs">-</span>}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm font-medium">
-                              {(profile as any).lodges?.name || '-'}
-                            </span>
+                            <Select
+                              value={profile.lodge_id || 'none'}
+                              onValueChange={async (newLodgeId) => {
+                                try {
+                                  const lodgeIdValue = newLodgeId === 'none' ? null : newLodgeId;
+                                  const selectedLodge = lodges?.find(l => l.id === lodgeIdValue);
+                                  const { error } = await supabase
+                                    .from('profiles')
+                                    .update({ lodge_id: lodgeIdValue })
+                                    .eq('id', profile.id);
+                                  if (error) throw error;
+                                  queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+                                  toast({ 
+                                    title: 'Loja alterada com sucesso!', 
+                                    description: selectedLodge 
+                                      ? `${profile.full_name} agora está filiado à ${selectedLodge.name}.`
+                                      : `Filiação de ${profile.full_name} removida (sem loja).`
+                                  });
+                                } catch (error: any) {
+                                  toast({ title: 'Erro ao alterar loja', description: error.message, variant: 'destructive' });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-44 h-8 text-xs font-medium">
+                                <SelectValue>
+                                  {(profile as any).lodges?.name || (
+                                    <span className="text-muted-foreground italic">Sem Loja</span>
+                                  )}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="bg-background border border-border z-50 max-h-64">
+                                <SelectItem value="none">
+                                  <span className="text-muted-foreground italic">Sem Loja (Não filiado)</span>
+                                </SelectItem>
+                                {lodges?.map((lodge) => (
+                                  <SelectItem key={lodge.id} value={lodge.id}>
+                                    {lodge.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell>
                             <Select
@@ -1214,14 +1252,50 @@ export default function AdminMembers() {
 
                         {/* Details summary */}
                         <div className="space-y-1.5 pt-2 border-t border-border/50 text-xs text-muted-foreground">
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-1 text-xs shrink-0">
                               <Building2 className="h-3.5 w-3.5 text-primary/70" />
                               Loja:
                             </span>
-                            <span className="font-medium text-foreground truncate max-w-[150px]">
-                              {(profile as any).lodges?.name || '-'}
-                            </span>
+                            <Select
+                              value={profile.lodge_id || 'none'}
+                              onValueChange={async (newLodgeId) => {
+                                try {
+                                  const lodgeIdValue = newLodgeId === 'none' ? null : newLodgeId;
+                                  const selectedLodge = lodges?.find(l => l.id === lodgeIdValue);
+                                  const { error } = await supabase
+                                    .from('profiles')
+                                    .update({ lodge_id: lodgeIdValue })
+                                    .eq('id', profile.id);
+                                  if (error) throw error;
+                                  queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+                                  toast({ 
+                                    title: 'Loja alterada com sucesso!', 
+                                    description: selectedLodge 
+                                      ? `${profile.full_name} agora está filiado à ${selectedLodge.name}.`
+                                      : `Filiação de ${profile.full_name} removida.`
+                                  });
+                                } catch (error: any) {
+                                  toast({ title: 'Erro ao alterar loja', description: error.message, variant: 'destructive' });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs px-2 max-w-[170px]">
+                                <SelectValue>
+                                  {(profile as any).lodges?.name || <span className="text-muted-foreground italic">Sem Loja</span>}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="bg-background border border-border z-50 max-h-64">
+                                <SelectItem value="none">
+                                  <span className="text-muted-foreground italic">Sem Loja</span>
+                                </SelectItem>
+                                {lodges?.map((lodge) => (
+                                  <SelectItem key={lodge.id} value={lodge.id}>
+                                    {lodge.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="flex items-center justify-between">
                             <span>CIM:</span>

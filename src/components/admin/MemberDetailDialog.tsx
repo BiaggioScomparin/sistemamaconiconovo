@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLodges } from '@/hooks/useLodges';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { User, CalendarCheck, DollarSign, FileText, UserCheck, UserX } from 'lucide-react';
@@ -18,6 +22,14 @@ interface MemberDetailDialogProps {
 }
 
 export function MemberDetailDialog({ profile, open, onOpenChange }: MemberDetailDialogProps) {
+  const { data: lodges } = useLodges();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [currentLodgeId, setCurrentLodgeId] = useState<string | null>(profile?.lodge_id || null);
+
+  useEffect(() => {
+    setCurrentLodgeId(profile?.lodge_id || null);
+  }, [profile?.lodge_id]);
   // Fetch attendance history
   const { data: attendances } = useQuery({
     queryKey: ['member-attendances', profile?.id],
@@ -128,7 +140,51 @@ export function MemberDetailDialog({ profile, open, onOpenChange }: MemberDetail
                   <InfoRow label="CIM" value={profile.cim_number} />
                   <InfoRow label="Grau" value={p.degree || 'Aprendiz'} />
                   <InfoRow label="Cargo" value={p.lodge_position} />
-                  <InfoRow label="Loja" value={p.lodges?.name} />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Loja:</span>
+                    <Select
+                      value={currentLodgeId || 'none'}
+                      onValueChange={async (newLodgeId) => {
+                        const lodgeIdValue = newLodgeId === 'none' ? null : newLodgeId;
+                        try {
+                          const { error } = await supabase
+                            .from('profiles')
+                            .update({ lodge_id: lodgeIdValue })
+                            .eq('id', profile.id);
+                          if (error) throw error;
+                          setCurrentLodgeId(lodgeIdValue);
+                          queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+                          const selected = lodges?.find(l => l.id === lodgeIdValue);
+                          toast({
+                            title: 'Loja alterada com sucesso!',
+                            description: selected 
+                              ? `${profile.full_name} agora pertence à ${selected.name}.`
+                              : `Filiação de ${profile.full_name} removida.`,
+                          });
+                        } catch (err: any) {
+                          toast({ title: 'Erro ao alterar loja', description: err.message, variant: 'destructive' });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue>
+                          {lodges?.find(l => l.id === currentLodgeId)?.name || (
+                            <span className="text-muted-foreground italic">Sem Loja</span>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border border-border z-50 max-h-60">
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground italic">Sem Loja (Não filiado)</span>
+                        </SelectItem>
+                        {lodges?.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <InfoRow label="Iniciação (1º Grau)" value={formatDate(profile.initiation_date)} />
                   <InfoRow label="Elevação (2º Grau)" value={formatDate((profile as any).elevation_date)} />
                   <InfoRow label="Exaltação (3º Grau)" value={formatDate((profile as any).exaltation_date)} />

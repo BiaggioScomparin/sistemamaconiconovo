@@ -132,6 +132,7 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
     setValue,
     watch,
     getValues,
+    reset,
     formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(schemaToUse),
@@ -146,6 +147,12 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
   const canEditInitiation = !!showAdminFields;
   const canEditElevation = !!showAdminFields && isCompanheiroOrAbove;
   const canEditExaltation = !!showAdminFields && isMestreOrAbove;
+
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+    }
+  }, [initialData, reset]);
 
   useEffect(() => {
     if (photoUrl) {
@@ -245,7 +252,7 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
       'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state',
     ];
     for (const k of optionalFields) {
-      if (cleaned[k] === '' || cleaned[k] === undefined || (typeof cleaned[k] === 'string' && cleaned[k].trim() === '')) {
+      if (cleaned[k] === '' || cleaned[k] === undefined || cleaned[k] === 'none' || (typeof cleaned[k] === 'string' && cleaned[k].trim() === '')) {
         cleaned[k] = null;
       }
     }
@@ -380,22 +387,47 @@ export function ProfileForm({ initialData, initialChildren = [], onSubmit, loadi
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="lodge_id">Loja Maçônica</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lodge_id">Loja Maçônica</Label>
+              {showAdminFields && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  (Alteração de filiação)
+                </span>
+              )}
+            </div>
             <Select
-              onValueChange={(value) => setValue('lodge_id', value)}
-              defaultValue={initialData?.lodge_id}
+              value={watch('lodge_id') || 'none'}
+              onValueChange={(value) => {
+                setValue('lodge_id', value === 'none' ? '' : value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              }}
+              disabled={!showAdminFields && !!initialData?.lodge_id}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma loja" />
+              <SelectTrigger id="lodge_id" className="w-full bg-background">
+                <SelectValue placeholder="Selecione uma loja">
+                  {lodges?.find(l => l.id === watch('lodge_id'))?.name || (
+                    watch('lodge_id') && watch('lodge_id') !== 'none' ? 'Loja vinculada' : 'Nenhuma (Sem Filiação)'
+                  )}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
-                {lodges?.map((lodge) => (
+              <SelectContent className="bg-background border border-border z-50 max-h-64">
+                <SelectItem value="none">
+                  <span className="text-muted-foreground italic">Nenhuma Loja (Sem Filiação)</span>
+                </SelectItem>
+                {lodges?.filter(l => l.id).map((lodge) => (
                   <SelectItem key={lodge.id} value={lodge.id}>
-                    {lodge.name}
+                    {lodge.name} {lodge.city ? `(${lodge.city}${lodge.state ? ` - ${lodge.state}` : ''})` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {!showAdminFields && (
+              <p className="text-xs text-muted-foreground">
+                Para transferir ou mudar de Loja, entre em contato com a secretaria da administração.
+              </p>
+            )}
           </div>
 
           {/* Grau Maçônico */}
