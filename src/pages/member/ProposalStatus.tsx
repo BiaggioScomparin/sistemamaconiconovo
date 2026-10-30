@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -350,6 +350,17 @@ export default function ProposalStatus() {
                     </p>
                   </div>
                 </div>
+
+                {statusKey === 'sindicancia_aprovada' && (
+                  <div className="pt-2">
+                    <Link to="/proposta" className="block w-full">
+                      <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold h-12 text-sm shadow-lg animate-pulse">
+                        <FileText className="h-5 w-5" />
+                        Preencher Ficha de Proposta Completa (Etapa 2) →
+                      </Button>
+                    </Link>
+                  </div>
+                )}
 
                 {statusConfig.alertNotice && (
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
