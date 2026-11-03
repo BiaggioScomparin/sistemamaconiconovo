@@ -667,6 +667,7 @@ export default function AdminProposals() {
     { key: 'sindicancia_aprovada', title: 'Sind. Aprovada', icon: UserCheck, color: 'border-orange-500/50 bg-orange-500/5' },
     { key: 'aguardando_iniciacao', title: 'Aguard. Iniciação', icon: Calendar, color: 'border-purple-500/50 bg-purple-500/5' },
     { key: 'membro', title: 'Iniciado / Membro', icon: UserCheck, color: 'border-emerald-500/50 bg-emerald-500/5' },
+    { key: 'reprovado', title: 'Reprovados', icon: UserX, color: 'border-red-500/50 bg-red-500/5' },
   ];
 
   const tabCounts = {
@@ -727,7 +728,7 @@ export default function AdminProposals() {
         {/* KANBAN BOARD VIEW */}
         {viewMode === 'kanban' && (
           <div className="overflow-x-auto pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-[1000px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 min-w-[1200px]">
               {kanbanColumns.map((col) => {
                 const candidates = filterProfiles(col.key);
                 return (
@@ -852,11 +853,15 @@ export default function AdminProposals() {
                                 </DropdownMenu>
                               </div>
 
-                              {col.key === 'sindicancia' && (
+                              {(col.key === 'sindicancia' || col.key === 'reprovado') && (
                                 <Button
                                   size="sm"
                                   onClick={() => navigate(`/admin/sindicancia?candidateId=${candidate.id}`)}
-                                  className="h-7 px-2 text-[11px] w-full gap-1 bg-amber-500 hover:bg-amber-600 text-black font-bold mt-1"
+                                  className={`h-7 px-2 text-[11px] w-full gap-1 font-bold mt-1 ${
+                                    col.key === 'reprovado' 
+                                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30' 
+                                      : 'bg-amber-500 hover:bg-amber-600 text-black'
+                                  }`}
                                 >
                                   <ShieldCheck className="h-3.5 w-3.5" /> Analisar Sindicância
                                 </Button>
