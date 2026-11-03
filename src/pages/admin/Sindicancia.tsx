@@ -25,20 +25,19 @@ import {
   User, 
   Building2, 
   Scale, 
-  ShieldAlert, 
   FileCheck, 
-  ChevronRight,
-  Sparkles,
-  Vote,
-  Receipt,
-  Briefcase,
-  Landmark,
-  Award,
-  AlertTriangle,
-  ExternalLink,
-  AlertOctagon,
-  Trash2,
-  Eye
+  Vote, 
+  Receipt, 
+  Briefcase, 
+  Landmark, 
+  Award, 
+  AlertTriangle, 
+  ExternalLink, 
+  AlertOctagon, 
+  Trash2, 
+  Eye,
+  MapPin,
+  FolderOpen
 } from 'lucide-react';
 
 interface CandidateData {
@@ -54,6 +53,15 @@ interface CandidateData {
   hasLgpdConsent: boolean;
 }
 
+export interface ApontamentoDetalheItem {
+  processo?: string;
+  vara?: string;
+  motivo?: string;
+  grau?: string;
+}
+
+export type ApontamentosPorOrgaoMap = Record<string, ApontamentoDetalheItem>;
+
 interface SindicanciaDbRecord {
   id: string;
   profile_id?: string;
@@ -67,6 +75,7 @@ interface SindicanciaDbRecord {
   has_apontamento: boolean;
   apontamento_detalhes?: string;
   apontamento_orgaos?: string[];
+  apontamentos_por_orgao?: ApontamentosPorOrgaoMap;
   comissao_vote: 'FAVORAVEL' | 'RESTRICAO' | 'DESFAVORAVEL';
   concept?: string;
   parecer_notes?: string;
@@ -80,6 +89,35 @@ interface SindicanciaDbRecord {
   cgu_status?: string;
   created_at: string;
 }
+
+interface CertificadoCardData {
+  status: string;
+  protocol: string;
+  date?: string;
+  detail?: string;
+  processo?: string;
+  vara?: string;
+  motivo?: string;
+  quitacao?: string;
+  crimes?: string;
+  cpfStatus?: string;
+  cndStatus?: string;
+  ceisStatus?: string;
+  cnepStatus?: string;
+  totalCases?: number;
+  totalEmpresas?: number;
+}
+
+const BASES_DISPONIVEIS = [
+  { id: 'TJ Estadual', label: 'TJ Estadual (Justiça Estadual)', icon: Building2, desc: 'Processos criminais e cíveis em 1º e 2º grau' },
+  { id: 'DataJud (CNJ Nacional)', label: 'DataJud (CNJ - Base Nacional)', icon: Scale, desc: 'Varredura unificada em todos os tribunais do Brasil' },
+  { id: 'Polícia Federal (SINIC)', label: 'Polícia Federal (SINIC)', icon: ShieldCheck, desc: 'Inquéritos policiais e antecedentes federais' },
+  { id: 'TRF Federal', label: 'TRF (Justiça Federal)', icon: FileCheck, desc: 'Ações penais e execuções fiscais federais' },
+  { id: 'TSE Eleitoral', label: 'TSE (Justiça Eleitoral)', icon: Vote, desc: 'Crimes eleitorais e cassação de direitos políticos' },
+  { id: 'Receita Federal', label: 'Receita Federal (CPF & Dívida Ativa)', icon: Receipt, desc: 'Irregularidade no CPF e débitos com a União' },
+  { id: 'CNDT Trabalhista', label: 'TST (Justiça do Trabalho / CNDT)', icon: Briefcase, desc: 'Processos trabalhistas e execuções ativas' },
+  { id: 'CGU Sanções', label: 'CGU Sanções (CEIS / CNEP)', icon: Landmark, desc: 'Declaração de inidoneidade e sanções administrativas' },
+];
 
 export default function AdminSindicancia() {
   const { user, loading, isAdmin } = useAuth();
@@ -101,10 +139,11 @@ export default function AdminSindicancia() {
     hasLgpdConsent: true,
   });
 
-  // Apontamento controls
+  // Apontamento controls per organ
   const [hasApontamento, setHasApontamento] = useState(false);
   const [apontamentoOrgaos, setApontamentoOrgaos] = useState<string[]>([]);
-  const [apontamentoDetalhes, setApontamentoDetalhes] = useState('');
+  const [apontamentosPorOrgao, setApontamentosPorOrgao] = useState<ApontamentosPorOrgaoMap>({});
+  const [observacoesGeraisApontamento, setObservacoesGeraisApontamento] = useState('');
 
   // Candidate Selector
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
@@ -121,19 +160,20 @@ export default function AdminSindicancia() {
     protocol: string;
     generatedAt: string;
     hasApontamento: boolean;
-    apontamentoDetalhes?: string;
-    apontamentoOrgaos?: string[];
-    pfCert: { status: string; protocol: string; date: string; detail: string };
-    datajudCert: { status: string; totalCases: number; detail: string };
-    tjCert: { status: string; protocol: string; date: string; detail: string };
-    trfCert: { status: string; protocol: string; detail: string };
-    tseCert: { quitacao: string; crimes: string; protocol: string };
-    receitaCert: { cpfStatus: string; cndStatus: string; protocol: string };
-    cndtCert: { status: string; protocol: string };
-    cguCert: { ceisStatus: string; cnepStatus: string; protocol: string };
-    tcuCert: { status: string; detail: string };
-    redesimCert: { totalEmpresas: number; detail: string };
-    conselhoCert: { status: string; detail: string };
+    apontamentosPorOrgao: ApontamentosPorOrgaoMap;
+    apontamentoOrgaos: string[];
+    apontamentoDetalhesGerais?: string;
+    pfCert: CertificadoCardData;
+    datajudCert: CertificadoCardData;
+    tjCert: CertificadoCardData;
+    trfCert: CertificadoCardData;
+    tseCert: CertificadoCardData;
+    receitaCert: CertificadoCardData;
+    cndtCert: CertificadoCardData;
+    cguCert: CertificadoCardData;
+    tcuCert: CertificadoCardData;
+    redesimCert: CertificadoCardData;
+    conselhoCert: CertificadoCardData;
   } | null>(null);
 
   // Sindicante Parecer Form
@@ -143,7 +183,6 @@ export default function AdminSindicancia() {
   const [parecerNotes, setParecerNotes] = useState('');
   const [isSavingParecer, setIsSavingParecer] = useState(false);
 
-  // Clear interval on unmount
   useEffect(() => {
     return () => {
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
@@ -205,7 +244,8 @@ export default function AdminSindicancia() {
       if (existing) {
         setHasApontamento(existing.has_apontamento || false);
         setApontamentoOrgaos(existing.apontamento_orgaos || []);
-        setApontamentoDetalhes(existing.apontamento_detalhes || '');
+        setApontamentosPorOrgao(existing.apontamentos_por_orgao || {});
+        setObservacoesGeraisApontamento(existing.apontamento_detalhes || '');
         setSindicanteName(existing.sindicante_name || '');
         setInterviewConcept(existing.concept || 'excelente');
         setComissaoVote(existing.comissao_vote || 'FAVORAVEL');
@@ -213,7 +253,8 @@ export default function AdminSindicancia() {
       } else {
         setHasApontamento(false);
         setApontamentoOrgaos([]);
-        setApontamentoDetalhes('');
+        setApontamentosPorOrgao({});
+        setObservacoesGeraisApontamento('');
         setComissaoVote('FAVORAVEL');
         setInterviewConcept('excelente');
         setParecerNotes('');
@@ -239,6 +280,33 @@ export default function AdminSindicancia() {
   if (!user || !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  const handleToggleOrgao = (baseName: string, checked: boolean) => {
+    if (checked) {
+      setApontamentoOrgaos(prev => [...prev, baseName]);
+      setApontamentosPorOrgao(prev => ({
+        ...prev,
+        [baseName]: prev[baseName] || { processo: '', vara: '', motivo: '' }
+      }));
+    } else {
+      setApontamentoOrgaos(prev => prev.filter(o => o !== baseName));
+      setApontamentosPorOrgao(prev => {
+        const copy = { ...prev };
+        delete copy[baseName];
+        return copy;
+      });
+    }
+  };
+
+  const handleUpdateApontamentoCampo = (baseName: string, field: keyof ApontamentoDetalheItem, value: string) => {
+    setApontamentosPorOrgao(prev => ({
+      ...prev,
+      [baseName]: {
+        ...(prev[baseName] || {}),
+        [field]: value
+      }
+    }));
+  };
 
   const handleSaveProfileChanges = async () => {
     if (!formData.id) {
@@ -309,7 +377,8 @@ export default function AdminSindicancia() {
     const candidateSnapshot = { ...formData };
     const currentHasApontamento = hasApontamento;
     const currentOrgaos = [...apontamentoOrgaos];
-    const currentDetalhes = apontamentoDetalhes;
+    const currentApontamentosMap = { ...apontamentosPorOrgao };
+    const currentObsGerais = observacoesGeraisApontamento;
 
     const finishScan = () => {
       if (scanIntervalRef.current) {
@@ -321,95 +390,142 @@ export default function AdminSindicancia() {
       const protocol = `SIND-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const todayStr = new Date().toLocaleDateString('pt-BR');
 
-      const isPfApont = currentOrgaos.includes('Polícia Federal (SINIC)');
-      const isDatajudApont = currentOrgaos.includes('DataJud (CNJ Nacional)');
-      const isTjApont = currentOrgaos.includes('TJ Estadual');
-      const isTrfApont = currentOrgaos.includes('TRF Federal');
-      const isTseApont = currentOrgaos.includes('TSE Eleitoral');
-      const isReceitaApont = currentOrgaos.includes('Receita Federal');
-      const isCndtApont = currentOrgaos.includes('CNDT Trabalhista');
-      const isCguApont = currentOrgaos.includes('CGU Sanções');
+      const pfItem = currentApontamentosMap['Polícia Federal (SINIC)'];
+      const datajudItem = currentApontamentosMap['DataJud (CNJ Nacional)'];
+      const tjItem = currentApontamentosMap['TJ Estadual'];
+      const trfItem = currentApontamentosMap['TRF Federal'];
+      const tseItem = currentApontamentosMap['TSE Eleitoral'];
+      const receitaItem = currentApontamentosMap['Receita Federal'];
+      const cndtItem = currentApontamentosMap['CNDT Trabalhista'];
+      const cguItem = currentApontamentosMap['CGU Sanções'];
 
       setReportData({
         candidate: candidateSnapshot,
         protocol,
         generatedAt: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         hasApontamento: currentHasApontamento,
-        apontamentoDetalhes: currentDetalhes,
+        apontamentosPorOrgao: currentApontamentosMap,
         apontamentoOrgaos: currentOrgaos,
+        apontamentoDetalhesGerais: currentObsGerais,
         // 1. Polícia Federal
         pfCert: {
-          status: isPfApont ? 'APONTAMENTO' : 'NADA CONSTA',
-          protocol: `PF-SINIC-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          status: pfItem ? 'APONTAMENTO' : 'NADA CONSTA',
+          protocol: pfItem?.processo || `PF-SINIC-${Math.floor(10000000 + Math.random() * 90000000)}`,
           date: todayStr,
-          detail: isPfApont ? currentDetalhes || 'Registro de ocorrência ou inquérito policial localizado.' : 'Sem antecedentes criminais federais'
+          detail: pfItem ? (pfItem.motivo || 'Ocorrência ou inquérito policial registrado.') : 'Sem antecedentes criminais federais',
+          processo: pfItem?.processo,
+          vara: pfItem?.vara,
+          motivo: pfItem?.motivo
         },
         // 2. DataJud CNJ
         datajudCert: {
-          status: isDatajudApont ? 'APONTAMENTO' : 'NADA CONSTA',
-          totalCases: isDatajudApont ? 1 : 0,
-          detail: isDatajudApont ? currentDetalhes || 'Processo judicial localizado nas varas judiciais.' : 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
+          status: datajudItem ? 'APONTAMENTO' : 'NADA CONSTA',
+          totalCases: datajudItem ? 1 : 0,
+          protocol: datajudItem?.processo || `CNJ-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          detail: datajudItem ? (datajudItem.motivo || 'Processo judicial impeditivo localizado.') : 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.',
+          processo: datajudItem?.processo,
+          vara: datajudItem?.vara,
+          motivo: datajudItem?.motivo
         },
         // 3. TJ Estadual
         tjCert: {
-          status: isTjApont ? 'APONTAMENTO' : 'NADA CONSTA',
-          protocol: `TJ${candidateSnapshot.uf}-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          status: tjItem ? 'APONTAMENTO' : 'NADA CONSTA',
+          protocol: tjItem?.processo || `TJ${candidateSnapshot.uf}-${Math.floor(10000000 + Math.random() * 90000000)}`,
           date: todayStr,
-          detail: isTjApont ? currentDetalhes || 'Distribuição criminal ou cível com apontamento na UF.' : 'Sem distribuições criminais ou cíveis na UF'
+          detail: tjItem ? (tjItem.motivo || 'Distribuição criminal ou cível com apontamento na UF.') : 'Sem distribuições criminais ou cíveis na UF',
+          processo: tjItem?.processo,
+          vara: tjItem?.vara,
+          motivo: tjItem?.motivo
         },
         // 4. TRF Federal
         trfCert: {
-          status: isTrfApont ? 'APONTAMENTO' : 'NADA CONSTA',
-          protocol: `TRF-${Math.floor(100000 + Math.random() * 900000)}`,
-          detail: isTrfApont ? currentDetalhes || 'Apontamento em execução ou ação na Justiça Federal.' : 'Sem execuções fiscais ou ações federais'
+          status: trfItem ? 'APONTAMENTO' : 'NADA CONSTA',
+          protocol: trfItem?.processo || `TRF-${Math.floor(100000 + Math.random() * 900000)}`,
+          detail: trfItem ? (trfItem.motivo || 'Apontamento em execução ou ação na Justiça Federal.') : 'Sem execuções fiscais ou ações federais',
+          processo: trfItem?.processo,
+          vara: trfItem?.vara,
+          motivo: trfItem?.motivo
         },
         // 5. TSE Eleitoral
         tseCert: {
-          quitacao: isTseApont ? 'PENDÊNCIA' : 'QUITADO (Em Dia)',
-          crimes: isTseApont ? 'APONTAMENTO' : 'NADA CONSTA (Sem Crimes Eleitorais)',
-          protocol: `TSE-ELEIT-${Math.floor(10000000 + Math.random() * 90000000)}`
+          status: tseItem ? 'APONTAMENTO' : 'QUITADO',
+          quitacao: tseItem ? 'PENDÊNCIA / CONDENAÇÃO' : 'QUITADO (Em Dia)',
+          crimes: tseItem ? (tseItem.motivo || 'Apontamento em Crimes Eleitorais') : 'NADA CONSTA (Sem Crimes Eleitorais)',
+          protocol: tseItem?.processo || `TSE-ELEIT-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          processo: tseItem?.processo,
+          vara: tseItem?.vara,
+          motivo: tseItem?.motivo
         },
         // 6. Receita Federal
         receitaCert: {
-          cpfStatus: isReceitaApont ? 'PENDENTE / IRREGULAR' : 'REGULAR',
-          cndStatus: isReceitaApont ? 'DÉBITO ATIVO' : 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
-          protocol: `RFB-${Math.floor(10000000 + Math.random() * 90000000)}`
+          status: receitaItem ? 'APONTAMENTO' : 'REGULAR',
+          cpfStatus: receitaItem ? 'PENDENTE / IRREGULAR' : 'REGULAR',
+          cndStatus: receitaItem ? (receitaItem.motivo || 'DÉBITO ATIVO DA UNIÃO') : 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
+          protocol: receitaItem?.processo || `RFB-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          processo: receitaItem?.processo,
+          vara: receitaItem?.vara,
+          motivo: receitaItem?.motivo
         },
         // 7. TST Trabalhista (CNDT)
         cndtCert: {
-          status: isCndtApont ? 'POSITIVA (Débitos Trabalhistas)' : 'NADA CONSTA (Livre de Débitos Trabalhistas)',
-          protocol: `CNDT-${Math.floor(10000000 + Math.random() * 90000000)}/${new Date().getFullYear()}`
+          status: cndtItem ? 'APONTAMENTO' : 'NADA CONSTA',
+          protocol: cndtItem?.processo || `CNDT-${Math.floor(10000000 + Math.random() * 90000000)}/${new Date().getFullYear()}`,
+          detail: cndtItem ? (cndtItem.motivo || 'Certidão Positiva de Débitos Trabalhistas.') : 'Livre de Débitos Trabalhistas',
+          processo: cndtItem?.processo,
+          vara: cndtItem?.vara,
+          motivo: cndtItem?.motivo
         },
         // 8. CGU Sanções / CEIS
         cguCert: {
-          ceisStatus: isCguApont ? 'SANÇÃO / INIDÔNEO' : 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
-          cnepStatus: isCguApont ? 'SANÇÃO ATIVA' : 'NADA CONSTA (Livre de Punição Anticorrupção)',
-          protocol: `CGU-CEIS-${Math.floor(100000 + Math.random() * 900000)}`
+          status: cguItem ? 'APONTAMENTO' : 'NADA CONSTA',
+          ceisStatus: cguItem ? (cguItem.motivo || 'SANÇÃO / INIDÔNEO') : 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
+          cnepStatus: cguItem ? 'SANÇÃO ATIVA' : 'NADA CONSTA (Livre de Punição Anticorrupção)',
+          protocol: cguItem?.processo || `CGU-CEIS-${Math.floor(100000 + Math.random() * 900000)}`,
+          processo: cguItem?.processo,
+          vara: cguItem?.vara,
+          motivo: cguItem?.motivo
         },
         // 9. TCU Contas Irregulares
         tcuCert: {
           status: 'NADA CONSTA',
+          protocol: `TCU-${Math.floor(100000 + Math.random() * 900000)}`,
           detail: 'Sem contas públicas rejeitadas ou inabilitação para função pública.'
         },
         // 10. REDESIM Participação Societária
         redesimCert: {
+          status: 'REGULAR',
+          protocol: `REDESIM-${Math.floor(100000 + Math.random() * 900000)}`,
           totalEmpresas: 1,
           detail: 'Empresa Ativa e em situação regular (Sem baixas de ofício ou inaptidão).'
         },
         // 11. Conselho de Classe
         conselhoCert: {
           status: 'REGULAR & ATIVO',
+          protocol: `CONSELHO-${Math.floor(100000 + Math.random() * 900000)}`,
           detail: 'Inscrição ativa no Conselho de Classe sem punições éticas ativas.'
         }
       });
 
-      // Auto-suggest vote
+      // Auto-suggest vote and construct parecer summary
       if (currentHasApontamento) {
         setComissaoVote('DESFAVORAVEL');
         setInterviewConcept('Incompatível');
-        if (!parecerNotes) {
-          setParecerNotes(`Apontamento identificado na verificação de antecedentes: ${currentDetalhes || currentOrgaos.join(', ')}.`);
-        }
+        
+        const breakdownLines = Object.entries(currentApontamentosMap).map(([org, det]) => {
+          const parts = [org];
+          if (det.processo) parts.push(`Proc: ${det.processo}`);
+          if (det.vara) parts.push(`Vara: ${det.vara}`);
+          if (det.motivo) parts.push(`Assunto: ${det.motivo}`);
+          return parts.join(' | ');
+        });
+
+        const fullNotes = [
+          'Candidato com apontamentos constatados durante a sindicância em bases oficiais:',
+          ...breakdownLines.map(l => `• ${l}`),
+          currentObsGerais ? `\nObservações complementares: ${currentObsGerais}` : ''
+        ].filter(Boolean).join('\n');
+
+        setParecerNotes(fullNotes);
       } else {
         setComissaoVote('FAVORAVEL');
         setInterviewConcept('excelente');
@@ -418,7 +534,7 @@ export default function AdminSindicancia() {
       toast({
         title: currentHasApontamento ? 'Sindicância com Apontamentos Registrada' : 'Sindicância Concluída!',
         description: currentHasApontamento
-          ? `Apontamentos registrados para ${candidateSnapshot.fullName}. Verifique o parecer.`
+          ? `${currentOrgaos.length} órgão(s) com apontamento detalhado para ${candidateSnapshot.fullName}.`
           : `Verificação concluída para ${candidateSnapshot.fullName}.`,
         variant: currentHasApontamento ? 'destructive' : 'default'
       });
@@ -459,8 +575,9 @@ export default function AdminSindicancia() {
         profession: reportData.candidate.profession,
         protocol: reportData.protocol,
         has_apontamento: reportData.hasApontamento,
-        apontamento_detalhes: reportData.apontamentoDetalhes || null,
+        apontamento_detalhes: reportData.apontamentoDetalhesGerais || parecerNotes,
         apontamento_orgaos: reportData.apontamentoOrgaos || [],
+        apontamentos_por_orgao: reportData.apontamentosPorOrgao || {},
         comissao_vote: comissaoVote,
         concept: interviewConcept,
         parecer_notes: parecerNotes,
@@ -560,14 +677,24 @@ export default function AdminSindicancia() {
   };
 
   const handleViewSavedSindicancia = (item: SindicanciaDbRecord) => {
-    const isPfApont = (item.apontamento_orgaos || []).includes('Polícia Federal (SINIC)') || item.pf_status === 'APONTAMENTO';
-    const isDatajudApont = (item.apontamento_orgaos || []).includes('DataJud (CNJ Nacional)') || item.datajud_status === 'APONTAMENTO';
-    const isTjApont = (item.apontamento_orgaos || []).includes('TJ Estadual') || item.tj_status === 'APONTAMENTO';
-    const isTrfApont = (item.apontamento_orgaos || []).includes('TRF Federal');
-    const isTseApont = (item.apontamento_orgaos || []).includes('TSE Eleitoral');
-    const isReceitaApont = (item.apontamento_orgaos || []).includes('Receita Federal');
-    const isCndtApont = (item.apontamento_orgaos || []).includes('CNDT Trabalhista');
-    const isCguApont = (item.apontamento_orgaos || []).includes('CGU Sanções');
+    const orgsData: ApontamentosPorOrgaoMap = item.apontamentos_por_orgao || {};
+    const isPfApont = (item.apontamento_orgaos || []).includes('Polícia Federal (SINIC)') || item.pf_status === 'APONTAMENTO' || !!orgsData['Polícia Federal (SINIC)'];
+    const isDatajudApont = (item.apontamento_orgaos || []).includes('DataJud (CNJ Nacional)') || item.datajud_status === 'APONTAMENTO' || !!orgsData['DataJud (CNJ Nacional)'];
+    const isTjApont = (item.apontamento_orgaos || []).includes('TJ Estadual') || item.tj_status === 'APONTAMENTO' || !!orgsData['TJ Estadual'];
+    const isTrfApont = (item.apontamento_orgaos || []).includes('TRF Federal') || !!orgsData['TRF Federal'];
+    const isTseApont = (item.apontamento_orgaos || []).includes('TSE Eleitoral') || !!orgsData['TSE Eleitoral'];
+    const isReceitaApont = (item.apontamento_orgaos || []).includes('Receita Federal') || !!orgsData['Receita Federal'];
+    const isCndtApont = (item.apontamento_orgaos || []).includes('CNDT Trabalhista') || !!orgsData['CNDT Trabalhista'];
+    const isCguApont = (item.apontamento_orgaos || []).includes('CGU Sanções') || !!orgsData['CGU Sanções'];
+
+    const pfItem = orgsData['Polícia Federal (SINIC)'];
+    const datajudItem = orgsData['DataJud (CNJ Nacional)'];
+    const tjItem = orgsData['TJ Estadual'];
+    const trfItem = orgsData['TRF Federal'];
+    const tseItem = orgsData['TSE Eleitoral'];
+    const receitaItem = orgsData['Receita Federal'];
+    const cndtItem = orgsData['CNDT Trabalhista'];
+    const cguItem = orgsData['CGU Sanções'];
 
     setReportData({
       candidate: {
@@ -584,59 +711,93 @@ export default function AdminSindicancia() {
       protocol: item.protocol,
       generatedAt: new Date(item.created_at).toLocaleDateString('pt-BR') + ' às ' + new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       hasApontamento: item.has_apontamento,
-      apontamentoDetalhes: item.apontamento_detalhes || '',
-      apontamentoOrgaos: item.apontamento_orgaos || [],
+      apontamentosPorOrgao: orgsData,
+      apontamentoOrgaos: item.apontamento_orgaos || Object.keys(orgsData),
+      apontamentoDetalhesGerais: item.apontamento_detalhes || '',
       pfCert: {
         status: item.pf_status || (isPfApont ? 'APONTAMENTO' : 'NADA CONSTA'),
-        protocol: `PF-SINIC-${item.protocol.replace(/\D/g, '') || '10293847'}`,
+        protocol: pfItem?.processo || `PF-SINIC-${item.protocol.replace(/\D/g, '') || '10293847'}`,
         date: new Date(item.created_at).toLocaleDateString('pt-BR'),
-        detail: item.has_apontamento ? item.apontamento_detalhes || 'Apontamento registrado' : 'Sem antecedentes criminais federais'
+        detail: pfItem?.motivo || item.apontamento_detalhes || 'Sem antecedentes criminais federais',
+        processo: pfItem?.processo,
+        vara: pfItem?.vara,
+        motivo: pfItem?.motivo
       },
       datajudCert: {
         status: item.datajud_status || (isDatajudApont ? 'APONTAMENTO' : 'NADA CONSTA'),
-        totalCases: item.has_apontamento ? 1 : 0,
-        detail: item.has_apontamento ? item.apontamento_detalhes || 'Processo judicial localizado.' : 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
+        totalCases: isDatajudApont ? 1 : 0,
+        protocol: datajudItem?.processo || `CNJ-${item.protocol.replace(/\D/g, '') || '887766'}`,
+        detail: datajudItem?.motivo || item.apontamento_detalhes || 'Sem processos judiciais impeditivos.',
+        processo: datajudItem?.processo,
+        vara: datajudItem?.vara,
+        motivo: datajudItem?.motivo
       },
       tjCert: {
         status: item.tj_status || (isTjApont ? 'APONTAMENTO' : 'NADA CONSTA'),
-        protocol: `TJ${item.uf || 'SP'}-${item.protocol.replace(/\D/g, '') || '98765432'}`,
+        protocol: tjItem?.processo || `TJ${item.uf || 'SP'}-${item.protocol.replace(/\D/g, '') || '98765432'}`,
         date: new Date(item.created_at).toLocaleDateString('pt-BR'),
-        detail: item.has_apontamento ? item.apontamento_detalhes || 'Distribuição criminal/cível localizada.' : 'Sem distribuições criminais ou cíveis na UF'
+        detail: tjItem?.motivo || item.apontamento_detalhes || 'Sem distribuições criminais na UF',
+        processo: tjItem?.processo,
+        vara: tjItem?.vara,
+        motivo: tjItem?.motivo
       },
       trfCert: {
         status: isTrfApont ? 'APONTAMENTO' : 'NADA CONSTA',
-        protocol: `TRF-${item.protocol.replace(/\D/g, '') || '554433'}`,
-        detail: isTrfApont ? item.apontamento_detalhes || 'Apontamento na Justiça Federal' : 'Sem execuções fiscais ou ações federais'
+        protocol: trfItem?.processo || `TRF-${item.protocol.replace(/\D/g, '') || '554433'}`,
+        detail: trfItem?.motivo || item.apontamento_detalhes || 'Sem execuções fiscais ou ações federais',
+        processo: trfItem?.processo,
+        vara: trfItem?.vara,
+        motivo: trfItem?.motivo
       },
       tseCert: {
+        status: isTseApont ? 'APONTAMENTO' : 'QUITADO',
         quitacao: item.tse_status || (isTseApont ? 'PENDÊNCIA' : 'QUITADO (Em Dia)'),
-        crimes: isTseApont ? 'APONTAMENTO' : 'NADA CONSTA',
-        protocol: `TSE-ELEIT-${item.protocol.replace(/\D/g, '') || '99887766'}`
+        crimes: tseItem?.motivo || (isTseApont ? 'APONTAMENTO' : 'NADA CONSTA'),
+        protocol: tseItem?.processo || `TSE-ELEIT-${item.protocol.replace(/\D/g, '') || '99887766'}`,
+        processo: tseItem?.processo,
+        vara: tseItem?.vara,
+        motivo: tseItem?.motivo
       },
       receitaCert: {
+        status: isReceitaApont ? 'APONTAMENTO' : 'REGULAR',
         cpfStatus: item.receita_status || (isReceitaApont ? 'PENDENTE' : 'REGULAR'),
-        cndStatus: isReceitaApont ? 'DÉBITO ATIVO' : 'NADA CONSTA',
-        protocol: `RFB-${item.protocol.replace(/\D/g, '') || '12345678'}`
+        cndStatus: receitaItem?.motivo || (isReceitaApont ? 'DÉBITO ATIVO' : 'NADA CONSTA'),
+        protocol: receitaItem?.processo || `RFB-${item.protocol.replace(/\D/g, '') || '12345678'}`,
+        processo: receitaItem?.processo,
+        vara: receitaItem?.vara,
+        motivo: receitaItem?.motivo
       },
       cndtCert: {
-        status: item.cndt_status || (isCndtApont ? 'POSITIVA' : 'NADA CONSTA'),
-        protocol: `CNDT-${item.protocol.replace(/\D/g, '') || '55667788'}`
+        status: item.cndt_status || (isCndtApont ? 'APONTAMENTO' : 'NADA CONSTA'),
+        protocol: cndtItem?.processo || `CNDT-${item.protocol.replace(/\D/g, '') || '55667788'}`,
+        detail: cndtItem?.motivo || 'Livre de Débitos Trabalhistas',
+        processo: cndtItem?.processo,
+        vara: cndtItem?.vara,
+        motivo: cndtItem?.motivo
       },
       cguCert: {
-        ceisStatus: item.cgu_status || (isCguApont ? 'SANÇÃO ATIVA' : 'NADA CONSTA'),
+        status: isCguApont ? 'APONTAMENTO' : 'NADA CONSTA',
+        ceisStatus: item.cgu_status || (isCguApont ? (cguItem?.motivo || 'SANÇÃO ATIVA') : 'NADA CONSTA'),
         cnepStatus: 'NADA CONSTA',
-        protocol: `CGU-CEIS-${item.protocol.replace(/\D/g, '') || '778899'}`
+        protocol: cguItem?.processo || `CGU-CEIS-${item.protocol.replace(/\D/g, '') || '778899'}`,
+        processo: cguItem?.processo,
+        vara: cguItem?.vara,
+        motivo: cguItem?.motivo
       },
       tcuCert: {
         status: 'NADA CONSTA',
+        protocol: `TCU-${item.protocol.replace(/\D/g, '') || '443322'}`,
         detail: 'Sem contas públicas rejeitadas.'
       },
       redesimCert: {
+        status: 'REGULAR',
+        protocol: `REDESIM-${item.protocol.replace(/\D/g, '') || '112233'}`,
         totalEmpresas: 1,
         detail: 'Empresa Ativa e em situação regular.'
       },
       conselhoCert: {
         status: 'REGULAR & ATIVO',
+        protocol: `CONSELHO-${item.protocol.replace(/\D/g, '') || '998811'}`,
         detail: 'Inscrição ativa sem sanções éticas.'
       }
     });
@@ -673,6 +834,77 @@ export default function AdminSindicancia() {
     window.print();
   };
 
+  // Helper to render individual base card with distinct apontamento details
+  const renderCertCard = (
+    title: string,
+    Icon: any,
+    cert: CertificadoCardData,
+    iconColor: string = 'text-primary'
+  ) => {
+    const isApont = cert.status === 'APONTAMENTO';
+
+    return (
+      <Card className={`card-elegant transition-all ${
+        isApont 
+          ? 'border-red-500/80 bg-red-500/10 shadow-sm shadow-red-500/10' 
+          : 'border-primary/30'
+      }`}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Icon className={`h-4 w-4 ${isApont ? 'text-red-500' : iconColor}`} />
+              {title}
+            </span>
+            {isApont ? (
+              <Badge variant="destructive" className="text-[10px] gap-1 font-bold animate-pulse">
+                <AlertTriangle size={11} /> APONTAMENTO
+              </Badge>
+            ) : (
+              <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">
+                {cert.quitacao || cert.cpfStatus || 'NADA CONSTA'}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-[11px]">
+          {/* Main Protocol/Process line */}
+          <div className="flex justify-between py-1 border-b border-border/40">
+            <span className="text-muted-foreground">
+              {isApont && cert.processo ? 'Nº Processo/Inquérito:' : 'Protocolo/Certidão:'}
+            </span>
+            <span className={`font-mono font-medium ${isApont ? 'text-red-400 font-bold' : ''}`}>
+              {cert.processo || cert.protocol}
+            </span>
+          </div>
+
+          {/* Specific Vara / Local if Apontamento */}
+          {isApont && cert.vara && (
+            <div className="flex justify-between py-1 border-b border-border/40">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <MapPin size={11} className="text-red-400" /> Vara / Comarca:
+              </span>
+              <span className="font-semibold text-foreground text-right">{cert.vara}</span>
+            </div>
+          )}
+
+          {/* Detailed Reason or Clean Status */}
+          <div className={isApont ? 'pt-1 text-red-300 font-semibold leading-relaxed' : 'pt-1 text-emerald-500 font-semibold'}>
+            {isApont ? (
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase tracking-wider text-red-400 font-bold block">
+                  Motivo / Assunto:
+                </span>
+                <span>⚠️ {cert.motivo || cert.detail || 'Apontamento impeditivo identificado.'}</span>
+              </div>
+            ) : (
+              <span>✓ {cert.cndStatus || cert.crimes || cert.detail || 'Regular e sem apontamentos'}</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -689,11 +921,11 @@ export default function AdminSindicancia() {
                 </h1>
                 <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-[11px] gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  Tribunais, Antecedentes & Bases Oficiais
+                  Tribunais, Antecedentes & Apontamentos Detalhados
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground font-body mt-0.5">
-                Verificação de antecedentes criminais, certidões judiciais e emissão do parecer oficial da comissão
+                Checagem detalhada com registro de processos e comarcas para cada base com apontamento
               </p>
             </div>
           </div>
@@ -832,10 +1064,10 @@ export default function AdminSindicancia() {
                     </div>
                   </div>
 
-                  {/* APONTAMENTO & ANTECEDENTES REGISTRATION */}
-                  <div className={`p-4 rounded-xl border transition-colors space-y-4 ${
+                  {/* APONTAMENTO & ANTECEDENTES SECTION PER ORGAN */}
+                  <div className={`p-4 rounded-xl border transition-all space-y-4 ${
                     hasApontamento 
-                      ? 'border-red-500/60 bg-red-500/10' 
+                      ? 'border-red-500/70 bg-red-500/10' 
                       : 'border-border bg-card/60'
                   }`}>
                     <div className="flex items-start gap-3">
@@ -847,12 +1079,16 @@ export default function AdminSindicancia() {
                           setHasApontamento(val);
                           if (val) {
                             if (apontamentoOrgaos.length === 0) {
-                              setApontamentoOrgaos(['TJ Estadual', 'DataJud (CNJ Nacional)']);
+                              setApontamentoOrgaos(['TJ Estadual']);
+                              setApontamentosPorOrgao({
+                                'TJ Estadual': { processo: '', vara: '', motivo: '' }
+                              });
                             }
                             setComissaoVote('DESFAVORAVEL');
                             setInterviewConcept('Incompatível');
                           } else {
                             setApontamentoOrgaos([]);
+                            setApontamentosPorOrgao({});
                             setComissaoVote('FAVORAVEL');
                             setInterviewConcept('excelente');
                           }
@@ -865,66 +1101,134 @@ export default function AdminSindicancia() {
                           Constatado Apontamento / Antecedentes Criminais ou Processuais
                         </label>
                         <p className="text-[11px] text-muted-foreground">
-                          Marque esta opção se durante a conferência nos tribunais ou certidões foi identificado processo judicial, inquérito ou registro criminal em desfavor do candidato.
+                          Marque para abrir os campos detalhados de cada órgão (número do processo, vara/comarca e motivo específico de cada apontamento).
                         </p>
                       </div>
                     </div>
 
                     {hasApontamento && (
-                      <div className="pl-6 space-y-4 pt-2 border-t border-red-500/30">
+                      <div className="space-y-5 pt-3 border-t border-red-500/30">
+                        {/* 1. SELEÇÃO DE ÓRGÃOS COM APONTAMENTO */}
                         <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-red-400">
-                            Bases com Apontamento Identificado *
+                          <Label className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                            <FolderOpen size={14} /> Selecione em quais bases foram identificados apontamentos:
                           </Label>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                            {[
-                              'Polícia Federal (SINIC)',
-                              'DataJud (CNJ Nacional)',
-                              'TJ Estadual',
-                              'TRF Federal',
-                              'TSE Eleitoral',
-                              'Receita Federal',
-                              'CNDT Trabalhista',
-                              'CGU Sanções'
-                            ].map(baseName => {
-                              const isChecked = apontamentoOrgaos.includes(baseName);
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                            {BASES_DISPONIVEIS.map(base => {
+                              const isChecked = apontamentoOrgaos.includes(base.id);
+                              const BaseIcon = base.icon;
                               return (
                                 <label
-                                  key={baseName}
-                                  className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition-colors ${
+                                  key={base.id}
+                                  className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer text-xs transition-colors ${
                                     isChecked 
-                                      ? 'border-red-500 bg-red-500/20 text-red-300 font-semibold' 
+                                      ? 'border-red-500 bg-red-500/20 text-red-300 font-semibold shadow-sm' 
                                       : 'border-border text-muted-foreground hover:bg-accent'
                                   }`}
                                 >
                                   <Checkbox
                                     checked={isChecked}
-                                    onCheckedChange={checked => {
-                                      if (checked) {
-                                        setApontamentoOrgaos([...apontamentoOrgaos, baseName]);
-                                      } else {
-                                        setApontamentoOrgaos(apontamentoOrgaos.filter(o => o !== baseName));
-                                      }
-                                    }}
+                                    onCheckedChange={checked => handleToggleOrgao(base.id, !!checked)}
+                                    className="mt-0.5"
                                   />
-                                  <span>{baseName}</span>
+                                  <div className="min-w-0">
+                                    <span className="flex items-center gap-1">
+                                      <BaseIcon size={12} className={isChecked ? 'text-red-400' : 'text-muted-foreground'} />
+                                      {base.id}
+                                    </span>
+                                  </div>
                                 </label>
                               );
                             })}
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="apontamentoDetalhes" className="text-xs font-semibold text-red-400">
-                            Detalhes do Apontamento / Processo / Vara *
+                        {/* 2. CAMPOS ESPECÍFICOS PARA CADA ÓRGÃO SELECIONADO */}
+                        <div className="space-y-3">
+                          <Label className="text-xs font-bold text-red-400">
+                            Dados Detalhados de Cada Lugar com Apontamento:
+                          </Label>
+
+                          {apontamentoOrgaos.length === 0 ? (
+                            <p className="text-xs text-red-400 italic">
+                              Selecione ao menos um órgão acima para preencher os dados do processo.
+                            </p>
+                          ) : (
+                            apontamentoOrgaos.map(orgName => {
+                              const baseInfo = BASES_DISPONIVEIS.find(b => b.id === orgName);
+                              const OrgIcon = baseInfo?.icon || Building2;
+                              const currentData = apontamentosPorOrgao[orgName] || {};
+
+                              return (
+                                <div 
+                                  key={orgName} 
+                                  className="p-3.5 rounded-xl border border-red-500/50 bg-background/80 space-y-3 shadow-sm"
+                                >
+                                  <div className="flex items-center justify-between border-b border-red-500/20 pb-2">
+                                    <span className="font-bold text-red-400 text-xs flex items-center gap-2">
+                                      <OrgIcon size={15} className="text-red-400" />
+                                      {orgName}
+                                    </span>
+                                    <Badge variant="destructive" className="text-[10px] gap-1">
+                                      <AlertTriangle size={10} /> Apontamento Ativo
+                                    </Badge>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                    <div className="space-y-1">
+                                      <Label className="text-[11px] font-semibold text-foreground">
+                                        Nº do Processo / Inquérito / Auto *
+                                      </Label>
+                                      <Input
+                                        placeholder="Ex: 1002345-89.2024.8.26.0405"
+                                        value={currentData.processo || ''}
+                                        onChange={e => handleUpdateApontamentoCampo(orgName, 'processo', e.target.value)}
+                                        className="h-8 text-xs border-red-500/40 font-mono"
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-[11px] font-semibold text-foreground">
+                                        Vara / Comarca / Delegacia / Órgão Julgador *
+                                      </Label>
+                                      <Input
+                                        placeholder="Ex: 2ª Vara Criminal de Osasco/SP"
+                                        value={currentData.vara || ''}
+                                        onChange={e => handleUpdateApontamentoCampo(orgName, 'vara', e.target.value)}
+                                        className="h-8 text-xs border-red-500/40"
+                                      />
+                                    </div>
+
+                                    <div className="sm:col-span-2 space-y-1">
+                                      <Label className="text-[11px] font-semibold text-foreground">
+                                        Descrição do Delito / Motivo / Assunto do Apontamento *
+                                      </Label>
+                                      <Input
+                                        placeholder="Ex: Ação Penal - Art. 171 do CP (Estelionato). Fase de instrução."
+                                        value={currentData.motivo || ''}
+                                        onChange={e => handleUpdateApontamentoCampo(orgName, 'motivo', e.target.value)}
+                                        className="h-8 text-xs border-red-500/40"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Observações Gerais Opcionais */}
+                        <div className="space-y-1.5 pt-1">
+                          <Label htmlFor="obsGerais" className="text-[11px] font-semibold text-muted-foreground">
+                            Observações Gerais da Comissão sobre os Apontamentos (Opcional):
                           </Label>
                           <Textarea
-                            id="apontamentoDetalhes"
-                            rows={3}
-                            placeholder="Descreva o processo (nº do processo, vara/comarca, tipo de delito ou ação, situação atual do processo)..."
-                            value={apontamentoDetalhes}
-                            onChange={e => setApontamentoDetalhes(e.target.value)}
-                            className="text-xs border-red-500/40 bg-background/50"
+                            id="obsGerais"
+                            rows={2}
+                            placeholder="Anotações complementares dos sindicantes sobre o histórico ou esclarecimentos do candidato..."
+                            value={observacoesGeraisApontamento}
+                            onChange={e => setObservacoesGeraisApontamento(e.target.value)}
+                            className="text-xs border-border"
                           />
                         </div>
                       </div>
@@ -983,7 +1287,7 @@ export default function AdminSindicancia() {
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-[11px]">
-                      Abra diretamente as páginas dos tribunais e órgãos com os dados do candidato:
+                      Abra diretamente os portais oficiais com os dados do candidato:
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2 text-xs">
@@ -1102,7 +1406,7 @@ export default function AdminSindicancia() {
               <Card className="card-elegant border-amber-500/50 p-8 text-center space-y-6">
                 <div className="space-y-2">
                   <h3 className="text-xl font-display text-foreground">Consolidando Dados da Sindicância...</h3>
-                  <p className="text-xs text-muted-foreground">Verificando certidões nos órgãos competentes</p>
+                  <p className="text-xs text-muted-foreground">Cruzando apontamentos e certidões das bases oficiais</p>
                 </div>
 
                 <div className="w-full bg-accent rounded-full h-4 overflow-hidden border border-border p-0.5">
@@ -1191,301 +1495,75 @@ export default function AdminSindicancia() {
                   </CardHeader>
                 </Card>
 
-                {/* ALERT BANNER IF HAS APONTAMENTO */}
+                {/* DETAILED APONTAMENTOS SUMMARY BREAKDOWN */}
                 {reportData.hasApontamento && (
-                  <Card className="border-red-500/60 bg-red-500/10 p-4">
+                  <Card className="border-red-500/70 bg-red-500/10 p-5 space-y-4">
                     <div className="flex items-start gap-3">
                       <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                       <div className="space-y-1">
                         <h4 className="text-sm font-bold text-red-500">
-                          Atenção: Constatado Apontamento Impeditivo / Restritivo
+                          Quadro de Apontamentos & Restrições Identificadas
                         </h4>
                         <p className="text-xs text-foreground/90 leading-relaxed">
-                          {reportData.apontamentoDetalhes || 'Identificados processos judiciais ou registros restritivos na verificação de antecedentes.'}
+                          Foram identificados registros em <strong>{Object.keys(reportData.apontamentosPorOrgao).length} base(s)</strong> de dados oficiais:
                         </p>
-                        {reportData.apontamentoOrgaos && reportData.apontamentoOrgaos.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {reportData.apontamentoOrgaos.map(org => (
-                              <Badge key={org} variant="destructive" className="text-[10px]">
-                                {org}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      {Object.entries(reportData.apontamentosPorOrgao).map(([org, det]) => (
+                        <div 
+                          key={org} 
+                          className="p-3 rounded-lg border border-red-500/40 bg-background/90 text-xs space-y-1.5 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between border-b border-red-500/20 pb-1">
+                            <span className="font-bold text-red-400 flex items-center gap-1.5">
+                              <AlertTriangle size={13} /> {org}
+                            </span>
+                            <Badge variant="destructive" className="text-[9px]">Apontamento</Badge>
+                          </div>
+                          {det.processo && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Nº Processo/Inquérito:</span>
+                              <span className="font-mono font-bold text-foreground">{det.processo}</span>
+                            </div>
+                          )}
+                          {det.vara && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Vara/Comarca:</span>
+                              <span className="font-medium text-foreground">{det.vara}</span>
+                            </div>
+                          )}
+                          {det.motivo && (
+                            <div className="pt-0.5 text-red-400 font-semibold leading-tight">
+                              Motivo: {det.motivo}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {reportData.apontamentoDetalhesGerais && (
+                      <p className="text-xs text-muted-foreground border-t border-red-500/20 pt-2 italic">
+                        Observações adicionais: {reportData.apontamentoDetalhesGerais}
+                      </p>
+                    )}
                   </Card>
                 )}
 
-                {/* 11 CERTIFICATES & SEARCH RESULTS GRID */}
+                {/* 11 BASES GRID WITH INDIVIDUAL DATA */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* 1. Polícia Federal */}
-                  <Card className={`card-elegant ${
-                    reportData.pfCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
-                  }`}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <ShieldCheck className="h-4 w-4 text-blue-500" />
-                          1. Polícia Federal (SINIC)
-                        </span>
-                        {reportData.pfCert.status === 'APONTAMENTO' ? (
-                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Protocolo:</span>
-                        <span className="font-mono font-medium">{reportData.pfCert.protocol}</span>
-                      </div>
-                      <div className={reportData.pfCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
-                        {reportData.pfCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.pfCert.detail}` : '✓ Sem antecedentes criminais federais'}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 2. DataJud CNJ */}
-                  <Card className={`card-elegant ${
-                    reportData.datajudCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
-                  }`}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Scale className="h-4 w-4 text-purple-500" />
-                          2. DataJud (CNJ Nacional)
-                        </span>
-                        {reportData.datajudCert.status === 'APONTAMENTO' ? (
-                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Processos Registrados:</span>
-                        <span className={reportData.datajudCert.status === 'APONTAMENTO' ? "font-semibold text-red-500" : "font-semibold text-emerald-500"}>
-                          {reportData.datajudCert.totalCases} Processo(s)
-                        </span>
-                      </div>
-                      <div className={reportData.datajudCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
-                        {reportData.datajudCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.datajudCert.detail}` : '✓ Livre de ações criminais'}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 3. TJ Estadual */}
-                  <Card className={`card-elegant ${
-                    reportData.tjCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
-                  }`}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Building2 className="h-4 w-4 text-amber-500" />
-                          3. TJ Estadual (TJ{reportData.candidate.uf})
-                        </span>
-                        {reportData.tjCert.status === 'APONTAMENTO' ? (
-                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Distribuição Estadual:</span>
-                        <span className="font-mono font-medium">{reportData.tjCert.protocol}</span>
-                      </div>
-                      <div className={reportData.tjCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
-                        {reportData.tjCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.tjCert.detail}` : '✓ Sem distribuições criminais na UF'}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 4. TRF Federal */}
-                  <Card className={`card-elegant ${
-                    reportData.trfCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
-                  }`}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <FileCheck className="h-4 w-4 text-emerald-500" />
-                          4. TRF Justiça Federal
-                        </span>
-                        {reportData.trfCert.status === 'APONTAMENTO' ? (
-                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Certidão Federal:</span>
-                        <span className="font-mono font-medium">{reportData.trfCert.protocol}</span>
-                      </div>
-                      <div className={reportData.trfCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
-                        {reportData.trfCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.trfCert.detail}` : '✓ Sem execuções fiscais ou ações federais'}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 5. TSE Eleitoral */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Vote className="h-4 w-4 text-rose-500" />
-                          5. TSE (Justiça Eleitoral)
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">{reportData.tseCert.quitacao}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Quitação Eleitoral:</span>
-                        <span className="font-semibold text-emerald-500">{reportData.tseCert.quitacao}</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ {reportData.tseCert.crimes}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 6. Receita Federal */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Receipt className="h-4 w-4 text-indigo-500" />
-                          6. Receita Federal (CPF/CND)
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">{reportData.receitaCert.cpfStatus}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Situação Cadastral:</span>
-                        <span className="font-semibold text-emerald-500">{reportData.receitaCert.cpfStatus}</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ {reportData.receitaCert.cndStatus}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 7. TST Trabalhista */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-4 w-4 text-teal-500" />
-                          7. TST (Débitos Trabalhistas)
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">CNDT REGULAR</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Certidão CNDT:</span>
-                        <span className="font-mono font-medium">{reportData.cndtCert.protocol}</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ {reportData.cndtCert.status}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 8. CGU Sanções */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Landmark className="h-4 w-4 text-cyan-500" />
-                          8. CGU Sanções (CEIS / CNEP)
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">LIVRE</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Cadastro de Inidôneos:</span>
-                        <span className="font-semibold text-emerald-500">NADA CONSTA</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem penalidades ativas no Poder Executivo Federal
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 9. TCU Contas Irregulares */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Scale className="h-4 w-4 text-sky-500" />
-                          9. TCU (Contas Irregulares)
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Contas Públicas:</span>
-                        <span className="font-semibold text-emerald-500">REGULAR</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem inabilitação para cargos públicos
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 10. REDESIM */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Building2 className="h-4 w-4 text-orange-500" />
-                          10. REDESIM (Empresas)
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">REGULAR</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Situação Empresarial:</span>
-                        <span className="font-semibold text-emerald-500">ATIVO</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem inaptidão ou baixas punitivas
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 11. Conselhos de Classe */}
-                  <Card className="card-elegant border-primary/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Award className="h-4 w-4 text-yellow-500" />
-                          11. Conselho Profissional
-                        </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">ATIVO</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 text-[11px]">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Registro Profissional:</span>
-                        <span className="font-semibold text-emerald-500">{reportData.conselhoCert.status}</span>
-                      </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem penalidades ético-disciplinares
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {renderCertCard('1. Polícia Federal (SINIC)', ShieldCheck, reportData.pfCert, 'text-blue-500')}
+                  {renderCertCard('2. DataJud (CNJ Nacional)', Scale, reportData.datajudCert, 'text-purple-500')}
+                  {renderCertCard(`3. TJ Estadual (TJ${reportData.candidate.uf})`, Building2, reportData.tjCert, 'text-amber-500')}
+                  {renderCertCard('4. TRF Justiça Federal', FileCheck, reportData.trfCert, 'text-emerald-500')}
+                  {renderCertCard('5. TSE (Justiça Eleitoral)', Vote, reportData.tseCert, 'text-rose-500')}
+                  {renderCertCard('6. Receita Federal (CPF/CND)', Receipt, reportData.receitaCert, 'text-indigo-500')}
+                  {renderCertCard('7. TST (Débitos Trabalhistas)', Briefcase, reportData.cndtCert, 'text-teal-500')}
+                  {renderCertCard('8. CGU Sanções (CEIS / CNEP)', Landmark, reportData.cguCert, 'text-cyan-500')}
+                  {renderCertCard('9. TCU (Contas Irregulares)', Scale, reportData.tcuCert, 'text-sky-500')}
+                  {renderCertCard('10. REDESIM (Empresas)', Building2, reportData.redesimCert, 'text-orange-500')}
+                  {renderCertCard('11. Conselho Profissional', Award, reportData.conselhoCert, 'text-yellow-500')}
                 </div>
 
                 {/* PARECER DA COMISSÃO DE SINDICÂNCIA */}
@@ -1553,7 +1631,7 @@ export default function AdminSindicancia() {
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold">Observações & Parecer Circunstanciado *</Label>
                       <Textarea
-                        rows={4}
+                        rows={5}
                         placeholder="Descreva aqui o parecer fundamentado da comissão sobre o candidato, antecedentes apurados ou motivo do parecer..."
                         value={parecerNotes}
                         onChange={e => setParecerNotes(e.target.value)}
@@ -1622,65 +1700,82 @@ export default function AdminSindicancia() {
                           <th className="p-3">Candidato</th>
                           <th className="p-3">CPF</th>
                           <th className="p-3">Antecedentes</th>
+                          <th className="p-3">Locais com Apontamento</th>
                           <th className="p-3">Sindicante</th>
                           <th className="p-3">Parecer Final</th>
                           <th className="p-3 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {sindicancias.map((item) => (
-                          <tr key={item.id} className="hover:bg-accent/30 transition-colors">
-                            <td className="p-3 font-mono font-medium text-foreground">{item.protocol}</td>
-                            <td className="p-3 text-muted-foreground">
-                              {new Date(item.created_at).toLocaleDateString('pt-BR')}
-                            </td>
-                            <td className="p-3 font-semibold text-foreground">{item.candidate_name}</td>
-                            <td className="p-3 text-muted-foreground">{item.cpf}</td>
-                            <td className="p-3">
-                              {item.has_apontamento ? (
-                                <Badge variant="destructive" className="bg-red-500/20 text-red-500 border-red-500/40 text-[10px] gap-1">
-                                  <AlertTriangle size={12} /> APONTAMENTO
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/40 text-[10px] gap-1">
-                                  <CheckCircle2 size={12} /> LIMPO
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="p-3 text-muted-foreground">{item.sindicante_name || 'Comissão'}</td>
-                            <td className="p-3">
-                              {item.comissao_vote === 'FAVORAVEL' && (
-                                <Badge className="bg-emerald-600 text-white font-bold">FAVORÁVEL</Badge>
-                              )}
-                              {item.comissao_vote === 'RESTRICAO' && (
-                                <Badge className="bg-amber-500 text-black font-bold">C/ RESTRIÇÃO</Badge>
-                              )}
-                              {item.comissao_vote === 'DESFAVORAVEL' && (
-                                <Badge className="bg-red-600 text-white font-bold">DESFAVORÁVEL (REPROVADO)</Badge>
-                              )}
-                            </td>
-                            <td className="p-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleViewSavedSindicancia(item)}
-                                  className="h-7 text-xs gap-1 text-primary hover:text-primary"
-                                >
-                                  <Eye size={14} /> Ver Ficha
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => handleDeleteSindicancia(item.id, e)}
-                                  className="h-7 text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                                >
-                                  <Trash2 size={13} />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                        {sindicancias.map((item) => {
+                          const orgs = item.apontamentos_por_orgao ? Object.keys(item.apontamentos_por_orgao) : (item.apontamento_orgaos || []);
+                          return (
+                            <tr key={item.id} className="hover:bg-accent/30 transition-colors">
+                              <td className="p-3 font-mono font-medium text-foreground">{item.protocol}</td>
+                              <td className="p-3 text-muted-foreground">
+                                {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                              </td>
+                              <td className="p-3 font-semibold text-foreground">{item.candidate_name}</td>
+                              <td className="p-3 text-muted-foreground">{item.cpf}</td>
+                              <td className="p-3">
+                                {item.has_apontamento ? (
+                                  <Badge variant="destructive" className="bg-red-500/20 text-red-500 border-red-500/40 text-[10px] gap-1">
+                                    <AlertTriangle size={12} /> APONTAMENTO
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/40 text-[10px] gap-1">
+                                    <CheckCircle2 size={12} /> LIMPO
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                {orgs.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                    {orgs.map(o => (
+                                      <Badge key={o} variant="outline" className="text-[9px] border-red-500/40 text-red-400">
+                                        {o}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-[11px]">-</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-muted-foreground">{item.sindicante_name || 'Comissão'}</td>
+                              <td className="p-3">
+                                {item.comissao_vote === 'FAVORAVEL' && (
+                                  <Badge className="bg-emerald-600 text-white font-bold">FAVORÁVEL</Badge>
+                                )}
+                                {item.comissao_vote === 'RESTRICAO' && (
+                                  <Badge className="bg-amber-500 text-black font-bold">C/ RESTRIÇÃO</Badge>
+                                )}
+                                {item.comissao_vote === 'DESFAVORAVEL' && (
+                                  <Badge className="bg-red-600 text-white font-bold">DESFAVORÁVEL (REPROVADO)</Badge>
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleViewSavedSindicancia(item)}
+                                    className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                                  >
+                                    <Eye size={14} /> Ver Ficha
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => handleDeleteSindicancia(item.id, e)}
+                                    className="h-7 text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                                  >
+                                    <Trash2 size={13} />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
