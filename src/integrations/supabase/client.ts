@@ -2,7 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://banco.goib.com.br";
+let rawUrl = import.meta.env.VITE_SUPABASE_URL || "https://banco.goib.org";
+if (!rawUrl || rawUrl.includes("banco.goib.com.br") || rawUrl.includes("fqvvfslqeajyrgyvjwpp")) {
+  rawUrl = "https://banco.goib.org";
+}
+
+const SUPABASE_URL = rawUrl;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzkxMDU1Mzk4LCJleHAiOjE5NDg3MzUzOTh9.nAQCEyt0GxZ1VWY_U2dOQMbysmQxTBCWJJrclJ_I0Pw";
 
 // Import the supabase client like this:
