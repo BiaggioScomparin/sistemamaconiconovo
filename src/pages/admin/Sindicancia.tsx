@@ -98,6 +98,7 @@ interface CertificadoCardData {
   processo?: string;
   vara?: string;
   motivo?: string;
+  link?: string;
   quitacao?: string;
   crimes?: string;
   cpfStatus?: string;
@@ -106,6 +107,22 @@ interface CertificadoCardData {
   cnepStatus?: string;
   totalCases?: number;
   totalEmpresas?: number;
+}
+
+export interface JudicialProcessFound {
+  tribunal: string;
+  numero: string;
+  classe?: string;
+  assunto?: string;
+  foro?: string;
+  vara?: string;
+  juiz?: string;
+  area?: string;
+  distribuicao?: string;
+  controle?: string;
+  valor?: string;
+  link?: string;
+  partes?: Array<{ tipo: string; nome: string }>;
 }
 
 const BASES_DISPONIVEIS = [
@@ -144,6 +161,10 @@ export default function AdminSindicancia() {
   const [apontamentoOrgaos, setApontamentoOrgaos] = useState<string[]>([]);
   const [apontamentosPorOrgao, setApontamentosPorOrgao] = useState<ApontamentosPorOrgaoMap>({});
   const [observacoesGeraisApontamento, setObservacoesGeraisApontamento] = useState('');
+
+  // Automated judicial background search state
+  const [isAutoSearching, setIsAutoSearching] = useState(false);
+  const [autoSearchResults, setAutoSearchResults] = useState<JudicialProcessFound[]>([]);
 
   // Candidate Selector
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
@@ -306,6 +327,124 @@ export default function AdminSindicancia() {
         [field]: value
       }
     }));
+  };
+
+  const handleApplyProcessToOrgan = (proc: JudicialProcessFound, organId: string = 'TJ Estadual') => {
+    setHasApontamento(true);
+    setApontamentoOrgaos(prev => prev.includes(organId) ? prev : [...prev, organId]);
+    const varaStr = [proc.vara, proc.foro].filter(Boolean).join(' - ');
+    const motivoStr = [
+      proc.classe ? `Classe: ${proc.classe}` : '',
+      proc.assunto ? `Assunto: ${proc.assunto}` : '',
+      proc.area ? `Área: ${proc.area}` : '',
+      proc.valor ? `Valor: ${proc.valor}` : '',
+      proc.partes && proc.partes.length > 0 ? `Partes: ${proc.partes.map(p => `${p.tipo}: ${p.nome}`).join(' | ')}` : ''
+    ].filter(Boolean).join('. ');
+
+    setApontamentosPorOrgao(prev => ({
+      ...prev,
+      [organId]: {
+        processo: proc.numero,
+        vara: varaStr || prev[organId]?.vara || '',
+        motivo: motivoStr || prev[organId]?.motivo || '',
+      }
+    }));
+    setComissaoVote('DESFAVORAVEL');
+    setInterviewConcept('Incompatível');
+    toast({
+      title: 'Processo Aplicado!',
+      description: `Processo nº ${proc.numero} vinculado à base ${organId}.`,
+    });
+  };
+
+  const handleAutoSearchJudicial = async () => {
+    const cleanCpf = formData.cpf.replace(/\D/g, '');
+    if (!cleanCpf && !formData.fullName) {
+      toast({
+        title: 'Informe o CPF ou Nome',
+        description: 'Preencha o CPF ou o Nome completo do candidato para iniciar a varredura judicial.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsAutoSearching(true);
+    try {
+      const url = new URL('https://banco.goib.org/api/sindicancia/search');
+      if (cleanCpf) url.searchParams.set('cpf', cleanCpf);
+      if (formData.fullName) url.searchParams.set('nome', formData.fullName);
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Falha no servidor de consulta (${res.status})`);
+      }
+
+      const data = await res.json();
+      if (data.success && data.hasProcesses && data.processes.length > 0) {
+        const foundList: JudicialProcessFound[] = data.processes;
+        setAutoSearchResults(foundList);
+
+        // Auto mark Apontamento
+        setHasApontamento(true);
+        setApontamentoOrgaos(prev => {
+          const list = [...prev];
+          if (!list.includes('TJ Estadual')) list.push('TJ Estadual');
+          return list;
+        });
+
+        // Populate TJ Estadual with the first process details
+        const primary = foundList[0];
+        const primaryVara = [primary.vara, primary.foro].filter(Boolean).join(' - ');
+        const primaryMotivo = [
+          primary.classe ? `Classe: ${primary.classe}` : '',
+          primary.assunto ? `Assunto: ${primary.assunto}` : '',
+          primary.area ? `Área: ${primary.area}` : '',
+          primary.valor ? `Valor da Causa: ${primary.valor}` : '',
+          primary.partes && primary.partes.length > 0
+            ? `Partes: ${primary.partes.map(p => `${p.tipo}: ${p.nome}`).join(' | ')}`
+            : ''
+        ].filter(Boolean).join('. ');
+
+        setApontamentosPorOrgao(prev => ({
+          ...prev,
+          'TJ Estadual': {
+            processo: primary.numero,
+            vara: primaryVara || prev['TJ Estadual']?.vara || '',
+            motivo: primaryMotivo || prev['TJ Estadual']?.motivo || '',
+          }
+        }));
+
+        setComissaoVote('DESFAVORAVEL');
+        setInterviewConcept('Incompatível');
+
+        toast({
+          title: `🚨 ${foundList.length} Processo(s) Localizado(s)!`,
+          description: `Identificado(s) processo(s) no Tribunal de Justiça. Os campos da sindicância foram preenchidos automaticamente.`,
+          variant: 'destructive',
+        });
+      } else {
+        setAutoSearchResults([]);
+        toast({
+          title: '✅ Certidão Limpa no Tribunal de Justiça',
+          description: 'Nenhum processo judicial (cível, criminal ou de execução) foi localizado no TJSP para este CPF.',
+        });
+      }
+    } catch (err: any) {
+      console.error('Erro na varredura judicial:', err);
+      toast({
+        title: 'Erro na Consulta Automática',
+        description: err.message || 'Não foi possível consultar os tribunais no momento.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAutoSearching(false);
+    }
   };
 
   const handleSaveProfileChanges = async () => {
@@ -890,11 +1029,23 @@ export default function AdminSindicancia() {
           {/* Detailed Reason or Clean Status */}
           <div className={isApont ? 'pt-1 text-red-300 font-semibold leading-relaxed' : 'pt-1 text-emerald-500 font-semibold'}>
             {isApont ? (
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 <span className="text-[10px] uppercase tracking-wider text-red-400 font-bold block">
                   Motivo / Assunto:
                 </span>
                 <span>⚠️ {cert.motivo || cert.detail || 'Apontamento impeditivo identificado.'}</span>
+                {cert.processo && (
+                  <div className="pt-1.5 flex justify-end">
+                    <a
+                      href={cert.link || `https://esaj.tjsp.jus.br/cpopg/search.do?conversationId=&cbPesquisa=NUMPROC&dadosConsulta.valorConsulta=${encodeURIComponent(cert.processo.replace(/\D/g, ''))}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 hover:underline font-mono bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20"
+                    >
+                      <ExternalLink size={10} /> Consultar no e-SAJ
+                    </a>
+                  </div>
+                )}
               </div>
             ) : (
               <span>✓ {cert.cndStatus || cert.crimes || cert.detail || 'Regular e sem apontamentos'}</span>
@@ -1062,6 +1213,146 @@ export default function AdminSindicancia() {
                         onChange={e => setFormData({ ...formData, profession: e.target.value })}
                       />
                     </div>
+                  </div>
+
+                  {/* VARREDURA JUDICIAL AUTOMÁTICA EM TEMPO REAL */}
+                  <div className="p-4 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 space-y-3.5 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Scale className="h-5 w-5 text-amber-500" />
+                          <h4 className="text-sm font-bold text-foreground">
+                            Varredura Judicial Automática (TJSP / e-SAJ)
+                          </h4>
+                          <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold">
+                            100% Gratuito (VPS)
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          Consulta os bancos de dados dos Tribunais Estaduais via CPF/Nome em tempo real. Identifica ações criminais, cíveis, falências e execuções de título sem mensalidades ou custos de API externa.
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={handleAutoSearchJudicial}
+                        disabled={isAutoSearching || (!formData.cpf && !formData.fullName)}
+                        className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-md text-xs whitespace-nowrap h-10 px-4 self-stretch sm:self-auto"
+                      >
+                        {isAutoSearching ? (
+                          <>
+                            <div className="h-3.5 w-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            Consultando Tribunais...
+                          </>
+                        ) : (
+                          <>
+                            <Search className="h-4 w-4" />
+                            Consultar Antecedentes Agora
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Exibição dos processos localizados */}
+                    {autoSearchResults.length > 0 && (
+                      <div className="pt-3 border-t border-red-500/30 space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                            <AlertTriangle size={14} className="text-red-500 animate-pulse" />
+                            {autoSearchResults.length} processo(s) localizado(s) no Tribunal de Justiça:
+                          </span>
+                          <Badge variant="destructive" className="text-[10px]">Preenchimento Aplicado</Badge>
+                        </div>
+
+                        <div className="space-y-2.5">
+                          {autoSearchResults.map((proc, idx) => (
+                            <div
+                              key={proc.numero || idx}
+                              className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 space-y-2 text-xs"
+                            >
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-red-500/20 pb-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge className="bg-red-500/30 text-red-200 border border-red-500/50 text-[10px] font-mono">
+                                    {proc.numero}
+                                  </Badge>
+                                  <span className="font-semibold text-foreground">{proc.classe || 'Ação Judicial'}</span>
+                                  {proc.area && (
+                                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
+                                      {proc.area}
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {proc.link && (
+                                    <a
+                                      href={proc.link}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 hover:underline font-medium bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20"
+                                    >
+                                      <ExternalLink size={12} /> Abrir no e-SAJ
+                                    </a>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleApplyProcessToOrgan(proc, 'TJ Estadual')}
+                                    className="h-7 text-[10px] border-red-500/40 text-red-400 hover:bg-red-500/20"
+                                  >
+                                    Reaplicar ao Formulário
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+                                <div>
+                                  <span className="font-semibold text-foreground">Foro / Vara: </span>
+                                  {[proc.vara, proc.foro].filter(Boolean).join(' - ') || 'Não especificado'}
+                                </div>
+                                {proc.juiz && (
+                                  <div>
+                                    <span className="font-semibold text-foreground">Juiz: </span>
+                                    {proc.juiz}
+                                  </div>
+                                )}
+                                {proc.assunto && (
+                                  <div>
+                                    <span className="font-semibold text-foreground">Assunto: </span>
+                                    {proc.assunto}
+                                  </div>
+                                )}
+                                {proc.valor && (
+                                  <div>
+                                    <span className="font-semibold text-foreground">Valor da Causa: </span>
+                                    <span className="font-mono text-amber-400">{proc.valor}</span>
+                                  </div>
+                                )}
+                                {proc.distribuicao && (
+                                  <div className="sm:col-span-2">
+                                    <span className="font-semibold text-foreground">Distribuição: </span>
+                                    {proc.distribuicao}
+                                  </div>
+                                )}
+                                {proc.partes && proc.partes.length > 0 && (
+                                  <div className="sm:col-span-2 pt-1 border-t border-red-500/10">
+                                    <span className="font-semibold text-foreground">Partes Envolvidas: </span>
+                                    <ul className="list-disc list-inside mt-0.5 space-y-0.5 text-[10px]">
+                                      {proc.partes.map((p, pIdx) => (
+                                        <li key={pIdx}>
+                                          <strong className="text-red-300">{p.tipo}:</strong> {p.nome}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* APONTAMENTO & ANTECEDENTES SECTION PER ORGAN */}
