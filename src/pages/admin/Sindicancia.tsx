@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,12 @@ import {
   Receipt,
   Briefcase,
   Landmark,
-  Award
+  Award,
+  AlertTriangle,
+  ExternalLink,
+  AlertOctagon,
+  Trash2,
+  Eye
 } from 'lucide-react';
 
 interface CandidateData {
@@ -49,30 +54,39 @@ interface CandidateData {
   hasLgpdConsent: boolean;
 }
 
-interface SindicanciaRecord {
+interface SindicanciaDbRecord {
   id: string;
-  candidateName: string;
+  profile_id?: string;
+  candidate_name: string;
   cpf: string;
-  profession: string;
-  uf: string;
-  pfStatus: 'NADA_CONSTA' | 'APONTAMENTO';
-  datajudStatus: 'NADA_CONSTA' | 'APONTAMENTO';
-  tseStatus: 'REGULAR' | 'PENDENTE';
-  receitaStatus: 'REGULAR' | 'PENDENTE';
-  cndtStatus: 'NADA_CONSTA' | 'APONTAMENTO';
-  cguStatus: 'NADA_CONSTA' | 'SANCAO';
-  overallStatus: 'FAVORAVEL' | 'RESTRICAO' | 'DESFAVORAVEL' | 'EM_ANALISE';
-  date: string;
-  sindicanteName?: string;
+  rg?: string;
+  rg_issuer?: string;
+  uf?: string;
+  profession?: string;
+  protocol: string;
+  has_apontamento: boolean;
+  apontamento_detalhes?: string;
+  apontamento_orgaos?: string[];
+  comissao_vote: 'FAVORAVEL' | 'RESTRICAO' | 'DESFAVORAVEL';
   concept?: string;
-  parecerText?: string;
+  parecer_notes?: string;
+  sindicante_name?: string;
+  pf_status?: string;
+  tj_status?: string;
+  datajud_status?: string;
+  receita_status?: string;
+  tse_status?: string;
+  cndt_status?: string;
+  cgu_status?: string;
+  created_at: string;
 }
 
 export default function AdminSindicancia() {
   const { user, loading, isAdmin } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState('consulta');
+  const [activeTab, setActiveTab] = useState<'consulta' | 'relatorio' | 'painel'>('consulta');
 
   // Form State
   const [formData, setFormData] = useState<CandidateData>({
@@ -84,8 +98,13 @@ export default function AdminSindicancia() {
     uf: 'SP',
     profession: '',
     councilNumber: '',
-    hasLgpdConsent: false,
+    hasLgpdConsent: true,
   });
+
+  // Apontamento controls
+  const [hasApontamento, setHasApontamento] = useState(false);
+  const [apontamentoOrgaos, setApontamentoOrgaos] = useState<string[]>([]);
+  const [apontamentoDetalhes, setApontamentoDetalhes] = useState('');
 
   // Candidate Selector
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
@@ -94,43 +113,26 @@ export default function AdminSindicancia() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStep, setScanStep] = useState(0);
-  // Holds the active sweep interval so it can be cleared on unmount (prevents setState-after-unmount leaks).
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Clear any running sweep interval when the component unmounts.
-  useEffect(() => {
-    return () => {
-      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-    };
-  }, []);
-
-  // Active Report State with all 11 public sources
+  // Active Report State
   const [reportData, setReportData] = useState<{
     candidate: CandidateData;
     protocol: string;
     generatedAt: string;
     hasApontamento: boolean;
-    // 1. Polícia Federal
-    pfCert: { status: string; protocol: string; date: string };
-    // 2. DataJud CNJ
+    apontamentoDetalhes?: string;
+    apontamentoOrgaos?: string[];
+    pfCert: { status: string; protocol: string; date: string; detail: string };
     datajudCert: { status: string; totalCases: number; detail: string };
-    // 3. TJ Estadual
-    tjCert: { status: string; protocol: string; date: string };
-    // 4. TRF Federal
-    trfCert: { status: string; protocol: string };
-    // 5. TSE Eleitoral
+    tjCert: { status: string; protocol: string; date: string; detail: string };
+    trfCert: { status: string; protocol: string; detail: string };
     tseCert: { quitacao: string; crimes: string; protocol: string };
-    // 6. Receita Federal
     receitaCert: { cpfStatus: string; cndStatus: string; protocol: string };
-    // 7. TST Trabalhista (CNDT)
     cndtCert: { status: string; protocol: string };
-    // 8. CGU Sanções / CEIS
     cguCert: { ceisStatus: string; cnepStatus: string; protocol: string };
-    // 9. TCU Contas Irregulares
     tcuCert: { status: string; detail: string };
-    // 10. REDESIM Participação Societária
     redesimCert: { totalEmpresas: number; detail: string };
-    // 11. Conselho de Classe Profissional
     conselhoCert: { status: string; detail: string };
   } | null>(null);
 
@@ -139,46 +141,30 @@ export default function AdminSindicancia() {
   const [interviewConcept, setInterviewConcept] = useState('excelente');
   const [comissaoVote, setComissaoVote] = useState<'FAVORAVEL' | 'RESTRICAO' | 'DESFAVORAVEL'>('FAVORAVEL');
   const [parecerNotes, setParecerNotes] = useState('');
+  const [isSavingParecer, setIsSavingParecer] = useState(false);
 
-  // Mock list of past sindicancias
-  const [sindicanciasList, setSindicanciasList] = useState<SindicanciaRecord[]>([
-    {
-      id: 'SIND-2026-001',
-      candidateName: 'Carlos Eduardo Oliveira',
-      cpf: '123.456.789-00',
-      profession: 'Engenheiro Civil (CREA-SP 506987)',
-      uf: 'SP',
-      pfStatus: 'NADA_CONSTA',
-      datajudStatus: 'NADA_CONSTA',
-      tseStatus: 'REGULAR',
-      receitaStatus: 'REGULAR',
-      cndtStatus: 'NADA_CONSTA',
-      cguStatus: 'NADA_CONSTA',
-      overallStatus: 'FAVORAVEL',
-      date: '2026-09-28',
-      sindicanteName: 'Roberto M::: M:::',
-      concept: 'Excelente',
-      parecerText: 'Candidato com excelente reputação moral, ilibada conduta social e familiar. 11 bases consultadas totalmente limpas.'
-    },
-    {
-      id: 'SIND-2026-002',
-      candidateName: 'Fernando Augusto Santos',
-      cpf: '987.654.321-11',
-      profession: 'Advogado (OAB-SP 345120)',
-      uf: 'SP',
-      pfStatus: 'NADA_CONSTA',
-      datajudStatus: 'APONTAMENTO',
-      tseStatus: 'REGULAR',
-      receitaStatus: 'REGULAR',
-      cndtStatus: 'APONTAMENTO',
-      cguStatus: 'NADA_CONSTA',
-      overallStatus: 'RESTRICAO',
-      date: '2026-10-01',
-      sindicanteName: 'Marcos A::: M:::',
-      concept: 'Bom',
-      parecerText: 'Possui uma ação trabalhista em andamento como réu empresa. Recomenda-se acompanhamento pela Comissão.'
+  // Clear interval on unmount
+  useEffect(() => {
+    return () => {
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    };
+  }, []);
+
+  // Fetch real sindicancias from database
+  const { data: sindicancias = [], isLoading: isLoadingSindicancias } = useQuery({
+    queryKey: ['sindicancias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sindicancias')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Erro ao buscar sindicancias:', error);
+        return [];
+      }
+      return data as SindicanciaDbRecord[];
     }
-  ]);
+  });
 
   // Fetch profiles for candidate dropdown
   const { data: profiles } = useQuery({
@@ -213,8 +199,27 @@ export default function AdminSindicancia() {
         councilNumber: '',
         hasLgpdConsent: true,
       });
+
+      // Check if this candidate already has a saved sindicancia
+      const existing = sindicancias.find(s => s.profile_id === id);
+      if (existing) {
+        setHasApontamento(existing.has_apontamento || false);
+        setApontamentoOrgaos(existing.apontamento_orgaos || []);
+        setApontamentoDetalhes(existing.apontamento_detalhes || '');
+        setSindicanteName(existing.sindicante_name || '');
+        setInterviewConcept(existing.concept || 'excelente');
+        setComissaoVote(existing.comissao_vote || 'FAVORAVEL');
+        setParecerNotes(existing.parecer_notes || '');
+      } else {
+        setHasApontamento(false);
+        setApontamentoOrgaos([]);
+        setApontamentoDetalhes('');
+        setComissaoVote('FAVORAVEL');
+        setInterviewConcept('excelente');
+        setParecerNotes('');
+      }
     }
-  }, [profiles]);
+  }, [profiles, sindicancias]);
 
   // Auto-select candidate from URL query param if present
   useEffect(() => {
@@ -301,8 +306,10 @@ export default function AdminSindicancia() {
     setScanStep(1);
     setActiveTab('relatorio');
 
-    // Snapshot the candidate data at scan start so the async completion isn't affected by later edits.
     const candidateSnapshot = { ...formData };
+    const currentHasApontamento = hasApontamento;
+    const currentOrgaos = [...apontamentoOrgaos];
+    const currentDetalhes = apontamentoDetalhes;
 
     const finishScan = () => {
       if (scanIntervalRef.current) {
@@ -314,55 +321,69 @@ export default function AdminSindicancia() {
       const protocol = `SIND-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const todayStr = new Date().toLocaleDateString('pt-BR');
 
+      const isPfApont = currentOrgaos.includes('Polícia Federal (SINIC)');
+      const isDatajudApont = currentOrgaos.includes('DataJud (CNJ Nacional)');
+      const isTjApont = currentOrgaos.includes('TJ Estadual');
+      const isTrfApont = currentOrgaos.includes('TRF Federal');
+      const isTseApont = currentOrgaos.includes('TSE Eleitoral');
+      const isReceitaApont = currentOrgaos.includes('Receita Federal');
+      const isCndtApont = currentOrgaos.includes('CNDT Trabalhista');
+      const isCguApont = currentOrgaos.includes('CGU Sanções');
+
       setReportData({
         candidate: candidateSnapshot,
         protocol,
         generatedAt: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        hasApontamento: false,
+        hasApontamento: currentHasApontamento,
+        apontamentoDetalhes: currentDetalhes,
+        apontamentoOrgaos: currentOrgaos,
         // 1. Polícia Federal
         pfCert: {
-          status: 'NADA CONSTA',
+          status: isPfApont ? 'APONTAMENTO' : 'NADA CONSTA',
           protocol: `PF-SINIC-${Math.floor(10000000 + Math.random() * 90000000)}`,
-          date: todayStr
+          date: todayStr,
+          detail: isPfApont ? currentDetalhes || 'Registro de ocorrência ou inquérito policial localizado.' : 'Sem antecedentes criminais federais'
         },
         // 2. DataJud CNJ
         datajudCert: {
-          status: 'NADA CONSTA',
-          totalCases: 0,
-          detail: 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
+          status: isDatajudApont ? 'APONTAMENTO' : 'NADA CONSTA',
+          totalCases: isDatajudApont ? 1 : 0,
+          detail: isDatajudApont ? currentDetalhes || 'Processo judicial localizado nas varas judiciais.' : 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
         },
         // 3. TJ Estadual
         tjCert: {
-          status: 'NADA CONSTA',
+          status: isTjApont ? 'APONTAMENTO' : 'NADA CONSTA',
           protocol: `TJ${candidateSnapshot.uf}-${Math.floor(10000000 + Math.random() * 90000000)}`,
-          date: todayStr
+          date: todayStr,
+          detail: isTjApont ? currentDetalhes || 'Distribuição criminal ou cível com apontamento na UF.' : 'Sem distribuições criminais ou cíveis na UF'
         },
         // 4. TRF Federal
         trfCert: {
-          status: 'NADA CONSTA',
-          protocol: `TRF-${Math.floor(100000 + Math.random() * 900000)}`
+          status: isTrfApont ? 'APONTAMENTO' : 'NADA CONSTA',
+          protocol: `TRF-${Math.floor(100000 + Math.random() * 900000)}`,
+          detail: isTrfApont ? currentDetalhes || 'Apontamento em execução ou ação na Justiça Federal.' : 'Sem execuções fiscais ou ações federais'
         },
         // 5. TSE Eleitoral
         tseCert: {
-          quitacao: 'QUITADO (Em Dia)',
-          crimes: 'NADA CONSTA (Sem Crimes Eleitorais)',
+          quitacao: isTseApont ? 'PENDÊNCIA' : 'QUITADO (Em Dia)',
+          crimes: isTseApont ? 'APONTAMENTO' : 'NADA CONSTA (Sem Crimes Eleitorais)',
           protocol: `TSE-ELEIT-${Math.floor(10000000 + Math.random() * 90000000)}`
         },
         // 6. Receita Federal
         receitaCert: {
-          cpfStatus: 'REGULAR',
-          cndStatus: 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
+          cpfStatus: isReceitaApont ? 'PENDENTE / IRREGULAR' : 'REGULAR',
+          cndStatus: isReceitaApont ? 'DÉBITO ATIVO' : 'NADA CONSTA (Sem Débitos Dívida Ativa da União)',
           protocol: `RFB-${Math.floor(10000000 + Math.random() * 90000000)}`
         },
         // 7. TST Trabalhista (CNDT)
         cndtCert: {
-          status: 'NADA CONSTA (Livre de Débitos Trabalhistas)',
+          status: isCndtApont ? 'POSITIVA (Débitos Trabalhistas)' : 'NADA CONSTA (Livre de Débitos Trabalhistas)',
           protocol: `CNDT-${Math.floor(10000000 + Math.random() * 90000000)}/${new Date().getFullYear()}`
         },
         // 8. CGU Sanções / CEIS
         cguCert: {
-          ceisStatus: 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
-          cnepStatus: 'NADA CONSTA (Livre de Punição Anticorrupção)',
+          ceisStatus: isCguApont ? 'SANÇÃO / INIDÔNEO' : 'NADA CONSTA (Livre de Inidoneidade / Suspensão)',
+          cnepStatus: isCguApont ? 'SANÇÃO ATIVA' : 'NADA CONSTA (Livre de Punição Anticorrupção)',
           protocol: `CGU-CEIS-${Math.floor(100000 + Math.random() * 900000)}`
         },
         // 9. TCU Contas Irregulares
@@ -382,119 +403,270 @@ export default function AdminSindicancia() {
         }
       });
 
+      // Auto-suggest vote
+      if (currentHasApontamento) {
+        setComissaoVote('DESFAVORAVEL');
+        setInterviewConcept('Incompatível');
+        if (!parecerNotes) {
+          setParecerNotes(`Apontamento identificado na verificação de antecedentes: ${currentDetalhes || currentOrgaos.join(', ')}.`);
+        }
+      } else {
+        setComissaoVote('FAVORAVEL');
+        setInterviewConcept('excelente');
+      }
+
       toast({
-        title: 'Sindicância Completa Concluída!',
-        description: `Varredura automatizada nas 11 bases públicas concluída com sucesso para ${candidateSnapshot.fullName}.`
+        title: currentHasApontamento ? 'Sindicância com Apontamentos Registrada' : 'Sindicância Concluída!',
+        description: currentHasApontamento
+          ? `Apontamentos registrados para ${candidateSnapshot.fullName}. Verifique o parecer.`
+          : `Verificação concluída para ${candidateSnapshot.fullName}.`,
+        variant: currentHasApontamento ? 'destructive' : 'default'
       });
     };
 
-    // Simulate sweep across 11 official public databases.
-    // The updater below stays pure (no side effects); completion is handled by finishScan().
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     scanIntervalRef.current = setInterval(() => {
       setScanProgress(prev => {
-        if (prev >= 100) {
-          return 100;
-        }
-
-        const next = prev + 20;
-        if (next >= 20 && next < 40) setScanStep(2);
-        else if (next >= 40 && next < 60) setScanStep(3);
-        else if (next >= 60 && next < 80) setScanStep(4);
-        else if (next >= 80) setScanStep(5);
-
-        if (next >= 100) {
-          // Defer completion out of the state updater to avoid double-invocation in StrictMode.
+        if (prev >= 100) return 100;
+        const next = prev + 25;
+        if (next >= 25 && next < 50) setScanStep(2);
+        else if (next >= 50 && next < 75) setScanStep(3);
+        else if (next >= 75 && next < 100) setScanStep(4);
+        else if (next >= 100) {
+          setScanStep(5);
           finishScan();
         }
         return next;
       });
-    }, 600);
+    }, 400);
   };
 
   const handleSaveParecer = async () => {
     if (!reportData) return;
 
+    setIsSavingParecer(true);
     const newStatus = comissaoVote === 'DESFAVORAVEL' ? 'reprovado' : 'sindicancia_aprovada';
 
-    if (reportData.candidate.id) {
-      await supabase
-        .from('profiles')
-        .update({ status: newStatus as any })
-        .eq('id', reportData.candidate.id);
+    try {
+      // 1. Save or update record in public.sindicancias
+      const sindicanciaPayload = {
+        profile_id: reportData.candidate.id || null,
+        candidate_name: reportData.candidate.fullName,
+        cpf: reportData.candidate.cpf,
+        rg: reportData.candidate.rg,
+        rg_issuer: reportData.candidate.rgIssuer,
+        uf: reportData.candidate.uf,
+        profession: reportData.candidate.profession,
+        protocol: reportData.protocol,
+        has_apontamento: reportData.hasApontamento,
+        apontamento_detalhes: reportData.apontamentoDetalhes || null,
+        apontamento_orgaos: reportData.apontamentoOrgaos || [],
+        comissao_vote: comissaoVote,
+        concept: interviewConcept,
+        parecer_notes: parecerNotes,
+        sindicante_name: sindicanteName || 'Comissão de Sindicância',
+        pf_status: reportData.pfCert.status,
+        tj_status: reportData.tjCert.status,
+        datajud_status: reportData.datajudCert.status,
+        receita_status: reportData.receitaCert.cpfStatus,
+        tse_status: reportData.tseCert.quitacao,
+        cndt_status: reportData.cndtCert.status,
+        cgu_status: reportData.cguCert.ceisStatus,
+      };
 
-      // Enviar notificação WhatsApp via Whaticket somente se estiver ativado nas configurações
-      try {
-        const { data: candProfile } = await supabase
+      const { error: sindError } = await supabase
+        .from('sindicancias')
+        .insert([sindicanciaPayload]);
+
+      if (sindError) {
+        console.error('Erro ao salvar sindicancia no banco:', sindError);
+        throw sindError;
+      }
+
+      // 2. Update candidate profile status in public.profiles
+      if (reportData.candidate.id) {
+        const { error: profError } = await supabase
           .from('profiles')
-          .select('phone, cell_phone, lodge_id')
-          .eq('id', reportData.candidate.id)
-          .maybeSingle();
+          .update({ status: newStatus as any, updated_at: new Date().toISOString() })
+          .eq('id', reportData.candidate.id);
 
-        const phone = candProfile?.cell_phone || candProfile?.phone;
-        if (phone) {
-          const { data: tmplSetting } = await supabase
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'proposal_message_templates')
+        if (profError) throw profError;
+
+        // WhatsApp notification if enabled
+        try {
+          const { data: candProfile } = await supabase
+            .from('profiles')
+            .select('phone, cell_phone, lodge_id')
+            .eq('id', reportData.candidate.id)
             .maybeSingle();
 
-          let isTemplateEnabled = false;
-          if (tmplSetting?.value) {
-            try {
-              const parsed = JSON.parse(tmplSetting.value);
-              isTemplateEnabled = parsed[newStatus]?.enabled === true;
-            } catch (e) {}
-          }
+          const phone = candProfile?.cell_phone || candProfile?.phone;
+          if (phone) {
+            const { data: tmplSetting } = await supabase
+              .from('app_settings')
+              .select('value')
+              .eq('key', 'proposal_message_templates')
+              .maybeSingle();
 
-          if (isTemplateEnabled) {
-            const msg = newStatus === 'sindicancia_aprovada'
-              ? `Olá, ${reportData.candidate.fullName}! Parabéns! Sua Sindicância foi Aprovada pela Comissão do GOIB. Acesse https://sistemamaconiconovo.vercel.app/proposta para preencher a Ficha de Proposta Completa.`
-              : `Olá, ${reportData.candidate.fullName}. Houve uma atualização no status da sua proposta junto ao GOIB. Entre em contato com a secretaria da Loja.`;
+            let isTemplateEnabled = false;
+            if (tmplSetting?.value) {
+              try {
+                const parsed = JSON.parse(tmplSetting.value);
+                isTemplateEnabled = parsed[newStatus]?.enabled === true;
+              } catch (e) {}
+            }
 
-            await supabase.functions.invoke('send-whatsapp', {
-              body: {
-                lodge_id: candProfile?.lodge_id || 'default',
-                phone,
-                message: msg,
-                profile_id: reportData.candidate.id,
-                category: 'sindicancia_result',
-              },
-            });
+            if (isTemplateEnabled) {
+              const msg = newStatus === 'sindicancia_aprovada'
+                ? `Olá, ${reportData.candidate.fullName}! Parabéns! Sua Sindicância foi Aprovada pela Comissão do GOIB. Acesse https://sistemamaconiconovo.vercel.app/proposta para preencher a Ficha de Proposta Completa.`
+                : `Olá, ${reportData.candidate.fullName}. Houve uma atualização no status da sua proposta junto ao GOIB. Entre em contato com a secretaria da Loja para mais informações.`;
+
+              await supabase.functions.invoke('send-whatsapp', {
+                body: {
+                  lodge_id: candProfile?.lodge_id || 'default',
+                  phone,
+                  message: msg,
+                  profile_id: reportData.candidate.id,
+                  category: 'sindicancia_result',
+                },
+              });
+            }
           }
+        } catch (err) {
+          console.warn('Erro ao notificar WhatsApp:', err);
         }
-      } catch (err) {
-        console.warn('Erro ao notificar WhatsApp:', err);
       }
+
+      queryClient.invalidateQueries({ queryKey: ['sindicancias'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles-sindicancia'] });
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+
+      toast({
+        title: 'Parecer Salvo com Sucesso!',
+        description: `Sindicância registrada no banco. Status do candidato: ${newStatus === 'sindicancia_aprovada' ? 'Sindicância Aprovada' : 'Reprovado'}.`,
+        variant: newStatus === 'sindicancia_aprovada' ? 'default' : 'destructive'
+      });
+
+      setActiveTab('painel');
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao Salvar Parecer',
+        description: err.message || 'Ocorreu um erro ao salvar o parecer da sindicância.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSavingParecer(false);
     }
+  };
 
-    const newRecord: SindicanciaRecord = {
-      id: reportData.protocol,
-      candidateName: reportData.candidate.fullName,
-      cpf: reportData.candidate.cpf,
-      profession: reportData.candidate.profession || 'Não Informada',
-      uf: reportData.candidate.uf,
-      pfStatus: reportData.hasApontamento ? 'APONTAMENTO' : 'NADA_CONSTA',
-      datajudStatus: reportData.hasApontamento ? 'APONTAMENTO' : 'NADA_CONSTA',
-      tseStatus: 'REGULAR',
-      receitaStatus: 'REGULAR',
-      cndtStatus: 'NADA_CONSTA',
-      cguStatus: 'NADA_CONSTA',
-      overallStatus: comissaoVote,
-      date: new Date().toISOString().split('T')[0],
-      sindicanteName,
-      concept: interviewConcept,
-      parecerText: parecerNotes
-    };
+  const handleViewSavedSindicancia = (item: SindicanciaDbRecord) => {
+    const isPfApont = (item.apontamento_orgaos || []).includes('Polícia Federal (SINIC)') || item.pf_status === 'APONTAMENTO';
+    const isDatajudApont = (item.apontamento_orgaos || []).includes('DataJud (CNJ Nacional)') || item.datajud_status === 'APONTAMENTO';
+    const isTjApont = (item.apontamento_orgaos || []).includes('TJ Estadual') || item.tj_status === 'APONTAMENTO';
+    const isTrfApont = (item.apontamento_orgaos || []).includes('TRF Federal');
+    const isTseApont = (item.apontamento_orgaos || []).includes('TSE Eleitoral');
+    const isReceitaApont = (item.apontamento_orgaos || []).includes('Receita Federal');
+    const isCndtApont = (item.apontamento_orgaos || []).includes('CNDT Trabalhista');
+    const isCguApont = (item.apontamento_orgaos || []).includes('CGU Sanções');
 
-    setSindicanciasList(prev => [newRecord, ...prev]);
-
-    toast({
-      title: 'Parecer Salvo com Sucesso!',
-      description: `Sindicância registrada. Status do candidato atualizado para ${newStatus === 'sindicancia_aprovada' ? 'Sindicância Aprovada (Ficha de Proposta Liberada)' : 'Reprovado'}.`
+    setReportData({
+      candidate: {
+        id: item.profile_id,
+        fullName: item.candidate_name,
+        cpf: item.cpf,
+        rg: item.rg || '00.000.000-0',
+        rgIssuer: item.rg_issuer || 'SSP',
+        birthDate: '',
+        uf: item.uf || 'SP',
+        profession: item.profession || 'Não declarada',
+        hasLgpdConsent: true
+      },
+      protocol: item.protocol,
+      generatedAt: new Date(item.created_at).toLocaleDateString('pt-BR') + ' às ' + new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      hasApontamento: item.has_apontamento,
+      apontamentoDetalhes: item.apontamento_detalhes || '',
+      apontamentoOrgaos: item.apontamento_orgaos || [],
+      pfCert: {
+        status: item.pf_status || (isPfApont ? 'APONTAMENTO' : 'NADA CONSTA'),
+        protocol: `PF-SINIC-${item.protocol.replace(/\D/g, '') || '10293847'}`,
+        date: new Date(item.created_at).toLocaleDateString('pt-BR'),
+        detail: item.has_apontamento ? item.apontamento_detalhes || 'Apontamento registrado' : 'Sem antecedentes criminais federais'
+      },
+      datajudCert: {
+        status: item.datajud_status || (isDatajudApont ? 'APONTAMENTO' : 'NADA CONSTA'),
+        totalCases: item.has_apontamento ? 1 : 0,
+        detail: item.has_apontamento ? item.apontamento_detalhes || 'Processo judicial localizado.' : 'Sem processos criminais, cíveis ou de família nas Varas Estaduais ou Federais.'
+      },
+      tjCert: {
+        status: item.tj_status || (isTjApont ? 'APONTAMENTO' : 'NADA CONSTA'),
+        protocol: `TJ${item.uf || 'SP'}-${item.protocol.replace(/\D/g, '') || '98765432'}`,
+        date: new Date(item.created_at).toLocaleDateString('pt-BR'),
+        detail: item.has_apontamento ? item.apontamento_detalhes || 'Distribuição criminal/cível localizada.' : 'Sem distribuições criminais ou cíveis na UF'
+      },
+      trfCert: {
+        status: isTrfApont ? 'APONTAMENTO' : 'NADA CONSTA',
+        protocol: `TRF-${item.protocol.replace(/\D/g, '') || '554433'}`,
+        detail: isTrfApont ? item.apontamento_detalhes || 'Apontamento na Justiça Federal' : 'Sem execuções fiscais ou ações federais'
+      },
+      tseCert: {
+        quitacao: item.tse_status || (isTseApont ? 'PENDÊNCIA' : 'QUITADO (Em Dia)'),
+        crimes: isTseApont ? 'APONTAMENTO' : 'NADA CONSTA',
+        protocol: `TSE-ELEIT-${item.protocol.replace(/\D/g, '') || '99887766'}`
+      },
+      receitaCert: {
+        cpfStatus: item.receita_status || (isReceitaApont ? 'PENDENTE' : 'REGULAR'),
+        cndStatus: isReceitaApont ? 'DÉBITO ATIVO' : 'NADA CONSTA',
+        protocol: `RFB-${item.protocol.replace(/\D/g, '') || '12345678'}`
+      },
+      cndtCert: {
+        status: item.cndt_status || (isCndtApont ? 'POSITIVA' : 'NADA CONSTA'),
+        protocol: `CNDT-${item.protocol.replace(/\D/g, '') || '55667788'}`
+      },
+      cguCert: {
+        ceisStatus: item.cgu_status || (isCguApont ? 'SANÇÃO ATIVA' : 'NADA CONSTA'),
+        cnepStatus: 'NADA CONSTA',
+        protocol: `CGU-CEIS-${item.protocol.replace(/\D/g, '') || '778899'}`
+      },
+      tcuCert: {
+        status: 'NADA CONSTA',
+        detail: 'Sem contas públicas rejeitadas.'
+      },
+      redesimCert: {
+        totalEmpresas: 1,
+        detail: 'Empresa Ativa e em situação regular.'
+      },
+      conselhoCert: {
+        status: 'REGULAR & ATIVO',
+        detail: 'Inscrição ativa sem sanções éticas.'
+      }
     });
 
-    setActiveTab('painel');
+    setSindicanteName(item.sindicante_name || '');
+    setInterviewConcept(item.concept || 'excelente');
+    setComissaoVote(item.comissao_vote || 'FAVORAVEL');
+    setParecerNotes(item.parecer_notes || '');
+    setActiveTab('relatorio');
+  };
+
+  const handleDeleteSindicancia = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Deseja realmente excluir este registro de sindicância do histórico?')) return;
+
+    try {
+      const { error } = await supabase.from('sindicancias').delete().eq('id', id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['sindicancias'] });
+      toast({
+        title: 'Registro Removido',
+        description: 'Sindicância excluída com sucesso do histórico.'
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao Excluir',
+        description: err.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   const handlePrint = () => {
@@ -513,15 +685,15 @@ export default function AdminSindicancia() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl md:text-3xl font-display text-foreground">
-                  Sindicância & Admissão Maçônica
+                  Sindicância & Verificação de Antecedentes
                 </h1>
-                <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30 text-[11px] gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  11 Bases Oficiais Integradas
+                <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-[11px] gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  Tribunais, Antecedentes & Bases Oficiais
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground font-body mt-0.5">
-                Sistema Automatizado de Antecedentes, Receita, Justiça & Sanções Públicas
+                Verificação de antecedentes criminais, certidões judiciais e emissão do parecer oficial da comissão
               </p>
             </div>
           </div>
@@ -532,25 +704,25 @@ export default function AdminSindicancia() {
             className="gap-2 border-primary/30 hover:bg-accent"
           >
             <Users className="h-4 w-4 text-primary" />
-            Painel da Comissão ({sindicanciasList.length})
+            Histórico de Sindicâncias ({sindicancias.length})
           </Button>
         </div>
 
         {/* MAIN NAVIGATION TABS */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 h-12 bg-accent/30 p-1 rounded-xl border border-border">
             <TabsTrigger value="consulta" className="flex items-center gap-2 text-xs md:text-sm font-semibold">
-              <span>➕ Nova Sindicância (Consulta)</span>
+              <span>➕ Nova Sindicância & Checagem</span>
             </TabsTrigger>
             <TabsTrigger value="relatorio" className="flex items-center gap-2 text-xs md:text-sm font-semibold">
-              <span>📄 Relatório Emitido (11 Certidões)</span>
+              <span>📄 Relatório & Parecer da Comissão</span>
             </TabsTrigger>
             <TabsTrigger value="painel" className="flex items-center gap-2 text-xs md:text-sm font-semibold">
-              <span>👥 Painel da Comissão</span>
+              <span>👥 Painel & Histórico ({sindicancias.length})</span>
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: FORM & ALL 11 INTEGRATED APIS */}
+          {/* TAB 1: FORM & INVESTIGATION CHECKS */}
           <TabsContent value="consulta" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Candidate Form */}
@@ -560,23 +732,23 @@ export default function AdminSindicancia() {
                     <div>
                       <CardTitle className="text-xl font-display text-foreground flex items-center gap-2">
                         <User className="h-5 w-5 text-amber-500" />
-                        Dados do Candidato (Profano)
+                        Dados do Candidato
                       </CardTitle>
                       <CardDescription>
-                        Informe os dados para consulta automatizada às 11 bases públicas unificadas
+                        Selecione o candidato da lista de propostas ou informe os dados para checagem
                       </CardDescription>
                     </div>
 
                     {profiles && profiles.length > 0 && (
-                      <div className="w-56">
+                      <div className="w-64">
                         <Select value={selectedProfileId} onValueChange={handleProfileSelect}>
                           <SelectTrigger className="text-xs h-9">
-                            <SelectValue placeholder="Carregar de Propostas..." />
+                            <SelectValue placeholder="Carregar de Candidatos..." />
                           </SelectTrigger>
                           <SelectContent>
                             {profiles.map(p => (
                               <SelectItem key={p.id} value={p.id} className="text-xs">
-                                {p.full_name}
+                                {p.full_name} ({p.status || 'sem status'})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -653,24 +825,123 @@ export default function AdminSindicancia() {
                       <Label htmlFor="profession" className="text-xs font-semibold">Profissão / Registro Profissional</Label>
                       <Input
                         id="profession"
-                        placeholder="Ex: Advogado (OAB-SP 345120) / Engenheiro (CREA-SP)"
+                        placeholder="Ex: Advogado (OAB-SP 345120) / Auxiliar Administrativo"
                         value={formData.profession}
                         onChange={e => setFormData({ ...formData, profession: e.target.value })}
                       />
                     </div>
                   </div>
 
+                  {/* APONTAMENTO & ANTECEDENTES REGISTRATION */}
+                  <div className={`p-4 rounded-xl border transition-colors space-y-4 ${
+                    hasApontamento 
+                      ? 'border-red-500/60 bg-red-500/10' 
+                      : 'border-border bg-card/60'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="hasApontamento"
+                        checked={hasApontamento}
+                        onCheckedChange={checked => {
+                          const val = !!checked;
+                          setHasApontamento(val);
+                          if (val) {
+                            if (apontamentoOrgaos.length === 0) {
+                              setApontamentoOrgaos(['TJ Estadual', 'DataJud (CNJ Nacional)']);
+                            }
+                            setComissaoVote('DESFAVORAVEL');
+                            setInterviewConcept('Incompatível');
+                          } else {
+                            setApontamentoOrgaos([]);
+                            setComissaoVote('FAVORAVEL');
+                            setInterviewConcept('excelente');
+                          }
+                        }}
+                        className="mt-1"
+                      />
+                      <div className="space-y-1 cursor-pointer">
+                        <label htmlFor="hasApontamento" className="text-xs font-bold text-foreground cursor-pointer flex items-center gap-2">
+                          <AlertTriangle className={`h-4 w-4 ${hasApontamento ? 'text-red-500' : 'text-amber-500'}`} />
+                          Constatado Apontamento / Antecedentes Criminais ou Processuais
+                        </label>
+                        <p className="text-[11px] text-muted-foreground">
+                          Marque esta opção se durante a conferência nos tribunais ou certidões foi identificado processo judicial, inquérito ou registro criminal em desfavor do candidato.
+                        </p>
+                      </div>
+                    </div>
+
+                    {hasApontamento && (
+                      <div className="pl-6 space-y-4 pt-2 border-t border-red-500/30">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-red-400">
+                            Bases com Apontamento Identificado *
+                          </Label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            {[
+                              'Polícia Federal (SINIC)',
+                              'DataJud (CNJ Nacional)',
+                              'TJ Estadual',
+                              'TRF Federal',
+                              'TSE Eleitoral',
+                              'Receita Federal',
+                              'CNDT Trabalhista',
+                              'CGU Sanções'
+                            ].map(baseName => {
+                              const isChecked = apontamentoOrgaos.includes(baseName);
+                              return (
+                                <label
+                                  key={baseName}
+                                  className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition-colors ${
+                                    isChecked 
+                                      ? 'border-red-500 bg-red-500/20 text-red-300 font-semibold' 
+                                      : 'border-border text-muted-foreground hover:bg-accent'
+                                  }`}
+                                >
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={checked => {
+                                      if (checked) {
+                                        setApontamentoOrgaos([...apontamentoOrgaos, baseName]);
+                                      } else {
+                                        setApontamentoOrgaos(apontamentoOrgaos.filter(o => o !== baseName));
+                                      }
+                                    }}
+                                  />
+                                  <span>{baseName}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="apontamentoDetalhes" className="text-xs font-semibold text-red-400">
+                            Detalhes do Apontamento / Processo / Vara *
+                          </Label>
+                          <Textarea
+                            id="apontamentoDetalhes"
+                            rows={3}
+                            placeholder="Descreva o processo (nº do processo, vara/comarca, tipo de delito ou ação, situação atual do processo)..."
+                            value={apontamentoDetalhes}
+                            onChange={e => setApontamentoDetalhes(e.target.value)}
+                            className="text-xs border-red-500/40 bg-background/50"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* LGPD Consent Box */}
-                  <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+                  <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-2">
                     <div className="flex items-start gap-3">
                       <Checkbox
                         id="lgpd"
                         checked={formData.hasLgpdConsent}
                         onCheckedChange={checked => setFormData({ ...formData, hasLgpdConsent: !!checked })}
-                        className="mt-1"
+                        className="mt-0.5"
                       />
-                      <label htmlFor="lgpd" className="text-xs text-foreground cursor-pointer leading-relaxed">
-                        <span className="font-bold text-amber-500">Conformidade LGPD & Termo de Consentimento:</span> Confirmo que o candidato assinou autorização prévia e expressa para consulta de certidões criminais, cíveis, fiscais, trabalhistas e eleitorais em bases oficiais públicas.
+                      <label htmlFor="lgpd" className="text-[11px] text-foreground cursor-pointer leading-relaxed">
+                        <span className="font-bold text-amber-500">Conformidade LGPD:</span> O candidato assinou autorização prévia e expressa para checagem e emissão de certidões nos termos da admissão maçônica.
                       </label>
                     </div>
                   </div>
@@ -681,7 +952,7 @@ export default function AdminSindicancia() {
                       variant="outline"
                       onClick={handleSaveProfileChanges}
                       disabled={savingProfile || !formData.id}
-                      className="gap-2 border-amber-500/50 hover:bg-amber-500/10 text-amber-500 font-semibold h-12"
+                      className="gap-2 border-amber-500/50 hover:bg-amber-500/10 text-amber-500 font-semibold h-11 text-xs"
                     >
                       <Save className="h-4 w-4" />
                       {savingProfile ? 'Salvando...' : 'Salvar Alterações nos Dados'}
@@ -689,141 +960,172 @@ export default function AdminSindicancia() {
                     <Button
                       onClick={handleStartSindicancia}
                       size="lg"
-                      className="flex-1 gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-md h-12 text-sm"
+                      className="flex-1 gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-md h-11 text-xs"
                     >
-                      <Search className="h-5 w-5" />
-                      Conferir & Iniciar Varredura (11 Bases)
+                      <FileCheck className="h-5 w-5" />
+                      Gerar Relatório de Sindicância & Parecer
                     </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Panel of 11 Integrated Databases */}
+              {/* DIRECT QUICK OFFICIAL LINKS CARD */}
               <div className="space-y-4">
-                <Card className="card-elegant border-primary/30">
+                <Card className="card-elegant border-amber-500/30">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-display text-foreground flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      11 Fontes Gratuitas Integradas
+                    <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <ExternalLink className="h-4 w-4 text-amber-500" />
+                        Atalhos para Checagem Oficial
+                      </span>
+                      <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
+                        1 Clique
+                      </Badge>
                     </CardTitle>
-                    <CardDescription className="text-xs">
-                      APIs e certidões oficiais em tempo real
+                    <CardDescription className="text-[11px]">
+                      Abra diretamente as páginas dos tribunais e órgãos com os dados do candidato:
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-2.5 text-xs">
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                  <CardContent className="space-y-2 text-xs">
+                    <a
+                      href="https://esaj.tjsp.jus.br/cpopg/open.do"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-amber-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <ShieldCheck size={14} className="text-blue-500" /> 1. Polícia Federal (SINIC)
+                        <Building2 size={14} className="text-amber-500" />
+                        TJSP (Processos 1º Grau)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-amber-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href={`https://www.jusbrasil.com.br/busca?q=${encodeURIComponent(formData.fullName || '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-purple-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <Scale size={14} className="text-purple-500" /> 2. DataJud (CNJ - Processos)
+                        <Scale size={14} className="text-purple-500" />
+                        Jusbrasil (Processos do Nome)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-purple-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href={`https://www.escavador.com/busca?q=${encodeURIComponent(formData.fullName || '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-blue-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <Building2 size={14} className="text-amber-500" /> 3. TJ Estadual (TJSP/UF)
+                        <Search size={14} className="text-blue-500" />
+                        Escavador (Varredura Jurídica)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-blue-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href="https://servicos.dpf.gov.br/antecedentes-criminais/certidao"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-blue-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <FileCheck size={14} className="text-emerald-500" /> 4. TRF Federal (R1/R3)
+                        <ShieldCheck size={14} className="text-blue-500" />
+                        Polícia Federal (Antecedentes)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-blue-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href="https://web.trf3.jus.br/certidao-regional/CertidaoCivelEleitoralCriminal/Solicitar"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-emerald-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <Vote size={14} className="text-rose-500" /> 5. TSE (Justiça Eleitoral)
+                        <FileCheck size={14} className="text-emerald-500" />
+                        TRF3 (Certidão Regional Federal)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-emerald-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href="https://www.tse.jus.br/servicos-eleitorais/certidoes/certidao-de-quitacao-eleitoral"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-rose-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <Receipt size={14} className="text-indigo-500" /> 6. Receita Federal (CPF/CND)
+                        <Vote size={14} className="text-rose-500" />
+                        TSE (Quitação & Crimes)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-rose-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href="https://servicos.receita.fazenda.gov.br/servicos/cpf/consultasituacao/consultapublica.asp"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-indigo-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <Briefcase size={14} className="text-cyan-500" /> 7. TST Trabalhista (CNDT)
+                        <Receipt size={14} className="text-indigo-500" />
+                        Receita Federal (Situação CPF)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-indigo-500" />
+                    </a>
 
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
+                    <a
+                      href="https://cndt-certidao.tst.jus.br/inicio.faces"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-lg border border-border bg-card/60 hover:bg-accent hover:border-teal-500/50 transition-colors flex items-center justify-between group"
+                    >
                       <span className="flex items-center gap-2 font-medium">
-                        <ShieldAlert size={14} className="text-red-500" /> 8. CGU (CEIS / Inidoneidade)
+                        <Briefcase size={14} className="text-teal-500" />
+                        TST (Certidão CNDT)
                       </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
-                      <span className="flex items-center gap-2 font-medium">
-                        <Landmark size={14} className="text-orange-500" /> 9. TCU (Contas Públicas)
-                      </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
-                      <span className="flex items-center gap-2 font-medium">
-                        <Building2 size={14} className="text-teal-500" /> 10. REDESIM (Sócio / CNPJ)
-                      </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between">
-                      <span className="flex items-center gap-2 font-medium">
-                        <Award size={14} className="text-yellow-500" /> 11. Conselho Profissional
-                      </span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">Ativa</Badge>
-                    </div>
+                      <ExternalLink size={12} className="text-muted-foreground group-hover:text-teal-500" />
+                    </a>
                   </CardContent>
                 </Card>
               </div>
             </div>
           </TabsContent>
 
-          {/* TAB 2: CONSOLIDATED REPORT (ALL 11 CERTIFICATES) */}
+          {/* TAB 2: REPORT & VOTE */}
           <TabsContent value="relatorio" className="space-y-6">
-            {/* SCANNING PROGRESS ANIMATOR */}
             {isScanning && (
               <Card className="card-elegant border-amber-500/50 p-8 text-center space-y-6">
                 <div className="space-y-2">
-                  <h3 className="text-xl font-display text-foreground">Executando Varredura Unificada nas 11 Bases...</h3>
-                  <p className="text-xs text-muted-foreground">Consultando Polícia Federal, DataJud, TSE, Receita Federal, CNDT, CGU, TCU, REDESIM e Conselhos de Classe</p>
+                  <h3 className="text-xl font-display text-foreground">Consolidando Dados da Sindicância...</h3>
+                  <p className="text-xs text-muted-foreground">Verificando certidões nos órgãos competentes</p>
                 </div>
 
                 <div className="w-full bg-accent rounded-full h-4 overflow-hidden border border-border p-0.5">
                   <div 
-                    className="bg-gradient-to-r from-amber-500 via-purple-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out" 
+                    className="bg-gradient-to-r from-amber-500 via-purple-500 to-emerald-500 h-full rounded-full transition-all duration-300 ease-out" 
                     style={{ width: `${scanProgress}%` }}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs font-medium">
-                  <div className={`p-2.5 rounded-xl border ${scanStep >= 1 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 1 ? 'border-amber-500/50 bg-amber-500/10 text-amber-500' : 'border-border text-muted-foreground'}`}>
                     1. Polícia Federal
                   </div>
-                  <div className={`p-2.5 rounded-xl border ${scanStep >= 2 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 2 ? 'border-amber-500/50 bg-amber-500/10 text-amber-500' : 'border-border text-muted-foreground'}`}>
                     2. DataJud CNJ
                   </div>
-                  <div className={`p-2.5 rounded-xl border ${scanStep >= 3 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 3 ? 'border-amber-500/50 bg-amber-500/10 text-amber-500' : 'border-border text-muted-foreground'}`}>
                     3. TSE & CNDT
                   </div>
-                  <div className={`p-2.5 rounded-xl border ${scanStep >= 4 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 4 ? 'border-amber-500/50 bg-amber-500/10 text-amber-500' : 'border-border text-muted-foreground'}`}>
                     4. Receita & CGU
                   </div>
-                  <div className={`p-2.5 rounded-xl border ${scanStep >= 5 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}>
+                  <div className={`p-2.5 rounded-xl border ${scanStep >= 5 ? 'border-amber-500/50 bg-amber-500/10 text-amber-500' : 'border-border text-muted-foreground'}`}>
                     5. REDESIM & Órgãos
                   </div>
                 </div>
@@ -834,7 +1136,7 @@ export default function AdminSindicancia() {
               <Card className="card-elegant py-12 text-center">
                 <CardContent className="space-y-4">
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <p className="text-muted-foreground">Nenhuma consulta ativa no momento.</p>
+                  <p className="text-muted-foreground">Nenhuma sindicância selecionada no momento.</p>
                   <Button onClick={() => setActiveTab('consulta')} variant="outline" className="gap-2">
                     <Search className="h-4 w-4" /> Iniciar Nova Sindicância
                   </Button>
@@ -845,11 +1147,15 @@ export default function AdminSindicancia() {
             {!isScanning && reportData && (
               <div className="space-y-6 print:space-y-4">
                 {/* REPORT HEADER CARD */}
-                <Card className="card-elegant border-emerald-500/40 print:border-black">
+                <Card className={`card-elegant print:border-black ${
+                  reportData.hasApontamento 
+                    ? 'border-red-500/60 bg-red-500/5' 
+                    : 'border-emerald-500/40'
+                }`}>
                   <CardHeader className="pb-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge className="bg-amber-500/20 text-amber-500 font-mono text-xs">
                             Protocolo: {reportData.protocol}
                           </Badge>
@@ -866,9 +1172,15 @@ export default function AdminSindicancia() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <Badge className="bg-emerald-500 text-white font-bold px-4 py-2 text-sm gap-1.5 shadow-sm">
-                          <CheckCircle2 size={16} /> 11 CERTIDÕES LIMPAS (Ficha Limpa)
-                        </Badge>
+                        {reportData.hasApontamento ? (
+                          <Badge className="bg-red-600 text-white font-bold px-4 py-2 text-sm gap-1.5 shadow-sm">
+                            <AlertOctagon size={16} /> APONTAMENTO DETECTADO (Atenção Comissão)
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500 text-white font-bold px-4 py-2 text-sm gap-1.5 shadow-sm">
+                            <CheckCircle2 size={16} /> CERTIDÕES VERIFICADAS & LIMPAS
+                          </Badge>
+                        )}
                         <div className="flex items-center gap-2 print:hidden">
                           <Button onClick={handlePrint} variant="outline" size="sm" className="gap-1.5">
                             <Printer className="h-4 w-4" /> Imprimir Ficha Completa
@@ -879,17 +1191,49 @@ export default function AdminSindicancia() {
                   </CardHeader>
                 </Card>
 
+                {/* ALERT BANNER IF HAS APONTAMENTO */}
+                {reportData.hasApontamento && (
+                  <Card className="border-red-500/60 bg-red-500/10 p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-red-500">
+                          Atenção: Constatado Apontamento Impeditivo / Restritivo
+                        </h4>
+                        <p className="text-xs text-foreground/90 leading-relaxed">
+                          {reportData.apontamentoDetalhes || 'Identificados processos judiciais ou registros restritivos na verificação de antecedentes.'}
+                        </p>
+                        {reportData.apontamentoOrgaos && reportData.apontamentoOrgaos.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {reportData.apontamentoOrgaos.map(org => (
+                              <Badge key={org} variant="destructive" className="text-[10px]">
+                                {org}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
                 {/* 11 CERTIFICATES & SEARCH RESULTS GRID */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* 1. Polícia Federal */}
-                  <Card className="card-elegant border-primary/30">
+                  <Card className={`card-elegant ${
+                    reportData.pfCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
+                  }`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <ShieldCheck className="h-4 w-4 text-blue-500" />
                           1. Polícia Federal (SINIC)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        {reportData.pfCert.status === 'APONTAMENTO' ? (
+                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
@@ -897,43 +1241,57 @@ export default function AdminSindicancia() {
                         <span className="text-muted-foreground">Protocolo:</span>
                         <span className="font-mono font-medium">{reportData.pfCert.protocol}</span>
                       </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem antecedentes criminais federais
+                      <div className={reportData.pfCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
+                        {reportData.pfCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.pfCert.detail}` : '✓ Sem antecedentes criminais federais'}
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* 2. DataJud CNJ */}
-                  <Card className="card-elegant border-primary/30">
+                  <Card className={`card-elegant ${
+                    reportData.datajudCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
+                  }`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <Scale className="h-4 w-4 text-purple-500" />
                           2. DataJud (CNJ Nacional)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        {reportData.datajudCert.status === 'APONTAMENTO' ? (
+                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Processos Encontrados:</span>
-                        <span className="font-semibold text-emerald-500">0 Processos</span>
+                        <span className="text-muted-foreground">Processos Registrados:</span>
+                        <span className={reportData.datajudCert.status === 'APONTAMENTO' ? "font-semibold text-red-500" : "font-semibold text-emerald-500"}>
+                          {reportData.datajudCert.totalCases} Processo(s)
+                        </span>
                       </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Livre de ações cíveis, criminais e família
+                      <div className={reportData.datajudCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
+                        {reportData.datajudCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.datajudCert.detail}` : '✓ Livre de ações criminais'}
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* 3. TJ Estadual */}
-                  <Card className="card-elegant border-primary/30">
+                  <Card className={`card-elegant ${
+                    reportData.tjCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
+                  }`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <Building2 className="h-4 w-4 text-amber-500" />
                           3. TJ Estadual (TJ{reportData.candidate.uf})
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        {reportData.tjCert.status === 'APONTAMENTO' ? (
+                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
@@ -941,21 +1299,27 @@ export default function AdminSindicancia() {
                         <span className="text-muted-foreground">Distribuição Estadual:</span>
                         <span className="font-mono font-medium">{reportData.tjCert.protocol}</span>
                       </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem distribuições criminais ou cíveis na UF
+                      <div className={reportData.tjCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
+                        {reportData.tjCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.tjCert.detail}` : '✓ Sem distribuições criminais na UF'}
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* 4. TRF Federal */}
-                  <Card className="card-elegant border-primary/30">
+                  <Card className={`card-elegant ${
+                    reportData.trfCert.status === 'APONTAMENTO' ? 'border-red-500/70 bg-red-500/5' : 'border-primary/30'
+                  }`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <FileCheck className="h-4 w-4 text-emerald-500" />
                           4. TRF Justiça Federal
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        {reportData.trfCert.status === 'APONTAMENTO' ? (
+                          <Badge variant="destructive" className="text-[10px]">APONTAMENTO</Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
@@ -963,8 +1327,8 @@ export default function AdminSindicancia() {
                         <span className="text-muted-foreground">Certidão Federal:</span>
                         <span className="font-mono font-medium">{reportData.trfCert.protocol}</span>
                       </div>
-                      <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem execuções fiscais ou ações federais
+                      <div className={reportData.trfCert.status === 'APONTAMENTO' ? "text-red-500 font-semibold pt-1" : "text-emerald-500 font-semibold pt-1"}>
+                        {reportData.trfCert.status === 'APONTAMENTO' ? `⚠️ ${reportData.trfCert.detail}` : '✓ Sem execuções fiscais ou ações federais'}
                       </div>
                     </CardContent>
                   </Card>
@@ -977,7 +1341,7 @@ export default function AdminSindicancia() {
                           <Vote className="h-4 w-4 text-rose-500" />
                           5. TSE (Justiça Eleitoral)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">QUITADO</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">{reportData.tseCert.quitacao}</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
@@ -986,7 +1350,7 @@ export default function AdminSindicancia() {
                         <span className="font-semibold text-emerald-500">{reportData.tseCert.quitacao}</span>
                       </div>
                       <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem condenações por crimes eleitorais
+                        ✓ {reportData.tseCert.crimes}
                       </div>
                     </CardContent>
                   </Card>
@@ -999,16 +1363,16 @@ export default function AdminSindicancia() {
                           <Receipt className="h-4 w-4 text-indigo-500" />
                           6. Receita Federal (CPF/CND)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">REGULAR</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">{reportData.receitaCert.cpfStatus}</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Situação CPF:</span>
+                        <span className="text-muted-foreground">Situação Cadastral:</span>
                         <span className="font-semibold text-emerald-500">{reportData.receitaCert.cpfStatus}</span>
                       </div>
-                      <div className="text-emerald-500 font-semibold pt-1 flex items-center gap-1">
-                        ✓ Certidão Negativa Tributos Federais emitida
+                      <div className="text-emerald-500 font-semibold pt-1">
+                        ✓ {reportData.receitaCert.cndStatus}
                       </div>
                     </CardContent>
                   </Card>
@@ -1018,51 +1382,51 @@ export default function AdminSindicancia() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-4 w-4 text-cyan-500" />
-                          7. TST / CNDT Trabalhista
+                          <Briefcase className="h-4 w-4 text-teal-500" />
+                          7. TST (Débitos Trabalhistas)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">CNDT REGULAR</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Protocolo CNDT:</span>
+                        <span className="text-muted-foreground">Certidão CNDT:</span>
                         <span className="font-mono font-medium">{reportData.cndtCert.protocol}</span>
                       </div>
                       <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Livre de débitos na Justiça do Trabalho
+                        ✓ {reportData.cndtCert.status}
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* 8. CGU Sanções / CEIS */}
+                  {/* 8. CGU Sanções */}
                   <Card className="card-elegant border-primary/30">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <ShieldAlert className="h-4 w-4 text-red-500" />
-                          8. CGU (CEIS / Transparência)
+                          <Landmark className="h-4 w-4 text-cyan-500" />
+                          8. CGU Sanções (CEIS / CNEP)
                         </span>
-                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
+                        <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">LIVRE</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Cadastro CEIS/CNEP:</span>
-                        <span className="font-semibold text-emerald-500">Sem Inidoneidade</span>
+                        <span className="text-muted-foreground">Cadastro de Inidôneos:</span>
+                        <span className="font-semibold text-emerald-500">NADA CONSTA</span>
                       </div>
                       <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem punições no Portal da Transparência
+                        ✓ Sem penalidades ativas no Poder Executivo Federal
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* 9. TCU Contas Públicas */}
+                  {/* 9. TCU Contas Irregulares */}
                   <Card className="card-elegant border-primary/30">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <Landmark className="h-4 w-4 text-orange-500" />
+                          <Scale className="h-4 w-4 text-sky-500" />
                           9. TCU (Contas Irregulares)
                         </span>
                         <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">NADA CONSTA</Badge>
@@ -1071,32 +1435,32 @@ export default function AdminSindicancia() {
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
                         <span className="text-muted-foreground">Contas Públicas:</span>
-                        <span className="font-semibold text-emerald-500">Sem Rejeição</span>
+                        <span className="font-semibold text-emerald-500">REGULAR</span>
                       </div>
                       <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem inabilitação para funções públicas
+                        ✓ Sem inabilitação para cargos públicos
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* 10. REDESIM Sociedades */}
+                  {/* 10. REDESIM */}
                   <Card className="card-elegant border-primary/30">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-display text-foreground flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <Building2 className="h-4 w-4 text-teal-500" />
-                          10. REDESIM (Vínculo Societário)
+                          <Building2 className="h-4 w-4 text-orange-500" />
+                          10. REDESIM (Empresas)
                         </span>
                         <Badge className="bg-emerald-500/20 text-emerald-500 text-[10px]">REGULAR</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Participação em Empresas:</span>
-                        <span className="font-semibold text-foreground">{reportData.redesimCert.totalEmpresas} Empresa Ativa</span>
+                        <span className="text-muted-foreground">Situação Empresarial:</span>
+                        <span className="font-semibold text-emerald-500">ATIVO</span>
                       </div>
                       <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Empresa regular sem inaptidão fiscal
+                        ✓ Sem inaptidão ou baixas punitivas
                       </div>
                     </CardContent>
                   </Card>
@@ -1114,40 +1478,44 @@ export default function AdminSindicancia() {
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-[11px]">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Status do Registro:</span>
+                        <span className="text-muted-foreground">Registro Profissional:</span>
                         <span className="font-semibold text-emerald-500">{reportData.conselhoCert.status}</span>
                       </div>
                       <div className="text-emerald-500 font-semibold pt-1">
-                        ✓ Sem penalidades ético-disciplinares ativas
+                        ✓ Sem penalidades ético-disciplinares
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* PARECER DA COMISSÃO DE SINDICÂNCIA */}
-                <Card className="card-elegant border-amber-500/40">
+                <Card className={`card-elegant ${
+                  comissaoVote === 'DESFAVORAVEL' 
+                    ? 'border-red-500/50 bg-red-500/5' 
+                    : 'border-amber-500/40'
+                }`}>
                   <CardHeader>
                     <CardTitle className="text-xl font-display text-foreground flex items-center gap-2">
                       <FileCheck className="h-5 w-5 text-amber-500" />
-                      Parecer Final do Sindicante
+                      Parecer Final da Comissão Sindicante
                     </CardTitle>
                     <CardDescription>
-                      Preencha o conceito da entrevista presencial e o voto da comissão
+                      Registre o resultado da sindicância, o conceito da avaliação e o voto oficial
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Irmão Sindicante (M::: M:::)</Label>
+                        <Label className="text-xs font-semibold">Irmão Sindicante / Relator</Label>
                         <Input
-                          placeholder="Ex: Ir::: João da Silva"
+                          placeholder="Ex: Ir::: João da Silva (M::: M:::)"
                           value={sindicanteName}
                           onChange={e => setSindicanteName(e.target.value)}
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Conceito da Entrevista</Label>
+                        <Label className="text-xs font-semibold">Conceito da Avaliação</Label>
                         <Select value={interviewConcept} onValueChange={setInterviewConcept}>
                           <SelectTrigger>
                             <SelectValue placeholder="Conceito" />
@@ -1156,31 +1524,37 @@ export default function AdminSindicancia() {
                             <SelectItem value="excelente">Excelente (Sem Restrições)</SelectItem>
                             <SelectItem value="bom">Bom</SelectItem>
                             <SelectItem value="satisfatorio">Satisfatório</SelectItem>
-                            <SelectItem value="pendente">Pendente de Esclarecimento</SelectItem>
+                            <SelectItem value="Incompatível">Incompatível (Restrições Graves)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Voto da Comissão</Label>
+                        <Label className="text-xs font-semibold">Voto da Comissão *</Label>
                         <Select value={comissaoVote} onValueChange={(val: any) => setComissaoVote(val)}>
-                          <SelectTrigger>
+                          <SelectTrigger className={comissaoVote === 'DESFAVORAVEL' ? 'border-red-500 text-red-400 font-bold' : ''}>
                             <SelectValue placeholder="Voto" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="FAVORAVEL">✅ FAVORÁVEL</SelectItem>
-                            <SelectItem value="RESTRICAO">⚠️ FAVORÁVEL COM RESTRIÇÕES</SelectItem>
-                            <SelectItem value="DESFAVORAVEL">❌ DESFAVORÁVEL</SelectItem>
+                            <SelectItem value="FAVORAVEL" className="text-emerald-500 font-semibold">
+                              ✅ FAVORÁVEL (Aprovar Sindicância)
+                            </SelectItem>
+                            <SelectItem value="RESTRICAO" className="text-amber-500 font-semibold">
+                              ⚠️ FAVORÁVEL COM RESTRIÇÕES
+                            </SelectItem>
+                            <SelectItem value="DESFAVORAVEL" className="text-red-500 font-semibold">
+                              ❌ DESFAVORÁVEL (Reprovar Candidato)
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold">Observações & Parecer Fundamentado</Label>
+                      <Label className="text-xs font-semibold">Observações & Parecer Circunstanciado *</Label>
                       <Textarea
                         rows={4}
-                        placeholder="Descreva aqui o parecer circunstanciado da entrevista com o profano e sua família..."
+                        placeholder="Descreva aqui o parecer fundamentado da comissão sobre o candidato, antecedentes apurados ou motivo do parecer..."
                         value={parecerNotes}
                         onChange={e => setParecerNotes(e.target.value)}
                       />
@@ -1189,10 +1563,19 @@ export default function AdminSindicancia() {
                     <div className="flex justify-end gap-3 pt-2 print:hidden">
                       <Button
                         onClick={handleSaveParecer}
-                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                        disabled={isSavingParecer}
+                        className={`gap-2 font-bold ${
+                          comissaoVote === 'DESFAVORAVEL'
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        }`}
                       >
                         <Save className="h-4 w-4" />
-                        Salvar Parecer & Aprovar Pré-Sindicância
+                        {isSavingParecer ? 'Registrando...' : (
+                          comissaoVote === 'DESFAVORAVEL' 
+                            ? 'Salvar Parecer & Reprovar Candidato' 
+                            : 'Salvar Parecer & Aprovar Sindicância'
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -1201,109 +1584,107 @@ export default function AdminSindicancia() {
             )}
           </TabsContent>
 
-          {/* TAB 3: PAINEL DA COMISSÃO DE SINDICÂNCIA */}
+          {/* TAB 3: COMMISSION PANEL & SAVED DATABASE HISTORY */}
           <TabsContent value="painel" className="space-y-6">
             <Card className="card-elegant">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <CardTitle className="text-xl font-display text-foreground">
-                      Painel da Comissão de Sindicância
+                      Histórico Oficial de Sindicâncias Registradas
                     </CardTitle>
                     <CardDescription>
-                      Histórico de candidatos e pareceres emitidos nas 11 bases oficiais
+                      Todos os registros e pareceres de sindicância salvos com segurança no banco de dados
                     </CardDescription>
                   </div>
+                  <Button onClick={() => setActiveTab('consulta')} size="sm" className="gap-2">
+                    <Search className="h-4 w-4" /> Nova Sindicância
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-accent/40 text-muted-foreground uppercase font-semibold">
-                      <tr>
-                        <th className="p-3">Protocolo</th>
-                        <th className="p-3">Candidato</th>
-                        <th className="p-3">CPF</th>
-                        <th className="p-3">Polícia Federal</th>
-                        <th className="p-3">DataJud (CNJ)</th>
-                        <th className="p-3">TSE Eleitoral</th>
-                        <th className="p-3">Receita Federal</th>
-                        <th className="p-3">CNDT Trabalhista</th>
-                        <th className="p-3">CGU Sanções</th>
-                        <th className="p-3">Parecer Final</th>
-                        <th className="p-3 text-right">Ação</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {sindicanciasList.map((item) => (
-                        <tr key={item.id} className="hover:bg-accent/30 transition-colors">
-                          <td className="p-3 font-mono font-medium text-foreground">{item.id}</td>
-                          <td className="p-3 font-semibold text-foreground">{item.candidateName}</td>
-                          <td className="p-3 text-muted-foreground">{item.cpf}</td>
-                          <td className="p-3">
-                            <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
-                          </td>
-                          <td className="p-3">
-                            {item.datajudStatus === 'NADA_CONSTA' ? (
-                              <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
-                            ) : (
-                              <Badge className="bg-amber-500/20 text-amber-500">APONTAMENTO</Badge>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <Badge className="bg-emerald-500/20 text-emerald-500">QUITADO</Badge>
-                          </td>
-                          <td className="p-3">
-                            <Badge className="bg-emerald-500/20 text-emerald-500">REGULAR</Badge>
-                          </td>
-                          <td className="p-3">
-                            {item.cndtStatus === 'NADA_CONSTA' ? (
-                              <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
-                            ) : (
-                              <Badge className="bg-amber-500/20 text-amber-500">APONTAMENTO</Badge>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <Badge className="bg-emerald-500/20 text-emerald-500">NADA CONSTA</Badge>
-                          </td>
-                          <td className="p-3">
-                            {item.overallStatus === 'FAVORAVEL' && (
-                              <Badge className="bg-emerald-600 text-white font-bold">FAVORÁVEL</Badge>
-                            )}
-                            {item.overallStatus === 'RESTRICAO' && (
-                              <Badge className="bg-amber-500 text-black font-bold">C/ RESTRIÇÃO</Badge>
-                            )}
-                            {item.overallStatus === 'DESFAVORAVEL' && (
-                              <Badge className="bg-red-600 text-white font-bold">DESFAVORÁVEL</Badge>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setFormData({
-                                  fullName: item.candidateName,
-                                  cpf: item.cpf,
-                                  rg: '00.000.000-0',
-                                  rgIssuer: 'SSP',
-                                  birthDate: '1985-05-15',
-                                  uf: item.uf,
-                                  profession: item.profession,
-                                  hasLgpdConsent: true
-                                });
-                                handleStartSindicancia();
-                              }}
-                              className="h-7 text-xs gap-1 text-primary"
-                            >
-                              Ver Ficha <ChevronRight size={14} />
-                            </Button>
-                          </td>
+                {isLoadingSindicancias ? (
+                  <div className="py-12 text-center text-muted-foreground animate-pulse">
+                    Carregando histórico de sindicâncias...
+                  </div>
+                ) : sindicancias.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground space-y-2">
+                    <FileText className="h-10 w-10 mx-auto text-muted-foreground/60" />
+                    <p>Nenhuma sindicância registrada no banco de dados.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-accent/40 text-muted-foreground uppercase font-semibold">
+                        <tr>
+                          <th className="p-3">Protocolo</th>
+                          <th className="p-3">Data</th>
+                          <th className="p-3">Candidato</th>
+                          <th className="p-3">CPF</th>
+                          <th className="p-3">Antecedentes</th>
+                          <th className="p-3">Sindicante</th>
+                          <th className="p-3">Parecer Final</th>
+                          <th className="p-3 text-right">Ações</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {sindicancias.map((item) => (
+                          <tr key={item.id} className="hover:bg-accent/30 transition-colors">
+                            <td className="p-3 font-mono font-medium text-foreground">{item.protocol}</td>
+                            <td className="p-3 text-muted-foreground">
+                              {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="p-3 font-semibold text-foreground">{item.candidate_name}</td>
+                            <td className="p-3 text-muted-foreground">{item.cpf}</td>
+                            <td className="p-3">
+                              {item.has_apontamento ? (
+                                <Badge variant="destructive" className="bg-red-500/20 text-red-500 border-red-500/40 text-[10px] gap-1">
+                                  <AlertTriangle size={12} /> APONTAMENTO
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/40 text-[10px] gap-1">
+                                  <CheckCircle2 size={12} /> LIMPO
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-muted-foreground">{item.sindicante_name || 'Comissão'}</td>
+                            <td className="p-3">
+                              {item.comissao_vote === 'FAVORAVEL' && (
+                                <Badge className="bg-emerald-600 text-white font-bold">FAVORÁVEL</Badge>
+                              )}
+                              {item.comissao_vote === 'RESTRICAO' && (
+                                <Badge className="bg-amber-500 text-black font-bold">C/ RESTRIÇÃO</Badge>
+                              )}
+                              {item.comissao_vote === 'DESFAVORAVEL' && (
+                                <Badge className="bg-red-600 text-white font-bold">DESFAVORÁVEL (REPROVADO)</Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewSavedSindicancia(item)}
+                                  className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                                >
+                                  <Eye size={14} /> Ver Ficha
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => handleDeleteSindicancia(item.id, e)}
+                                  className="h-7 text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                                >
+                                  <Trash2 size={13} />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
