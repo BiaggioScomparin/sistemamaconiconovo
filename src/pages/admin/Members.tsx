@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useApprovedProfiles } from '@/hooks/useAdmin';
@@ -86,6 +86,7 @@ interface MemberFilters {
 }
 
 export default function AdminMembers() {
+  const navigate = useNavigate();
   const { user, loading, isAdmin } = useAuth();
   const { data: profiles, isLoading } = useApprovedProfiles();
   const { data: lodges } = useLodges();
@@ -956,12 +957,28 @@ export default function AdminMembers() {
               <div className="py-12 text-center text-muted-foreground flex flex-col items-center justify-center gap-3">
                 <Filter className="h-8 w-8 text-muted-foreground/50" />
                 <div>
-                  <p className="font-medium text-foreground">Nenhum membro atende aos filtros selecionados.</p>
-                  <p className="text-sm text-muted-foreground mt-1">Tente remover ou alterar os filtros de busca.</p>
+                  <p className="font-medium text-foreground">Nenhum membro ativo encontrado com esses filtros.</p>
+                  {filters.search && (
+                    <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                      Buscando por "<strong>{filters.search}</strong>"? Se for um candidato recente ou em processo de sindicância, ele estará no fluxo de Propostas.
+                    </p>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" onClick={clearFilters} className="mt-2">
-                  Limpar Filtros
-                </Button>
+                <div className="flex gap-2 flex-wrap justify-center mt-2">
+                  {filters.search && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => navigate(`/admin/propostas?search=${encodeURIComponent(filters.search)}`)}
+                      className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-sm"
+                    >
+                      <Search className="h-4 w-4" /> Buscar "{filters.search}" em Propostas
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    Limpar Filtros
+                  </Button>
+                </div>
               </div>
             ) : viewMode === 'table' ? (
               /* TABLE VIEW */

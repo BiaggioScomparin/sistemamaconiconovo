@@ -569,6 +569,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
   const [fetchingWorkCEP, setFetchingWorkCEP] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(profile?.photo_url || null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
 
   // Pre-load existing registered children if profile is already created
@@ -661,18 +662,49 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
     }
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const validation = validateImageFile(file);
-      if (!validation.valid) {
-        toast({ title: 'Erro', description: validation.error || 'Arquivo inválido', variant: 'destructive' });
-        return;
+    if (!file) return;
+
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Arquivo inválido', description: validation.error || 'Apenas imagens JPG, PNG ou WEBP de até 5MB', variant: 'destructive' });
+      return;
+    }
+
+    setPhotoFile(file);
+
+    // Pré-visualização local imediata para feedback instantâneo
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+
+    // Upload IMEDIATO para Supabase Storage e persistência no perfil
+    setUploadingPhoto(true);
+    try {
+      const fileName = getValidatedFileName(file, user?.id || profile?.user_id || 'proposals');
+      const { error: uploadError } = await supabase.storage.from('photos').upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
+      const publicUrl = urlData.publicUrl;
+
+      setPhotoPreview(publicUrl);
+      if (profile?.id) {
+        await supabase.from('profiles').update({ photo_url: publicUrl }).eq('id', profile.id);
       }
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
+      toast({
+        title: 'Foto Carregada com Sucesso!',
+        description: 'Sua foto 3x4 já foi salva permanentemente no seu cadastro.',
+      });
+    } catch (err: any) {
+      console.warn('Upload imediato falhou, enviará na submissão final:', err);
+      toast({
+        title: 'Foto Selecionada',
+        description: 'A foto foi anexada e será confirmada ao finalizar a proposta.',
+      });
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -695,10 +727,10 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
   const onSubmitFullProposal = async (data: ProposalFormData) => {
     setLoading(true);
     try {
-      let photoUrl = profile?.photo_url || null;
+      let photoUrl = profile?.photo_url || (photoPreview && photoPreview.startsWith('http') ? photoPreview : null);
 
-      if (photoFile) {
-        const fileName = getValidatedFileName(photoFile, user?.id || 'proposals');
+      if (photoFile && (!photoUrl || photoUrl.startsWith('data:'))) {
+        const fileName = getValidatedFileName(photoFile, user?.id || profile?.user_id || 'proposals');
         const { error: uploadError } = await supabase.storage.from('photos').upload(fileName, photoFile, { upsert: true });
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
@@ -789,7 +821,7 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
 
     const errorList = Object.entries(validationErrors);
     if (errorList.length > 0) {
-      const [field, error] = errorList[0] as [string, any];
+      const [field] = errorList[0] as [string, any];
       const fieldLabels: Record<string, string> = {
         full_name: 'Nome Completo',
         email: 'E-mail',
@@ -797,16 +829,64 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
         birth_date: 'Data de Nascimento',
         profession: 'Profissão',
         cell_phone: 'Telefone Celular',
+        father_name: 'Nome do Pai',
+        mother_name: 'Nome da Mãe',
+        cep: 'CEP',
+        street: 'Logradouro / Rua',
+        number: 'Número',
+        neighborhood: 'Bairro',
+        city: 'Cidade',
+        state: 'Estado (UF)',
+        education_level: 'Escolaridade',
+        civil_status: 'Estado Civil',
         expectation_masonry: 'Expectativas na Maçonaria',
       };
       const label = fieldLabels[field] || field;
+
+      // Scroll suave imediato até o campo faltante com foco
+      setTimeout(() => {
+        const el = document.querySelector(`[name="${field}"]`) || document.getElementById(field);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          (el as HTMLElement).focus?.();
+        }
+      }, 100);
+
       toast({
-        title: 'Campos Preenchidos Salvos!',
-        description: `Os campos preenchidos já foram salvos no sistema. Complete o campo "${label}" para finalizar a proposta.`,
+        title: '⚠️ Atenção: Proposta NÃO Concluída!',
+        description: `O rascunho dos campos digitados foi salvo, mas para FINALIZAR sua proposta é obrigatório preencher "${label}". Preencha e clique em Finalizar novamente.`,
         variant: 'destructive',
       });
     }
   };
+
+  // Cálculo de Progresso de Preenchimento da Proposta
+  const watchedValues = watch();
+  const trackedKeys = [
+    'full_name',
+    'cpf',
+    'birth_date',
+    'cell_phone',
+    'naturality',
+    'father_name',
+    'mother_name',
+    'education_level',
+    'civil_status',
+    'cep',
+    'street',
+    'number',
+    'neighborhood',
+    'city',
+    'state',
+    'profession',
+    'expectation_masonry',
+  ];
+  const filledTracked = trackedKeys.filter(k => {
+    const val = (watchedValues as any)[k];
+    return val !== undefined && val !== null && String(val).trim() !== '';
+  }).length + (photoPreview || profile?.photo_url ? 1 : 0);
+  const totalTracked = trackedKeys.length + 1;
+  const progressPercent = Math.min(100, Math.round((filledTracked / totalTracked) * 100));
 
   return (
     <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
@@ -816,12 +896,37 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-6 w-6 text-emerald-500" />
             <h1 className="text-2xl font-display text-foreground">
-              🎉 Sindicância Aprovada! Preencha sua Ficha de Proposta Complete
+              🎉 Sindicância Aprovada! Preencha sua Ficha de Proposta Completa
             </h1>
           </div>
           <p className="text-sm text-muted-foreground font-body">
             Sua verificação preliminar foi aprovada com louvor. Preencha abaixo os dados da sua Ficha de Proposta Maçônica.
           </p>
+        </div>
+
+        {/* Barra de Progresso do Preenchimento */}
+        <div className="bg-card border border-border rounded-xl p-4 space-y-2 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-medium">
+            <span className="text-foreground">Progresso do Preenchimento</span>
+            <span className={progressPercent === 100 ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
+              {filledTracked} de {totalTracked} itens preenchidos ({progressPercent}%)
+            </span>
+          </div>
+          <div className="w-full bg-secondary h-2.5 rounded-full overflow-hidden">
+            <div 
+              className={`h-full transition-all duration-300 ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          {progressPercent < 100 ? (
+            <p className="text-[11px] text-muted-foreground">
+              * Preencha todos os campos e anexe sua foto para liberar a finalização da sua proposta.
+            </p>
+          ) : (
+            <p className="text-[11px] text-emerald-500 font-medium">
+              ✓ Todos os campos principais estão preenchidos! Você já pode finalizar e enviar sua proposta.
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmitFullProposal, onInvalid)} className="space-y-6">
@@ -835,13 +940,27 @@ function Stage2FullProposalForm({ profile, onComplete }: { profile: any; onCompl
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 {photoPreview ? (
-                  <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover border-2 border-amber-500" />
+                  <div className="relative">
+                    <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover border-2 border-amber-500" />
+                    {uploadingPhoto && (
+                      <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-white">
+                        <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div className="w-24 h-24 rounded-full bg-accent flex items-center justify-center text-xs text-muted-foreground border border-border">Sem Foto</div>
+                  <div className="w-24 h-24 rounded-full bg-accent flex items-center justify-center text-xs text-muted-foreground border border-border">
+                    {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin text-amber-500" /> : 'Sem Foto'}
+                  </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="photo" className="text-xs font-semibold">Foto 3x4 do Candidato</Label>
-                  <Input id="photo" type="file" accept="image/*" onChange={handlePhotoChange} />
+                  <Label htmlFor="photo" className="text-xs font-semibold">Foto 3x4 do Candidato *</Label>
+                  <Input id="photo" type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} />
+                  {(photoPreview || profile?.photo_url) && !uploadingPhoto && (
+                    <span className="text-[11px] text-emerald-500 font-medium flex items-center gap-1">
+                      ✓ Foto salva no sistema
+                    </span>
+                  )}
                 </div>
               </div>
 

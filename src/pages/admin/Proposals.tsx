@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -37,7 +38,8 @@ import {
   Trash2,
   RotateCcw,
   MoreVertical,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -162,6 +164,8 @@ export default function AdminProposals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
@@ -329,6 +333,20 @@ export default function AdminProposals() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const searchLower = searchTerm.toLowerCase().trim();
+
+  const searchMatches = (p: Profile) => {
+    if (!searchLower) return true;
+    return (
+      (p.full_name || '').toLowerCase().includes(searchLower) ||
+      (p.cpf || '').toLowerCase().includes(searchLower) ||
+      (p.email || '').toLowerCase().includes(searchLower) ||
+      (p.cell_phone || '').toLowerCase().includes(searchLower) ||
+      (p.phone || '').toLowerCase().includes(searchLower) ||
+      (p.city || '').toLowerCase().includes(searchLower)
+    );
+  };
+
   const filterProfiles = (status: string) => {
     if (!profiles) return [];
     
@@ -342,8 +360,35 @@ export default function AdminProposals() {
       membro: ['membro', 'approved'],
     };
     
-    return profiles.filter(p => statusMap[status]?.includes(p.status));
+    return profiles
+      .filter(p => statusMap[status]?.includes(p.status))
+      .filter(searchMatches);
   };
+
+  const allMatchingProfiles = useMemo(() => {
+    if (!profiles || !searchLower) return [];
+    return profiles.filter(searchMatches);
+  }, [profiles, searchLower]);
+
+  const matchingTabs = useMemo(() => {
+    if (!searchLower || allMatchingProfiles.length === 0) return [];
+    const statusMap: Record<string, { label: string; statuses: string[] }> = {
+      proposta: { label: 'Proposta', statuses: ['proposta', 'pending'] },
+      sindicancia: { label: 'Sindicância', statuses: ['sindicancia'] },
+      sindicancia_aprovada: { label: 'Sind. Aprovada', statuses: ['sindicancia_aprovada', 'proposta_completa'] },
+      aguardando_iniciacao: { label: 'Aguard. Iniciação', statuses: ['aguardando_iniciacao'] },
+      reprovado: { label: 'Reprovados', statuses: ['reprovado', 'rejected'] },
+      membro: { label: 'Membros', statuses: ['membro', 'approved'] },
+    };
+    const list: Array<{ key: string; label: string; count: number }> = [];
+    for (const [key, cfg] of Object.entries(statusMap)) {
+      const count = allMatchingProfiles.filter(p => cfg.statuses.includes(p.status)).length;
+      if (count > 0) {
+        list.push({ key, label: cfg.label, count });
+      }
+    }
+    return list;
+  }, [searchLower, allMatchingProfiles]);
 
   const handleStatusChange = async () => {
     if (!selectedProfile || !newStatus) return;
@@ -723,6 +768,67 @@ export default function AdminProposals() {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* BARRA DE PESQUISA RÁPIDA GLOBAL */}
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar candidato por Nome, Sobrenome, CPF, E-mail, Telefone ou Cidade..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-9 text-sm h-10"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {searchTerm && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="text-xs bg-muted">
+                  {allMatchingProfiles.length} candidato(s) encontrado(s)
+                </Badge>
+                <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')} className="h-8 text-xs">
+                  Limpar Busca
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Atalho direto para as etapas onde o candidato foi encontrado */}
+          {searchTerm && matchingTabs.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/50 text-xs">
+              <span className="text-muted-foreground">Encontrado nas etapas:</span>
+              {matchingTabs.map(tab => (
+                <Badge
+                  key={tab.key}
+                  variant={activeTab === tab.key ? 'default' : 'outline'}
+                  className="cursor-pointer gap-1 hover:bg-primary/20 transition-colors"
+                  onClick={() => {
+                    setViewMode('list');
+                    setActiveTab(tab.key);
+                  }}
+                >
+                  {tab.label} ({tab.count})
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {searchTerm && allMatchingProfiles.length === 0 && (
+            <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span>Nenhum candidato encontrado com o termo "{searchTerm}" em nenhuma das etapas.</span>
+            </div>
+          )}
         </div>
 
         {/* KANBAN BOARD VIEW */}
