@@ -72,19 +72,87 @@ const formatDate = (dateStr: string | null | undefined): string => {
   return date.toLocaleDateString('pt-BR');
 };
 
-const loadImage = async (url: string): Promise<string | null> => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
+const normalizeImageUrl = (rawUrl: string | null | undefined): string | null => {
+  if (!rawUrl) return null;
+  let url = rawUrl.trim();
+  if (!url) return null;
+
+  // Se já for base64 Data URL, retorna diretamente
+  if (url.startsWith('data:')) return url;
+
+  // Substitui domínios antigos/expirados pelo domínio ativo da VPS
+  if (url.includes('banco.goib.com.br')) {
+    url = url.replace('banco.goib.com.br', 'banco.goib.org');
   }
+
+  // Se for caminho relativo do storage (ex: photos/... ou /storage/...)
+  if (url.startsWith('photos/')) {
+    url = `https://banco.goib.org/storage/v1/object/public/${url}`;
+  } else if (url.startsWith('/storage/')) {
+    url = `https://banco.goib.org${url}`;
+  }
+
+  return url;
+};
+
+const loadImage = async (rawUrl: string): Promise<string | null> => {
+  const url = normalizeImageUrl(rawUrl);
+  if (!url) return null;
+
+  // Se for base64 Data URL, retorna imediatamente sem tentar fetch
+  if (url.startsWith('data:')) {
+    return url;
+  }
+
+  // 1. Tenta carregar via fetch + FileReader (modo padrão)
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (response.ok) {
+      const blob = await response.blob();
+      const base64 = await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+      if (base64) return base64;
+    }
+  } catch (err) {
+    console.warn('Fetch direto da imagem falhou, tentando fallback Image/Canvas:', err);
+  }
+
+  // 2. Fallback resiliente via HTMLImageElement + Canvas (converte qualquer formato PNG/WEBP/JPEG com CORS)
+  if (typeof document !== 'undefined') {
+    try {
+      const canvasBase64 = await new Promise<string | null>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width || 300;
+            canvas.height = img.naturalHeight || img.height || 400;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.95));
+          } catch (e) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+      if (canvasBase64) return canvasBase64;
+    } catch (err) {
+      console.warn('Fallback via Canvas também falhou:', err);
+    }
+  }
+
+  return null;
 };
 
 export async function generateEditalPDF(
@@ -219,8 +287,19 @@ export async function generateEditalPDF(
   if (profile.photo_url) {
     const pData = await loadImage(profile.photo_url);
     if (pData) {
-      doc.addImage(pData, 'JPEG', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
-      candidatePhotoLoaded = true;
+      try {
+        const format = pData.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(pData, format, photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
+        candidatePhotoLoaded = true;
+      } catch (err) {
+        console.warn('Tentando adicionar imagem sem formato rígido:', err);
+        try {
+          doc.addImage(pData, '', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
+          candidatePhotoLoaded = true;
+        } catch (err2) {
+          console.error('Falha ao renderizar foto do candidato no PDF:', err2);
+        }
+      }
     }
   }
 

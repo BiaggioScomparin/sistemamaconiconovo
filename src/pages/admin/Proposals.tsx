@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -39,7 +39,9 @@ import {
   RotateCcw,
   MoreVertical,
   AlertTriangle,
-  X
+  X,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -181,6 +183,79 @@ export default function AdminProposals() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>(
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'kanban'
   );
+
+  // Candidate photo upload state
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewProfile) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Por favor, selecione um arquivo de imagem (JPEG, PNG ou WEBP).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'A imagem deve ter no máximo 10MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `proposals/${Date.now()}-${sanitizedName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('photos')
+        .getPublicUrl(filePath);
+
+      const newPhotoUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photo_url: newPhotoUrl } as any)
+        .eq('id', viewProfile.id);
+
+      if (updateError) throw updateError;
+
+      setViewProfile({ ...viewProfile, photo_url: newPhotoUrl });
+      if (editalProfile?.id === viewProfile.id) {
+        setEditalProfile({ ...editalProfile, photo_url: newPhotoUrl });
+      }
+      queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
+
+      toast({
+        title: 'Foto salva com sucesso!',
+        description: 'A foto do candidato foi atualizada.',
+      });
+    } catch (err: any) {
+      console.error('Erro ao subir foto do candidato:', err);
+      toast({
+        title: 'Erro ao enviar foto',
+        description: err.message || 'Falha ao salvar a imagem.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
 
   // Inactivate and delete states
   const [candidateToDelete, setCandidateToDelete] = useState<Profile | null>(null);
@@ -1201,12 +1276,37 @@ export default function AdminProposals() {
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={viewProfile?.photo_url || undefined} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {viewProfile?.full_name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="h-14 w-14 ring-2 ring-primary/20">
+                  <AvatarImage src={viewProfile?.photo_url || undefined} className="object-cover" />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                    {viewProfile?.full_name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <button
+                  type="button"
+                  title="Alterar Foto do Candidato"
+                  disabled={uploadingAvatar}
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute inset-0 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4" />
+                      <span className="text-[9px] font-medium leading-tight mt-0.5">Foto</span>
+                    </>
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/jpg"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
+              </div>
               <div>
                 <span className="text-xl">{viewProfile?.full_name}</span>
                 <div className="mt-1 flex items-center gap-2">
@@ -1562,15 +1662,35 @@ export default function AdminProposals() {
       <EditalFormDialog
         open={editalDialogOpen}
         onOpenChange={setEditalDialogOpen}
+        profileId={editalProfile?.id}
         profileName={editalProfile?.full_name || ''}
+        photoUrl={editalProfile?.photo_url}
         lodgeName={editalProfile?.lodges?.name}
         lodgeCity={editalProfile?.lodges?.city}
         lodgeState={editalProfile?.lodges?.state}
         isGenerating={!!generatingPDF}
+        onPhotoUpdated={(newUrl) => {
+          if (editalProfile) {
+            setEditalProfile({ ...editalProfile, photo_url: newUrl });
+          }
+          if (viewProfile && viewProfile.id === editalProfile?.id) {
+            setViewProfile({ ...viewProfile, photo_url: newUrl });
+          }
+          queryClient.invalidateQueries({ queryKey: ['all-proposals'] });
+        }}
         onGenerate={async (formData: EditalFormData) => {
           if (!editalProfile) return;
           setGeneratingPDF(editalProfile.id);
           try {
+            // Busca dados mais recentes do perfil para garantir a foto mais atual
+            const { data: freshProfile } = await supabase
+              .from('profiles')
+              .select('*, lodges(*)')
+              .eq('id', editalProfile.id)
+              .maybeSingle();
+
+            const profileToUse = (freshProfile as Profile) || editalProfile;
+
             // Fetch children for this profile
             const { data: children } = await supabase
               .from('children')
@@ -1578,9 +1698,9 @@ export default function AdminProposals() {
               .eq('profile_id', editalProfile.id);
             
             await generateEditalPDF(
-              editalProfile,
+              profileToUse,
               children || [],
-              editalProfile.lodges,
+              profileToUse.lodges,
               formData
             );
             toast({ title: 'PDF gerado com sucesso!' });
