@@ -644,7 +644,7 @@ export default function AdminProposals() {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3 font-display">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={profile.photo_url || undefined} />
+              <AvatarImage src={profile.photo_url || undefined} crossOrigin="anonymous" />
               <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                 {profile.full_name.charAt(0)}
               </AvatarFallback>
@@ -937,7 +937,7 @@ export default function AdminProposals() {
                             <CardContent className="p-3 space-y-2">
                               <div className="flex items-start gap-2.5">
                                 <Avatar className="h-9 w-9 border border-border">
-                                  <AvatarImage src={candidate.photo_url || undefined} />
+                                  <AvatarImage src={candidate.photo_url || undefined} crossOrigin="anonymous" />
                                   <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
                                     {candidate.full_name.charAt(0)}
                                   </AvatarFallback>
@@ -1278,7 +1278,7 @@ export default function AdminProposals() {
             <DialogTitle className="font-display flex items-center gap-3">
               <div className="relative group">
                 <Avatar className="h-14 w-14 ring-2 ring-primary/20">
-                  <AvatarImage src={viewProfile?.photo_url || undefined} className="object-cover" />
+                  <AvatarImage src={viewProfile?.photo_url || undefined} crossOrigin="anonymous" className="object-cover" />
                   <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                     {viewProfile?.full_name.charAt(0)}
                   </AvatarFallback>

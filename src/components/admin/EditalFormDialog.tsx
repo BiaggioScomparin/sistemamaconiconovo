@@ -200,6 +200,7 @@ export function EditalFormDialog({
                   <img
                     src={currentPhoto}
                     alt={profileName}
+                    crossOrigin="anonymous"
                     className="w-full h-full object-cover"
                   />
                 ) : (

@@ -106,6 +106,8 @@ const loadPhotoAsJpeg = async (rawUrl: string | null | undefined): Promise<strin
   const url = normalizeImageUrl(rawUrl);
   if (!url) return null;
 
+  console.log('[EditalPDF] Iniciando loadPhotoAsJpeg para:', { rawUrl, normalized: url });
+
   // Ambiente nao-navegador (Node / SSR)
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     try {
@@ -160,15 +162,18 @@ const loadPhotoAsJpeg = async (rawUrl: string | null | undefined): Promise<strin
         0, 0, canvas.width, canvas.height
       );
 
-      return canvas.toDataURL('image/jpeg', 0.92);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      console.log('[EditalPDF] Canvas gerou JPEG com sucesso! Tamanho:', dataUrl.length);
+      return dataUrl;
     } catch (e) {
-      console.warn('Erro ao converter imagem em canvas JPEG:', e);
+      console.warn('[EditalPDF] Erro ao converter imagem em canvas JPEG:', e);
       return null;
     }
   };
 
   // 1. Se ja for data URL (ex: arquivo lido via FileReader no upload)
   if (url.startsWith('data:')) {
+    console.log('[EditalPDF] Imagem ja e Data URL inline.');
     return new Promise((resolve) => {
       const img = new Image();
       // NUNCA colocar crossOrigin em data: URLs
@@ -179,58 +184,76 @@ const loadPhotoAsJpeg = async (rawUrl: string | null | undefined): Promise<strin
   }
 
   // 2. Para URLs remotas (ex: banco.goib.org ou supabase.co):
-  // Primeiro tentamos fetch -> blob -> FileReader -> dataURL -> Image -> Canvas.
-  // Como o data: URL e local inline, NUNCA ha bloqueio de CORS no Canvas e nunca tonta o canvas!
+  // Adicionamos cache buster ?t=Date.now() para garantir bypass de cache stale do navegador e Cloudflare
+  const cacheBuster = `t=${Date.now()}`;
+  const fetchUrl = url.includes('?') ? `${url}&${cacheBuster}` : `${url}?${cacheBuster}`;
+
   try {
-    const resp = await fetch(url, { mode: 'cors' });
+    console.log('[EditalPDF] Método 1: Fetch com CORS e cache buster:', fetchUrl);
+    const resp = await fetch(fetchUrl, { mode: 'cors' });
     if (resp.ok) {
       const blob = await resp.blob();
+      console.log('[EditalPDF] Fetch OK! Blob recebido:', blob.size, 'bytes, tipo:', blob.type);
       const rawDataUrl = await new Promise<string | null>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
+        reader.onerror = (e) => {
+          console.warn('[EditalPDF] FileReader falhou:', e);
+          resolve(null);
+        };
         reader.readAsDataURL(blob);
       });
 
       if (rawDataUrl) {
+        console.log('[EditalPDF] FileReader gerou Data URL raw, renderizando no Canvas...');
         const convertedJpeg = await new Promise<string | null>((resolve) => {
           const img = new Image();
           img.onload = () => resolve(renderImgToJpeg(img));
-          img.onerror = () => resolve(null);
+          img.onerror = (e) => {
+            console.warn('[EditalPDF] Image.onload falhou com Data URL:', e);
+            resolve(null);
+          };
           img.src = rawDataUrl;
         });
 
         if (convertedJpeg) return convertedJpeg;
-        // Se a conversao falhou mas temos o rawDataUrl (ex: PNG direto), retorna o raw
+        // Se a conversao em canvas falhou mas temos o rawDataUrl (ex: PNG), retorna o raw
         if (rawDataUrl.startsWith('data:image/jpeg') || rawDataUrl.startsWith('data:image/png')) {
+          console.log('[EditalPDF] Usando rawDataUrl como fallback de imagem');
           return rawDataUrl;
         }
       }
+    } else {
+      console.warn('[EditalPDF] Fetch HTTP status não-OK:', resp.status);
     }
   } catch (err) {
-    console.warn('Fetch direto falhou, tentando fallback via <img> com crossOrigin:', err);
+    console.warn('[EditalPDF] Fetch direto falhou, tentando fallback via <img> com crossOrigin:', err);
   }
 
-  // 3. Fallback: carregamento direto via HTMLImageElement com crossOrigin = 'anonymous'
+  // 3. Fallback: carregamento direto via HTMLImageElement com crossOrigin = 'anonymous' e cache buster
+  console.log('[EditalPDF] Método 2: Fallback via HTMLImageElement com crossOrigin');
   return new Promise<string | null>((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
     const timer = setTimeout(() => {
+      console.warn('[EditalPDF] Timeout (8s) no fallback Image element');
       resolve(null);
     }, 8000);
 
     img.onload = () => {
       clearTimeout(timer);
+      console.log('[EditalPDF] HTMLImageElement fallback carregado com sucesso!');
       resolve(renderImgToJpeg(img));
     };
 
-    img.onerror = () => {
+    img.onerror = (e) => {
       clearTimeout(timer);
+      console.warn('[EditalPDF] Fallback HTMLImageElement falhou:', e);
       resolve(null);
     };
 
-    img.src = url;
+    img.src = fetchUrl;
   });
 };
 
@@ -422,8 +445,9 @@ export async function generateEditalPDF(
   doc.setLineWidth(0.5);
   doc.rect(photoX, photoY, photoW, photoH);
 
-    let candidatePhotoLoaded = false;
+  let candidatePhotoLoaded = false;
   const candidatePhotoUrl = config?.photoUrl || profile.photo_url;
+  console.log('[EditalPDF] candidatePhotoUrl selecionado:', candidatePhotoUrl);
 
   if (candidatePhotoUrl) {
     const pData = await loadPhotoAsJpeg(candidatePhotoUrl);
@@ -432,19 +456,26 @@ export async function generateEditalPDF(
         const imgFmt = pData.startsWith('data:image/png') ? 'PNG' : 'JPEG';
         doc.addImage(pData, imgFmt, photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
         candidatePhotoLoaded = true;
+        console.log('[EditalPDF] Foto inserida no PDF com sucesso! Formato:', imgFmt);
       } catch (err) {
-        console.warn('Erro ao inserir foto JPEG no PDF, tentando modo fallback:', err);
+        console.warn('[EditalPDF] Falha ao inserir imagem com formato explicitado, tentando autodetect:', err);
         try {
           doc.addImage(pData, '', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
           candidatePhotoLoaded = true;
+          console.log('[EditalPDF] Foto inserida no PDF com sucesso via autodetect!');
         } catch (err2) {
-          console.error('Falha critica ao renderizar foto do candidato no PDF:', err2);
+          console.error('[EditalPDF] Falha critica ao renderizar foto do candidato no PDF:', err2);
         }
       }
+    } else {
+      console.warn('[EditalPDF] loadPhotoAsJpeg não retornou dados para:', candidatePhotoUrl);
     }
+  } else {
+    console.warn('[EditalPDF] Nenhuma URL de foto informada (config.photoUrl nem profile.photo_url)');
   }
 
   if (!candidatePhotoLoaded) {
+    console.warn('[EditalPDF] Renderizando quadro de FOTO 3x4 vazio no PDF');
     doc.setFillColor(248, 248, 248);
     doc.rect(photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1, 'F');
     doc.setFont('helvetica', 'normal');
