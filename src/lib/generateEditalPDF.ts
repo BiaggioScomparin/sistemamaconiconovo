@@ -99,16 +99,15 @@ const normalizeImageUrl = (rawUrl: string | null | undefined): string | null => 
 /**
  * Converte qualquer imagem (URL remota, caminho relativo, blob ou base64)
  * em um Data URL JPEG padronizado (600x800, proporcao 3x4).
- * Isso garante que qualquer formato (PNG com transparencia, WEBP, AVIF, JPEG grande)
- * seja renderizado com 100% de sucesso pelo jsPDF sem erros de formato.
+ * Suporta PNG, JPEG, WEBP, AVIF com total compatibilidade com jsPDF.
  */
 const loadPhotoAsJpeg = async (rawUrl: string | null | undefined): Promise<string | null> => {
   if (!rawUrl) return null;
   const url = normalizeImageUrl(rawUrl);
   if (!url) return null;
 
-  // Se nao estiver no navegador (ex: SSR / testes Node)
-  if (typeof document === 'undefined') {
+  // Ambiente nao-navegador (Node / SSR)
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
     try {
       if (url.startsWith('data:')) return url;
       const resp = await fetch(url);
@@ -122,105 +121,116 @@ const loadPhotoAsJpeg = async (rawUrl: string | null | undefined): Promise<strin
     return null;
   }
 
-  // No navegador: carrega via Image e converte para JPEG via Canvas com crop 3x4
-  return new Promise<string | null>((resolve) => {
-    let resolved = false;
-    const finish = (result: string | null) => {
-      if (!resolved) {
-        resolved = true;
-        resolve(result);
+  // Funcao utilitaria para renderizar uma Image em um Canvas 3x4 (600x800) e exportar como JPEG
+  const renderImgToJpeg = (img: HTMLImageElement): string | null => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      // Fundo branco solido (essencial para fotos transparentes)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const srcW = img.naturalWidth || img.width || 600;
+      const srcH = img.naturalHeight || img.height || 800;
+      const targetRatio = 3 / 4;
+      const srcRatio = srcW / srcH;
+
+      let renderW = srcW;
+      let renderH = srcH;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (srcRatio > targetRatio) {
+        // Mais largo que 3x4: corta laterais proporcionalmente
+        renderW = srcH * targetRatio;
+        offsetX = (srcW - renderW) / 2;
+      } else {
+        // Mais alto que 3x4: corta topo e base proporcionalmente
+        renderH = srcW / targetRatio;
+        offsetY = (srcH - renderH) / 2;
       }
-    };
 
-    const timeoutId = setTimeout(() => {
-      finish(null);
-    }, 12000);
+      ctx.drawImage(
+        img,
+        offsetX, offsetY, renderW, renderH,
+        0, 0, canvas.width, canvas.height
+      );
 
-    const convertImgToJpeg = (img: HTMLImageElement): string | null => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 800;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-
-        // Fundo branco solido para fotos com transparencia (ex: PNG)
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const srcW = img.naturalWidth || img.width || 600;
-        const srcH = img.naturalHeight || img.height || 800;
-        const targetRatio = 3 / 4;
-        const srcRatio = srcW / srcH;
-
-        let renderW = srcW;
-        let renderH = srcH;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (srcRatio > targetRatio) {
-          renderW = srcH * targetRatio;
-          offsetX = (srcW - renderW) / 2;
-        } else {
-          renderH = srcW / targetRatio;
-          offsetY = (srcH - renderH) / 2;
-        }
-
-        ctx.drawImage(
-          img,
-          offsetX, offsetY, renderW, renderH,
-          0, 0, canvas.width, canvas.height
-        );
-
-        return canvas.toDataURL('image/jpeg', 0.92);
-      } catch (err) {
-        console.warn('Canvas toDataURL falhou:', err);
-        return null;
-      }
-    };
-
-    const loadImageElement = (src: string, isObjectUrl = false) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      img.onload = () => {
-        clearTimeout(timeoutId);
-        const dataUrl = convertImgToJpeg(img);
-        if (isObjectUrl) {
-          try { URL.revokeObjectURL(src); } catch (_) {}
-        }
-        finish(dataUrl);
-      };
-
-      img.onerror = () => {
-        if (isObjectUrl) {
-          try { URL.revokeObjectURL(src); } catch (_) {}
-        }
-        clearTimeout(timeoutId);
-        finish(null);
-      };
-
-      img.src = src;
-    };
-
-    if (url.startsWith('data:')) {
-      loadImageElement(url);
-      return;
+      return canvas.toDataURL('image/jpeg', 0.92);
+    } catch (e) {
+      console.warn('Erro ao converter imagem em canvas JPEG:', e);
+      return null;
     }
+  };
 
-    fetch(url, { mode: 'cors' })
-      .then(async (res) => {
-        if (res.ok) {
-          const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          loadImageElement(blobUrl, true);
-        } else {
-          loadImageElement(url, false);
-        }
-      })
-      .catch(() => {
-        loadImageElement(url, false);
+  // 1. Se ja for data URL (ex: arquivo lido via FileReader no upload)
+  if (url.startsWith('data:')) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      // NUNCA colocar crossOrigin em data: URLs
+      img.onload = () => resolve(renderImgToJpeg(img) || url);
+      img.onerror = () => resolve(url);
+      img.src = url;
+    });
+  }
+
+  // 2. Para URLs remotas (ex: banco.goib.org ou supabase.co):
+  // Primeiro tentamos fetch -> blob -> FileReader -> dataURL -> Image -> Canvas.
+  // Como o data: URL e local inline, NUNCA ha bloqueio de CORS no Canvas e nunca tonta o canvas!
+  try {
+    const resp = await fetch(url, { mode: 'cors' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const rawDataUrl = await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
       });
+
+      if (rawDataUrl) {
+        const convertedJpeg = await new Promise<string | null>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(renderImgToJpeg(img));
+          img.onerror = () => resolve(null);
+          img.src = rawDataUrl;
+        });
+
+        if (convertedJpeg) return convertedJpeg;
+        // Se a conversao falhou mas temos o rawDataUrl (ex: PNG direto), retorna o raw
+        if (rawDataUrl.startsWith('data:image/jpeg') || rawDataUrl.startsWith('data:image/png')) {
+          return rawDataUrl;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Fetch direto falhou, tentando fallback via <img> com crossOrigin:', err);
+  }
+
+  // 3. Fallback: carregamento direto via HTMLImageElement com crossOrigin = 'anonymous'
+  return new Promise<string | null>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    const timer = setTimeout(() => {
+      resolve(null);
+    }, 8000);
+
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(renderImgToJpeg(img));
+    };
+
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve(null);
+    };
+
+    img.src = url;
   });
 };
 
@@ -419,7 +429,8 @@ export async function generateEditalPDF(
     const pData = await loadPhotoAsJpeg(candidatePhotoUrl);
     if (pData) {
       try {
-        doc.addImage(pData, 'JPEG', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
+        const imgFmt = pData.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(pData, imgFmt, photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
         candidatePhotoLoaded = true;
       } catch (err) {
         console.warn('Erro ao inserir foto JPEG no PDF, tentando modo fallback:', err);
