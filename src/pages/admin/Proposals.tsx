@@ -1689,7 +1689,10 @@ export default function AdminProposals() {
               .eq('id', editalProfile.id)
               .maybeSingle();
 
-            const profileToUse = (freshProfile as Profile) || editalProfile;
+            const profileToUse: Profile = {
+              ...((freshProfile as Profile) || editalProfile),
+              photo_url: formData.photoUrl || freshProfile?.photo_url || editalProfile.photo_url
+            };
 
             // Fetch children for this profile
             const { data: children } = await supabase

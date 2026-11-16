@@ -57,6 +57,7 @@ interface EditalConfig {
   sessaoHora?: string;
   rito?: string;
   lodgeNumber?: string;
+  photoUrl?: string | null;
 }
 
 const formatDate = (dateStr: string | null | undefined): string => {
@@ -93,6 +94,134 @@ const normalizeImageUrl = (rawUrl: string | null | undefined): string | null => 
   }
 
   return url;
+};
+
+/**
+ * Converte qualquer imagem (URL remota, caminho relativo, blob ou base64)
+ * em um Data URL JPEG padronizado (600x800, proporcao 3x4).
+ * Isso garante que qualquer formato (PNG com transparencia, WEBP, AVIF, JPEG grande)
+ * seja renderizado com 100% de sucesso pelo jsPDF sem erros de formato.
+ */
+const loadPhotoAsJpeg = async (rawUrl: string | null | undefined): Promise<string | null> => {
+  if (!rawUrl) return null;
+  const url = normalizeImageUrl(rawUrl);
+  if (!url) return null;
+
+  // Se nao estiver no navegador (ex: SSR / testes Node)
+  if (typeof document === 'undefined') {
+    try {
+      if (url.startsWith('data:')) return url;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const buf = await resp.arrayBuffer();
+        return 'data:image/jpeg;base64,' + Buffer.from(buf).toString('base64');
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  // No navegador: carrega via Image e converte para JPEG via Canvas com crop 3x4
+  return new Promise<string | null>((resolve) => {
+    let resolved = false;
+    const finish = (result: string | null) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(result);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(null);
+    }, 12000);
+
+    const convertImgToJpeg = (img: HTMLImageElement): string | null => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 800;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        // Fundo branco solido para fotos com transparencia (ex: PNG)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const srcW = img.naturalWidth || img.width || 600;
+        const srcH = img.naturalHeight || img.height || 800;
+        const targetRatio = 3 / 4;
+        const srcRatio = srcW / srcH;
+
+        let renderW = srcW;
+        let renderH = srcH;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (srcRatio > targetRatio) {
+          renderW = srcH * targetRatio;
+          offsetX = (srcW - renderW) / 2;
+        } else {
+          renderH = srcW / targetRatio;
+          offsetY = (srcH - renderH) / 2;
+        }
+
+        ctx.drawImage(
+          img,
+          offsetX, offsetY, renderW, renderH,
+          0, 0, canvas.width, canvas.height
+        );
+
+        return canvas.toDataURL('image/jpeg', 0.92);
+      } catch (err) {
+        console.warn('Canvas toDataURL falhou:', err);
+        return null;
+      }
+    };
+
+    const loadImageElement = (src: string, isObjectUrl = false) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        clearTimeout(timeoutId);
+        const dataUrl = convertImgToJpeg(img);
+        if (isObjectUrl) {
+          try { URL.revokeObjectURL(src); } catch (_) {}
+        }
+        finish(dataUrl);
+      };
+
+      img.onerror = () => {
+        if (isObjectUrl) {
+          try { URL.revokeObjectURL(src); } catch (_) {}
+        }
+        clearTimeout(timeoutId);
+        finish(null);
+      };
+
+      img.src = src;
+    };
+
+    if (url.startsWith('data:')) {
+      loadImageElement(url);
+      return;
+    }
+
+    fetch(url, { mode: 'cors' })
+      .then(async (res) => {
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          loadImageElement(blobUrl, true);
+        } else {
+          loadImageElement(url, false);
+        }
+      })
+      .catch(() => {
+        loadImageElement(url, false);
+      });
+  });
 };
 
 const loadImage = async (rawUrl: string): Promise<string | null> => {
@@ -283,21 +412,22 @@ export async function generateEditalPDF(
   doc.setLineWidth(0.5);
   doc.rect(photoX, photoY, photoW, photoH);
 
-  let candidatePhotoLoaded = false;
-  if (profile.photo_url) {
-    const pData = await loadImage(profile.photo_url);
+    let candidatePhotoLoaded = false;
+  const candidatePhotoUrl = config?.photoUrl || profile.photo_url;
+
+  if (candidatePhotoUrl) {
+    const pData = await loadPhotoAsJpeg(candidatePhotoUrl);
     if (pData) {
       try {
-        const format = pData.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(pData, format, photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
+        doc.addImage(pData, 'JPEG', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
         candidatePhotoLoaded = true;
       } catch (err) {
-        console.warn('Tentando adicionar imagem sem formato rígido:', err);
+        console.warn('Erro ao inserir foto JPEG no PDF, tentando modo fallback:', err);
         try {
           doc.addImage(pData, '', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
           candidatePhotoLoaded = true;
         } catch (err2) {
-          console.error('Falha ao renderizar foto do candidato no PDF:', err2);
+          console.error('Falha critica ao renderizar foto do candidato no PDF:', err2);
         }
       }
     }

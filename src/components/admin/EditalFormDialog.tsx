@@ -21,6 +21,7 @@ export interface EditalFormData {
   sessaoHora: string;
   rito: string;
   lodgeNumber: string;
+  photoUrl?: string | null;
 }
 
 interface EditalFormDialogProps {
@@ -98,6 +99,17 @@ export function EditalFormDialog({
       return;
     }
 
+    // Leitura local imediata para garantia total da foto no Edital baixado
+    const reader = new FileReader();
+    reader.onload = (re) => {
+      const localDataUrl = re.target?.result as string;
+      if (localDataUrl) {
+        setCurrentPhoto(localDataUrl);
+        onPhotoUpdated?.(localDataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+
     setUploadingPhoto(true);
     try {
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -150,7 +162,10 @@ export function EditalFormDialog({
   };
 
   const handleSubmit = () => {
-    onGenerate(formData);
+    onGenerate({
+      ...formData,
+      photoUrl: currentPhoto || photoUrl || null,
+    });
   };
 
   return (
